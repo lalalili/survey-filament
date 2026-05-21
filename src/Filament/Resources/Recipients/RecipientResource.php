@@ -38,12 +38,14 @@ class RecipientResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return config('survey-filament.navigation_group', '問卷管理');
+        return config('survey-filament.recipient_navigation_group',
+               config('survey-filament.navigation_group', '問卷管理'));
     }
 
     public static function getNavigationSort(): ?int
     {
-        return config('survey-filament.navigation_sort', 51);
+        return config('survey-filament.recipient_navigation_sort',
+               config('survey-filament.navigation_sort', 51));
     }
 
     public static function form(Schema $schema): Schema
@@ -130,6 +132,11 @@ class RecipientResource extends Resource
             return '';
         }
 
-        return implode('、', array_slice($state, 0, 6));
+        $labels = array_map(
+            fn (mixed $col) => is_array($col) ? ($col['label'] ?? $col['key'] ?? '') : (string) $col,
+            array_slice($state, 0, 6)
+        );
+
+        return implode('、', array_filter($labels));
     }
 }
