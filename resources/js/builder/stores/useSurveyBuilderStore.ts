@@ -12,6 +12,31 @@ interface QuestionTypeGroup {
 
 let autosaveTimer: number | undefined;
 
+function hasMissingPersonalizedKeyError(errors: Record<string, string[]>): boolean {
+  return Object.entries(errors).some(([key, messages]) => (
+    key.endsWith('.personalized_key')
+    && messages.some((message) => message.includes('個性化欄位') || message.includes('對應名單欄位'))
+  ));
+}
+
+function hasIncompleteShowIfConditionError(errors: Record<string, string[]>): boolean {
+  return Object.entries(errors).some(([key, messages]) => (
+    key.includes('.show_if.conditions.')
+    && messages.some((message) => message.includes('顯示條件'))
+  ));
+}
+
+function alertAutosaveValidationError(errors: Record<string, string[]>): void {
+  if (hasMissingPersonalizedKeyError(errors)) {
+    window.alert('已勾選「個性化欄位」，請設定「對應名單欄位」後再儲存。');
+    return;
+  }
+
+  if (hasIncompleteShowIfConditionError(errors)) {
+    window.alert('顯示條件尚未填寫完整，請填寫輸入值後再儲存。');
+  }
+}
+
 function cloneElement(element: SurveyElement): SurveyElement {
   return JSON.parse(JSON.stringify(element)) as SurveyElement;
 }
@@ -267,6 +292,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         if (error instanceof ValidationError) {
           this.saveError = error.message;
           this.validationErrors = error.errors;
+          alertAutosaveValidationError(error.errors);
         } else {
           this.saveError = error instanceof Error ? error.message : 'Save failed.';
           this.validationErrors = {};

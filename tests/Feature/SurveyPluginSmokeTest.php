@@ -2,6 +2,7 @@
 
 use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Models\Survey;
+use Lalalili\SurveyFilament\Filament\Resources\Recipients\RecipientResource;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers\CollectorsRelationManager;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\SurveyAnalytics;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
@@ -16,7 +17,7 @@ it('can instantiate the plugin', function () {
 
 it('can create and retrieve a survey model', function () {
     $survey = Survey::create([
-        'title' => 'Smoke Test Survey',
+        'title'  => 'Smoke Test Survey',
         'status' => SurveyStatus::Draft,
     ]);
 
@@ -30,6 +31,18 @@ it('survey navigation group reads from config', function () {
 
     expect(SurveyResource::getNavigationGroup())
         ->toBe('Custom Group');
+});
+
+it('shows recipient navigation by default', function () {
+    config()->set('survey-filament.recipient_navigation_enabled', true);
+
+    expect(RecipientResource::shouldRegisterNavigation())->toBeTrue();
+});
+
+it('can hide recipient navigation through config', function () {
+    config()->set('survey-filament.recipient_navigation_enabled', false);
+
+    expect(RecipientResource::shouldRegisterNavigation())->toBeFalse();
 });
 
 it('registers the survey analytics resource page', function () {

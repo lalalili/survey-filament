@@ -7,6 +7,8 @@ use Filament\Panel;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\RecipientResource;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
+use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerAllowedHosts\SurveyTriggerAllowedHostResource;
+use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\SurveyTriggerRuleResource;
 use Lalalili\SurveyFilament\Filament\Widgets\PublishedSurveysWidget;
 use Lalalili\SurveyFilament\Filament\Widgets\ResponsesTrendChart;
 use Lalalili\SurveyFilament\Filament\Widgets\TotalResponsesWidget;
@@ -30,6 +32,8 @@ class SurveyFilamentPlugin implements Plugin
             SurveyResource::class,
             RecipientResource::class,
             ResponseResource::class,
+            SurveyTriggerRuleResource::class,
+            SurveyTriggerAllowedHostResource::class,
         ]);
 
         if (config('survey-filament.widgets_enabled', true)) {
@@ -42,5 +46,7 @@ class SurveyFilamentPlugin implements Plugin
         }
     }
 
-    public function boot(Panel $panel): void {}
+    public function boot(Panel $panel): void
+    {
+    }
 }

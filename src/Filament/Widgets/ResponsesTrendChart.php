@@ -33,8 +33,8 @@ class ResponsesTrendChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Responses',
-                    'data' => $data,
+                    'label'           => 'Responses',
+                    'data'            => $data,
                     'backgroundColor' => '#6366f1',
                 ],
             ],

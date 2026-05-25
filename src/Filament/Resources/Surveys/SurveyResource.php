@@ -149,19 +149,22 @@ class SurveyResource extends Resource
                 ->label('姓名欄位')
                 ->options(fn ($get): array => self::audienceColumnOptions($get('settings_json.personalization.audience_list_id')))
                 ->searchable()
-                ->nullable(),
+                ->nullable()
+                ->helperText('同步名單時寫入收件人姓名，方便後台辨識、匯出與後續訊息個人化。'),
 
             Select::make('settings_json.personalization.email_column')
                 ->label('Email 欄位')
                 ->options(fn ($get): array => self::audienceColumnOptions($get('settings_json.personalization.audience_list_id')))
                 ->searchable()
-                ->nullable(),
+                ->nullable()
+                ->helperText('同步為收件人 Email，EDM 活動選擇此問卷時可沿用此欄位作為收件地址來源。'),
 
             Select::make('settings_json.personalization.external_id_column')
                 ->label('外部 ID 欄位')
                 ->options(fn ($get): array => self::audienceColumnOptions($get('settings_json.personalization.audience_list_id')))
                 ->searchable()
-                ->nullable(),
+                ->nullable()
+                ->helperText('同步 CRM、DMS 或會員系統 ID，便於對帳、去重與跨系統追蹤；未指定時使用名單資料列 ID。'),
 
             KeyValue::make('settings_json.personalization.field_mappings')
                 ->label('個性化題目欄位對應')

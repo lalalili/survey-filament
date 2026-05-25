@@ -15,9 +15,9 @@ class AudienceFileReader
         $extension = mb_strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
         return match ($extension) {
-            'csv', 'txt' => $this->readCsv($path),
+            'csv', 'txt'  => $this->readCsv($path),
             'xlsx', 'xls' => $this->readSpreadsheet($path),
-            default => throw new RuntimeException('僅支援 CSV、XLSX 或 XLS 檔案。'),
+            default       => throw new RuntimeException('僅支援 CSV、XLSX 或 XLS 檔案。'),
         };
     }
 

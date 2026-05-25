@@ -20,6 +20,9 @@ return [
 
     'navigation_sort' => 50,
 
+    // Keep the standalone survey package recipient list visible by default.
+    'recipient_navigation_enabled' => true,
+
     /*
     |--------------------------------------------------------------------------
     | Resource Discovery

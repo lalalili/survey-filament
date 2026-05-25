@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { getQuestionType, questionTypes } from '../registry/questionTypes';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
-import type { Condition, SurveyElement, SurveyOptionAction } from '../types/schema';
+import type { AudienceListColumn, Condition, SurveyElement, SurveyOptionAction } from '../types/schema';
 import { elementSupportsJump, hasActiveJumpLogic, typeCategory } from '../utils/builderHelpers';
 import MatrixColsDialog from '../dialogs/MatrixColsDialog.vue';
 import type { MatrixColsDialogState } from '../dialogs/MatrixColsDialog.vue';
@@ -83,9 +83,42 @@ function openCascadeDialog(elementId: string) {
 const selectedAudienceList = computed(() => {
   const listId = store.schema?.settings?.personalization?.audience_list_id;
   if (!listId) return null;
-  return store.audienceLists?.find((l) => l.id === listId) ?? null;
+  return store.audienceLists?.find((l) => String(l.id) === String(listId)) ?? null;
 });
-const audienceColumnOptions = computed(() => selectedAudienceList.value?.columns ?? []);
+
+type AudienceColumnOption = {
+  value: string;
+  label: string;
+};
+
+function normalizeAudienceColumnOption(column: string | AudienceListColumn): AudienceColumnOption | null {
+  if (typeof column === 'string') {
+    return {
+      value: column,
+      label: column,
+    };
+  }
+
+  const value = column.key ?? column.value ?? column.name ?? column.label;
+
+  if (value === undefined || value === null || String(value).trim() === '') {
+    return null;
+  }
+
+  const normalizedValue = String(value);
+  const label = column.label !== undefined && column.label !== null && String(column.label).trim() !== ''
+    ? String(column.label)
+    : normalizedValue;
+
+  return {
+    value: normalizedValue,
+    label: label === normalizedValue ? label : `${label} (${normalizedValue})`,
+  };
+}
+
+const audienceColumnOptions = computed(() => (selectedAudienceList.value?.columns ?? [])
+  .map((column) => normalizeAudienceColumnOption(column))
+  .filter((column): column is AudienceColumnOption => column !== null));
 
 // ── Selected element definition ──────────────────────────────────────
 const selectedDefinition = computed(() =>
@@ -479,7 +512,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                   @change="store.updateQuestion(store.selectedElement!.id, { personalized_key: ($event.target as HTMLSelectElement).value || null })"
                 >
                   <option value="">未指定</option>
-                  <option v-for="column in audienceColumnOptions" :key="column" :value="column">{{ column }}</option>
+                  <option v-for="column in audienceColumnOptions" :key="column.value" :value="column.value">{{ column.label }}</option>
                 </select>
                 <span class="sb-prop-help">欄位來源：{{ selectedAudienceList.name }}</span>
               </template>

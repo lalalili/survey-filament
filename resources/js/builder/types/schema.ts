@@ -126,10 +126,17 @@ export interface SurveyTheme {
   tokens: Record<string, string>;
 }
 
+export interface AudienceListColumn {
+  key?: string | number | null;
+  label?: string | number | null;
+  value?: string | number | null;
+  name?: string | number | null;
+}
+
 export interface AudienceListSummary {
   id: number;
   name: string;
-  columns: string[];
+  columns: Array<string | AudienceListColumn>;
 }
 
 export interface BuilderCapabilities {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { SurveySettings } from '../types/schema';
+import type { AudienceListColumn, SurveySettings } from '../types/schema';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
 import SurveyRichEditor from '../components/SurveyRichEditor.vue';
 
@@ -21,7 +21,39 @@ const selectedAudienceList = computed(() => {
   return store.audienceLists.find((list) => String(list.id) === String(audienceListId)) ?? null;
 });
 
-const audienceColumnOptions = computed(() => selectedAudienceList.value?.columns ?? []);
+type AudienceColumnOption = {
+  value: string;
+  label: string;
+};
+
+function normalizeAudienceColumnOption(column: string | AudienceListColumn): AudienceColumnOption | null {
+  if (typeof column === 'string') {
+    return {
+      value: column,
+      label: column,
+    };
+  }
+
+  const value = column.key ?? column.value ?? column.name ?? column.label;
+
+  if (value === undefined || value === null || String(value).trim() === '') {
+    return null;
+  }
+
+  const normalizedValue = String(value);
+  const label = column.label !== undefined && column.label !== null && String(column.label).trim() !== ''
+    ? String(column.label)
+    : normalizedValue;
+
+  return {
+    value: normalizedValue,
+    label: label === normalizedValue ? label : `${label} (${normalizedValue})`,
+  };
+}
+
+const audienceColumnOptions = computed(() => (selectedAudienceList.value?.columns ?? [])
+  .map((column) => normalizeAudienceColumnOption(column))
+  .filter((column): column is AudienceColumnOption => column !== null));
 
 function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings['personalization']>>) {
   store.updateSurveySettings({
@@ -472,8 +504,9 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                       @change="updatePersonalizationSettings({ name_column: ($event.target as HTMLSelectElement).value || null })"
                     >
                       <option value="">未指定</option>
-                      <option v-for="column in audienceColumnOptions" :key="column" :value="column">{{ column }}</option>
+                      <option v-for="column in audienceColumnOptions" :key="column.value" :value="column.value">{{ column.label }}</option>
                     </select>
+                    <div class="sb-set-hint" style="margin-top:4px">同步名單時寫入收件人姓名，方便後台辨識、匯出與後續訊息個人化。</div>
                   </div>
                   <div class="sb-set-field">
                     <div class="sb-set-field-label">Email 欄位</div>
@@ -484,8 +517,9 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                       @change="updatePersonalizationSettings({ email_column: ($event.target as HTMLSelectElement).value || null })"
                     >
                       <option value="">未指定</option>
-                      <option v-for="column in audienceColumnOptions" :key="column" :value="column">{{ column }}</option>
+                      <option v-for="column in audienceColumnOptions" :key="column.value" :value="column.value">{{ column.label }}</option>
                     </select>
+                    <div class="sb-set-hint" style="margin-top:4px">同步為收件人 Email，EDM 活動選擇此問卷時可沿用此欄位作為收件地址來源。</div>
                   </div>
                   <div class="sb-set-field">
                     <div class="sb-set-field-label">外部 ID 欄位</div>
@@ -496,8 +530,9 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                       @change="updatePersonalizationSettings({ external_id_column: ($event.target as HTMLSelectElement).value || null })"
                     >
                       <option value="">未指定</option>
-                      <option v-for="column in audienceColumnOptions" :key="column" :value="column">{{ column }}</option>
+                      <option v-for="column in audienceColumnOptions" :key="column.value" :value="column.value">{{ column.label }}</option>
                     </select>
+                    <div class="sb-set-hint" style="margin-top:4px">同步 CRM、DMS 或會員系統 ID，便於對帳、去重與跨系統追蹤；未指定時使用名單資料列 ID。</div>
                   </div>
                 </template>
               </div>

@@ -36,16 +36,25 @@ class RecipientResource extends Resource
 
     protected static ?string $pluralModelLabel = '名單';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return (bool) config('survey-filament.recipient_navigation_enabled', true);
+    }
+
     public static function getNavigationGroup(): ?string
     {
-        return config('survey-filament.recipient_navigation_group',
-               config('survey-filament.navigation_group', '問卷管理'));
+        return config(
+            'survey-filament.recipient_navigation_group',
+            config('survey-filament.navigation_group', '問卷管理')
+        );
     }
 
     public static function getNavigationSort(): ?int
     {
-        return config('survey-filament.recipient_navigation_sort',
-               config('survey-filament.navigation_sort', 51));
+        return config(
+            'survey-filament.recipient_navigation_sort',
+            config('survey-filament.navigation_sort', 51)
+        );
     }
 
     public static function form(Schema $schema): Schema
@@ -72,7 +81,7 @@ class RecipientResource extends Resource
                 TextColumn::make('rows_count')->label('資料筆數')->sortable(),
                 TextColumn::make('columns_json')
                     ->label('欄位')
-                    ->formatStateUsing(fn ($state): string => self::formatColumnsState($state))
+                    ->state(fn (AudienceList $record): string => self::formatColumnsState($record->columns_json))
                     ->placeholder('—')
                     ->wrap(),
                 TextColumn::make('imported_at')->label('匯入時間')->dateTime()->sortable()->placeholder('—'),
@@ -121,21 +130,20 @@ class RecipientResource extends Resource
         ];
     }
 
-    public static function formatColumnsState(mixed $state): string
+    /**
+     * @param  array<int, array<string, mixed>>  $columns
+     */
+    public static function formatColumnsState(array $columns): string
     {
-        if (is_string($state)) {
-            $decoded = json_decode($state, true);
-            $state = is_array($decoded) ? $decoded : array_filter(array_map('trim', explode(',', $state)));
-        }
-
-        if (! is_array($state)) {
-            return '';
-        }
-
+        $visible = array_slice($columns, 0, 6);
         $labels = array_map(
-            fn (mixed $col) => is_array($col) ? ($col['label'] ?? $col['key'] ?? '') : (string) $col,
-            array_slice($state, 0, 6)
+            fn (array $col): string => (string) ($col['label'] ?? $col['key'] ?? ''),
+            $visible,
         );
+
+        if (count($columns) > count($visible)) {
+            $labels[] = '...';
+        }
 
         return implode('、', array_filter($labels));
     }

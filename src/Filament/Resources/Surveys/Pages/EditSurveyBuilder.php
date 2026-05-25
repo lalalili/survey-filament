@@ -48,11 +48,11 @@ class EditSurveyBuilder extends Page
         $survey = $this->getRecord();
 
         return [
-            'survey' => $survey,
+            'survey'           => $survey,
             'builderEndpoints' => [
-                'show' => route('survey-filament.builder.show', $survey),
-                'update' => route('survey-filament.builder.update', $survey),
-                'publish' => route('survey-filament.builder.publish', $survey),
+                'show'         => route('survey-filament.builder.show', $survey),
+                'update'       => route('survey-filament.builder.update', $survey),
+                'publish'      => route('survey-filament.builder.publish', $survey),
                 'upload_image' => route('survey-filament.builder.upload-image', $survey),
             ],
         ];

@@ -98,9 +98,13 @@ const FIELD_LABELS: Record<string, string> = {
   title: '頁面標題', kind: '頁面類型',
   matrix_rows: '矩陣列', matrix_cols: '矩陣欄',
   cascade_levels: '層級設定', cascade_data: '選項資料',
+  personalized_key: '對應名單欄位',
+  show_if: '顯示條件',
 };
 
 const MSG_MAP: Array<[RegExp | string, string]> = [
+  [/顯示條件請填寫輸入值/i, '顯示條件請填寫輸入值'],
+  [/顯示條件請選擇目標題目/i, '顯示條件請選擇目標題目'],
   [/^選取的.*type.*無效$/i, '此題型目前不受支援，請改用其他題型'],
   [/^The selected.*type is invalid/i, '此題型目前不受支援，請改用其他題型'],
   [/field key is required/i, '欄位代碼不得為空'],
@@ -124,6 +128,20 @@ function translateMessage(msg: string): string {
     if (typeof pattern === 'string' ? msg.includes(pattern) : pattern.test(msg)) return replacement;
   }
   return msg;
+}
+
+function readableFieldLabel(fieldName: string | null): string {
+  if (!fieldName) return '';
+
+  const showIfCondition = fieldName.match(/^show_if\.conditions\.(\d+)\.(field_key|value)$/);
+  if (showIfCondition) {
+    const conditionNumber = Number(showIfCondition[1]) + 1;
+    const target = showIfCondition[2] === 'field_key' ? '目標題目' : '輸入值';
+
+    return `顯示條件 ${conditionNumber} 的${target}`;
+  }
+
+  return FIELD_LABELS[fieldName.split('.')[0]] ?? fieldName;
 }
 
 function parseErrorKey(key: string, messages: string[]): ParsedError {
@@ -164,7 +182,7 @@ function parseErrorKey(key: string, messages: string[]): ParsedError {
   else pageLabel = `頁面 ${pageIndex + 1}`;
 
   const elementLabel = element?.label ? `「${element.label}」` : elementIndex !== null ? `第 ${elementIndex + 1} 題` : '';
-  const fLabel = fieldName ? (FIELD_LABELS[fieldName.split('.')[0]] ?? fieldName) : '';
+  const fLabel = readableFieldLabel(fieldName);
 
   return { raw: key, messages, translatedMessages, pageIndex, elementIndex, questionPageNumber, pageId, elementId, fieldName, pageLabel, elementLabel, fieldLabel: fLabel };
 }
