@@ -11,6 +11,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Lalalili\SurveyCore\Actions\Triggers\ResolveActionPayloadAction;
 use Lalalili\SurveyCore\Models\SurveyResponse;
+use Lalalili\SurveyCore\Models\SurveyTriggerRule;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\SurveyTriggerRuleResource;
 
 class EditSurveyTriggerRule extends EditRecord
@@ -27,14 +28,20 @@ class EditSurveyTriggerRule extends EditRecord
                 ->schema([
                     Select::make('response_id')
                         ->label('選擇填答記錄')
-                        ->options(fn (): array => SurveyResponse::where('survey_id', $this->record->survey_id)
-                            ->latest()
-                            ->limit(20)
-                            ->get()
-                            ->mapWithKeys(fn (SurveyResponse $r): array => [
-                                $r->id => "#{$r->id} — " . ($r->submitted_at ? $r->submitted_at->format('Y/m/d H:i') : '未知時間'),
-                            ])
-                            ->all())
+                        ->options(function (): array {
+                            if (! $this->record instanceof SurveyTriggerRule) {
+                                return [];
+                            }
+
+                            return SurveyResponse::where('survey_id', $this->record->survey_id)
+                                ->latest()
+                                ->limit(20)
+                                ->get()
+                                ->mapWithKeys(fn (SurveyResponse $r): array => [
+                                    $r->id => "#{$r->id} — ".($r->submitted_at ? $r->submitted_at->format('Y/m/d H:i') : '未知時間'),
+                                ])
+                                ->all();
+                        })
                         ->placeholder('（選擇一筆填答以試算）')
                         ->live()
                         ->afterStateUpdated(function (?int $state, Set $set): void {
@@ -66,9 +73,13 @@ class EditSurveyTriggerRule extends EditRecord
             return '（找不到填答記錄）';
         }
 
+        if (! $this->record instanceof SurveyTriggerRule) {
+            return '（找不到觸發規則）';
+        }
+
         $actions = $this->record->actions_json ?? [];
         $firstAction = collect($actions)->firstWhere('type', 'http_post');
-        if (! $firstAction) {
+        if (! is_array($firstAction)) {
             return '（規則未設定 http_post 動作）';
         }
 
@@ -78,7 +89,6 @@ class EditSurveyTriggerRule extends EditRecord
         }
 
         $answerMap = $response->answers
-            ->filter(fn ($a) => $a->field !== null)
             ->mapWithKeys(fn ($a): array => [$a->field->field_key => $a->getValue()])
             ->all();
 

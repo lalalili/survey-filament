@@ -93,7 +93,7 @@ class ImportRecipients extends Page implements HasForms
             parsed: $parsed,
             name: filled($data['audience_list_id'] ?? null) ? null : (string) $data['name'],
             existingId: filled($data['audience_list_id'] ?? null) ? (int) $data['audience_list_id'] : null,
-            createdBy: Auth::id(),
+            createdBy: Auth::id() === null ? null : (int) Auth::id(),
         );
 
         Storage::disk('local')->delete($storedPath);

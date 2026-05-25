@@ -15,7 +15,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Lalalili\SurveyCore\Enums\SurveyFieldType;
-use Lalalili\SurveyCore\Models\AudienceList;
+use Lalalili\AudienceCore\Models\AudienceList;
 use Lalalili\SurveyCore\Models\SurveyField;
 
 class FieldsRelationManager extends RelationManager

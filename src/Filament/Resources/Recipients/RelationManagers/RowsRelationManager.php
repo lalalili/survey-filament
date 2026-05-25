@@ -41,6 +41,7 @@ class RowsRelationManager extends RelationManager
                             ->modalSubmitAction(false)
                             ->modalCancelActionLabel('關閉')
                             ->modalContent(fn ($record): \Illuminate\Contracts\View\View => view(
+                                /** @phpstan-ignore argument.type */
                                 'survey-filament::modals.row-data',
                                 [
                                     'data' => self::labelRowData($record->data_json, $this->currentColumnLabelMap()),
@@ -74,7 +75,7 @@ class RowsRelationManager extends RelationManager
         $preview = [];
 
         foreach ($priorityKeys as $key) {
-            if (isset($data[$key]) && $data[$key] !== null && $data[$key] !== '') {
+            if (isset($data[$key]) && $data[$key] !== '') {
                 $preview[$key] = $data[$key];
                 if (count($preview) >= 4) {
                     break;
@@ -84,7 +85,7 @@ class RowsRelationManager extends RelationManager
 
         if ($preview === []) {
             foreach ($data as $key => $value) {
-                if ($value !== null && $value !== '') {
+                if ($value !== '') {
                     $preview[$key] = $value;
                     if (count($preview) >= 4) {
                         break;

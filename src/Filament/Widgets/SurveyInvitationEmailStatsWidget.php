@@ -31,8 +31,8 @@ class SurveyInvitationEmailStatsWidget extends BaseWidget
             ->selectRaw('COUNT(*) as sent, COUNT(CASE WHEN opened_at IS NOT NULL THEN 1 END) as opened')
             ->first()?->toArray() ?? ['sent' => 0, 'opened' => 0];
 
-        $sent = (int) ($counts['sent'] ?? 0);
-        $opened = (int) ($counts['opened'] ?? 0);
+        $sent = (int) $counts['sent'];
+        $opened = (int) $counts['opened'];
         $rate = $sent > 0 ? round($opened / $sent * 100, 1) : 0.0;
 
         return [

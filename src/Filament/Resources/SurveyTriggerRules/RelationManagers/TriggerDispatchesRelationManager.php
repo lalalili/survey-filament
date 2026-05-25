@@ -71,7 +71,11 @@ class TriggerDispatchesRelationManager extends RelationManager
                         ->modalDescription('將選取的派送記錄全部重設為等待中，並重新排入佇列。')
                         ->action(function (Collection $records): void {
                             $retryAction = app(RetryTriggerDispatchAction::class);
-                            $records->each(fn (SurveyTriggerDispatch $dispatch) => $retryAction->execute($dispatch));
+                            $records->each(function ($dispatch) use ($retryAction): void {
+                                if ($dispatch instanceof SurveyTriggerDispatch) {
+                                    $retryAction->execute($dispatch);
+                                }
+                            });
                             Notification::make()->title("已重新排入佇列（{$records->count()} 筆）")->success()->send();
                         })
                         ->deselectRecordsAfterCompletion(),

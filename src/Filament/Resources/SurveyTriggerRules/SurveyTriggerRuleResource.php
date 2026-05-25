@@ -2,7 +2,6 @@
 
 namespace Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules;
 
-use App\Filament\Forms\Components\RuleTreeField;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -22,6 +21,7 @@ use Filament\Tables\Table;
 use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyCore\Models\SurveyField;
 use Lalalili\SurveyCore\Models\SurveyTriggerRule;
+use Lalalili\SurveyFilament\Filament\Forms\Components\RuleTreeField;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\Pages\CreateSurveyTriggerRule;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\Pages\EditSurveyTriggerRule;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\Pages\ListSurveyTriggerRules;
@@ -190,6 +190,9 @@ class SurveyTriggerRuleResource extends Resource
             ->defaultSort('created_at', 'desc');
     }
 
+    /**
+     * @return array<int, class-string>
+     */
     public static function getRelationManagers(): array
     {
         return [
