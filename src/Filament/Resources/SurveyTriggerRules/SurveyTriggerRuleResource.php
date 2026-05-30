@@ -16,6 +16,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Lalalili\SurveyCore\Actions\EvaluateAnswerRuleTreeAction;
 use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyCore\Models\SurveyField;
 use Lalalili\SurveyCore\Models\SurveyTriggerActionPreset;
@@ -84,7 +85,15 @@ class SurveyTriggerRuleResource extends Resource
                             return [];
                         }
 
-                        return SurveyField::where('survey_id', $surveyId)
+                        // meta pseudo-field（非問卷答案）：回填距邀請天數，供「X 天內回填」條件使用。
+                        $meta = [[
+                            'key'     => EvaluateAnswerRuleTreeAction::META_DAYS_SINCE_INVITATION,
+                            'label'   => '回填距邀請天數',
+                            'type'    => 'number',
+                            'options' => [],
+                        ]];
+
+                        $surveyFields = SurveyField::where('survey_id', $surveyId)
                             ->orderBy('sort_order')
                             ->get()
                             ->map(fn (SurveyField $field): array => [
@@ -96,6 +105,8 @@ class SurveyTriggerRuleResource extends Resource
                             ])
                             ->values()
                             ->all();
+
+                        return array_merge($meta, $surveyFields);
                     })
                     ->default(['op' => 'AND', 'children' => []]),
             ]),
