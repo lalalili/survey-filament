@@ -90,7 +90,8 @@ class SurveyTriggerRuleResource extends Resource
                             ->map(fn (SurveyField $field): array => [
                                 'key'     => $field->field_key,
                                 'label'   => $field->label ?? $field->field_key,
-                                'type'    => 'string',
+                                // 數值題（NPS／評分）給 number 型別，規則樹才會提供 > >= < <= 等運算子。
+                                'type'    => in_array($field->type?->value, ['nps', 'rating', 'number', 'integer'], true) ? 'number' : 'string',
                                 'options' => [],
                             ])
                             ->values()
