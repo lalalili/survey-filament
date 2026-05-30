@@ -5,6 +5,7 @@ namespace Lalalili\SurveyFilament\Filament\Resources\Responses;
 use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -39,6 +40,38 @@ class ResponseResource extends Resource
     protected static ?string $modelLabel = '回應';
 
     protected static ?string $pluralModelLabel = '回應列表';
+
+    public static function getNavigationLabel(): string
+    {
+        return static::panelLabel('response') ?? parent::getNavigationLabel();
+    }
+
+    public static function getModelLabel(): string
+    {
+        return static::panelLabel('response') ?? parent::getModelLabel();
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return static::panelLabel('response_plural') ?? parent::getPluralModelLabel();
+    }
+
+    /**
+     * 依目前所在 panel 取得可覆寫的 label（config: survey-filament.panel_labels.{panelId}.{key}）。
+     * 未設定時回傳 null，由呼叫端 fallback 至預設 label。
+     */
+    protected static function panelLabel(string $key): ?string
+    {
+        $panelId = Filament::getCurrentPanel()?->getId();
+
+        if ($panelId === null) {
+            return null;
+        }
+
+        $value = config("survey-filament.panel_labels.{$panelId}.{$key}");
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
 
     public static function getNavigationGroup(): ?string
     {

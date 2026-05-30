@@ -157,7 +157,7 @@ class SurveyResource extends Resource
                 ->options(fn ($get): array => self::audienceColumnOptions($get('settings_json.personalization.audience_list_id')))
                 ->searchable()
                 ->nullable()
-                ->helperText('同步為收件人 Email，EDM 活動選擇此問卷時可沿用此欄位作為收件地址來源。'),
+                ->helperText('同步為收件人 Email，Email 活動選擇此問卷時可沿用此欄位作為收件地址來源。'),
 
             Select::make('settings_json.personalization.external_id_column')
                 ->label('外部 ID 欄位')

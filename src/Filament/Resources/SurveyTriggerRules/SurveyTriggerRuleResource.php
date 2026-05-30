@@ -124,8 +124,14 @@ class SurveyTriggerRuleResource extends Resource
 
                         Textarea::make('payload_template')
                             ->label('Payload 模板（JSON）')
-                            ->helperText('可使用 {{response.id}}、{{answer.field_key}}、{{env.ENV_VAR}} 等 token')
+                            ->helperText('可使用 {{response.id}}、{{answer.field_key}}、{{recipient.payload.mobile}}、{{env.ENV_VAR}} 等 token')
                             ->rows(6)
+                            ->columnSpanFull(),
+
+                        Toggle::make('require_valid_token')
+                            ->label('僅限有效邀請連結觸發')
+                            ->helperText('開啟後，只有「透過邀請連結（token）且未逾期」的填答才會觸發此動作。發點券請開啟，避免對匿名公開填答發券。')
+                            ->default(false)
                             ->columnSpanFull(),
 
                         Grid::make(3)->schema([
