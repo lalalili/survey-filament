@@ -7,6 +7,7 @@ use Filament\Panel;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\RecipientResource;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
+use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerActionPresets\SurveyTriggerActionPresetResource;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerAllowedHosts\SurveyTriggerAllowedHostResource;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\SurveyTriggerRuleResource;
 use Lalalili\SurveyFilament\Filament\Widgets\PublishedSurveysWidget;
@@ -33,6 +34,7 @@ class SurveyFilamentPlugin implements Plugin
             RecipientResource::class,
             ResponseResource::class,
             SurveyTriggerRuleResource::class,
+            SurveyTriggerActionPresetResource::class,
             SurveyTriggerAllowedHostResource::class,
         ]);
 

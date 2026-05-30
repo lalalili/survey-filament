@@ -9,6 +9,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Lalalili\SurveyCore\Actions\Triggers\ExpandPresetsAction;
 use Lalalili\SurveyCore\Actions\Triggers\ResolveActionPayloadAction;
 use Lalalili\SurveyCore\Models\SurveyResponse;
 use Lalalili\SurveyCore\Models\SurveyTriggerRule;
@@ -17,6 +18,29 @@ use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\SurveyTriggerR
 class EditSurveyTriggerRule extends EditRecord
 {
     protected static string $resource = SurveyTriggerRuleResource::class;
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['preset_ids'] = SurveyTriggerRuleResource::actionsToPresetIds($data['actions_json'] ?? []);
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $data['actions_json'] = SurveyTriggerRuleResource::presetIdsToActions($data['preset_ids'] ?? []);
+        unset($data['preset_ids']);
+
+        return $data;
+    }
 
     protected function getHeaderActions(): array
     {
@@ -77,7 +101,8 @@ class EditSurveyTriggerRule extends EditRecord
             return '（找不到觸發規則）';
         }
 
-        $actions = $this->record->actions_json ?? [];
+        // 先把 preset 參照展開為具體 http_post 動作，再取第一個試算 payload。
+        $actions = app(ExpandPresetsAction::class)->execute($this->record->actions_json ?? []);
         $firstAction = collect($actions)->firstWhere('type', 'http_post');
         if (! is_array($firstAction)) {
             return '（規則未設定 http_post 動作）';

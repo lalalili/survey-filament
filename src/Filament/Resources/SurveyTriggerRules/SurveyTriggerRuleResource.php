@@ -5,9 +5,7 @@ namespace Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
@@ -20,6 +18,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyCore\Models\SurveyField;
+use Lalalili\SurveyCore\Models\SurveyTriggerActionPreset;
 use Lalalili\SurveyCore\Models\SurveyTriggerRule;
 use Lalalili\SurveyFilament\Filament\Forms\Components\RuleTreeField;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\Pages\CreateSurveyTriggerRule;
@@ -101,59 +100,19 @@ class SurveyTriggerRuleResource extends Resource
             ]),
 
             Section::make('觸發動作')->schema([
-                Repeater::make('actions_json')
-                    ->label('動作列表')
-                    ->columnSpanFull()
-                    ->schema([
-                        Select::make('type')
-                            ->label('動作類型')
-                            ->options(['http_post' => 'HTTP POST'])
-                            ->required()
-                            ->default('http_post'),
-
-                        TextInput::make('name')
-                            ->label('動作名稱')
-                            ->required()
-                            ->maxLength(255),
-
-                        TextInput::make('endpoint')
-                            ->label('Endpoint URL')
-                            ->url()
-                            ->required()
-                            ->maxLength(500),
-
-                        Textarea::make('payload_template')
-                            ->label('Payload 模板（JSON）')
-                            ->helperText('可使用 {{response.id}}、{{answer.field_key}}、{{recipient.payload.mobile}}、{{env.ENV_VAR}} 等 token')
-                            ->rows(6)
-                            ->columnSpanFull(),
-
-                        Toggle::make('require_valid_token')
-                            ->label('僅限有效邀請連結觸發')
-                            ->helperText('開啟後，只有「透過邀請連結（token）且未逾期」的填答才會觸發此動作。發點券請開啟，避免對匿名公開填答發券。')
-                            ->default(false)
-                            ->columnSpanFull(),
-
-                        Grid::make(3)->schema([
-                            TextInput::make('timeout')
-                                ->label('Timeout（秒）')
-                                ->numeric()
-                                ->default(10),
-
-                            TextInput::make('retry.times')
-                                ->label('重試次數')
-                                ->numeric()
-                                ->default(3),
-
-                            TextInput::make('retry.sleep_ms')
-                                ->label('重試間隔（ms）')
-                                ->numeric()
-                                ->default(200),
-                        ]),
-                    ])
-                    ->addActionLabel('新增動作')
-                    ->collapsible()
-                    ->itemLabel(fn (array $state): ?string => $state['name'] ?? null),
+                // 虛擬欄位：只存 preset id 陣列；實際 actions_json 由 Create/Edit 頁的
+                // mutateFormData hook 在 preset_ids ↔ [{type:preset,preset_id}] 間轉換。
+                Select::make('preset_ids')
+                    ->label('觸發動作')
+                    ->multiple()
+                    ->required()
+                    ->options(fn (): array => SurveyTriggerActionPreset::query()
+                        ->where('is_active', true)
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all())
+                    ->helperText('選擇命中後要執行的動作。動作內容（DMS endpoint／payload 等）由系統管理員於「DMS 動作設定」維護。')
+                    ->columnSpanFull(),
             ]),
         ]);
     }
@@ -213,5 +172,37 @@ class SurveyTriggerRuleResource extends Resource
             'create' => CreateSurveyTriggerRule::route('/create'),
             'edit'   => EditSurveyTriggerRule::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * preset id 陣列 → actions_json 參照格式。
+     *
+     * @param  array<int, int|string>  $presetIds
+     * @return array<int, array{type: string, preset_id: int}>
+     */
+    public static function presetIdsToActions(array $presetIds): array
+    {
+        return collect($presetIds)
+            ->filter()
+            ->map(fn ($id): array => ['type' => 'preset', 'preset_id' => (int) $id])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * actions_json 參照格式 → preset id 陣列（供表單下拉預選）。
+     *
+     * @param  array<int, mixed>  $actions
+     * @return array<int, int>
+     */
+    public static function actionsToPresetIds(array $actions): array
+    {
+        return collect($actions)
+            ->filter(fn ($a): bool => is_array($a) && ($a['type'] ?? '') === 'preset')
+            ->pluck('preset_id')
+            ->filter()
+            ->map(fn ($id): int => (int) $id)
+            ->values()
+            ->all();
     }
 }

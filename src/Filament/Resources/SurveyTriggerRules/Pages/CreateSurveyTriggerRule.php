@@ -13,4 +13,16 @@ class CreateSurveyTriggerRule extends CreateRecord
     {
         return $this->getResource()::getUrl('edit', ['record' => $this->getRecord()]);
     }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['actions_json'] = SurveyTriggerRuleResource::presetIdsToActions($data['preset_ids'] ?? []);
+        unset($data['preset_ids']);
+
+        return $data;
+    }
 }
