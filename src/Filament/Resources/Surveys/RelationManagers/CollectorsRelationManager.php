@@ -15,6 +15,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Str;
 use Lalalili\SurveyCore\Models\SurveyCollector;
+use Lalalili\SurveyFilament\Support\PanelLabel;
 
 class CollectorsRelationManager extends RelationManager
 {
@@ -109,7 +110,7 @@ class CollectorsRelationManager extends RelationManager
 
                 TextColumn::make('responses_count')
                     ->counts('responses')
-                    ->label('回應數'),
+                    ->label(PanelLabel::get('response_count') ?? '回應數'),
 
                 TextColumn::make('created_at')
                     ->label('建立時間')

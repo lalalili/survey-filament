@@ -29,6 +29,7 @@ use Lalalili\SurveyCore\Enums\SurveyUniquenessMode;
 use Lalalili\AudienceCore\Models\AudienceList;
 use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
+use Lalalili\SurveyFilament\Support\PanelLabel;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\CreateSurvey;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\EditSurvey;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\EditSurveyBuilder;
@@ -211,7 +212,7 @@ class SurveyResource extends Resource
 
                 TextColumn::make('responses_count')
                     ->counts('responses')
-                    ->label('回應數')
+                    ->label(PanelLabel::get('response_count') ?? '回應數')
                     // Filament v5 將 table filters 的 query string 別名為 'filters'（#[Url(as: 'filters')]）；
                     // 舊的 'tableFilters' key 不會被還原，會導致連結帶入後過濾失效（顯示全部回應）。
                     ->url(fn (Survey $record) => ResponseResource::getUrl('index').'?'.http_build_query(['filters' => ['survey_id' => ['value' => $record->getKey()]]]))
@@ -290,13 +291,13 @@ class SurveyResource extends Resource
                         ->action(fn (Survey $record) => app(DuplicateSurveyAction::class)->execute($record)),
 
                     Action::make('clear_responses')
-                        ->label('清除全部回應')
+                        ->label(PanelLabel::get('clear_responses') ?? '清除全部回應')
                         ->icon('heroicon-o-trash')
                         ->color('danger')
                         ->visible(fn (Survey $record) => static::canDelete($record))
                         ->requiresConfirmation()
-                        ->modalHeading('清除全部回應')
-                        ->modalDescription(fn (Survey $record): string => "確定要刪除「{$record->title}」的所有回應嗎？此操作無法復原。")
+                        ->modalHeading(PanelLabel::get('clear_responses') ?? '清除全部回應')
+                        ->modalDescription(fn (Survey $record): string => '確定要刪除「'.$record->title.'」的所有'.(PanelLabel::get('responses_word') ?? '回應').'嗎？此操作無法復原。')
                         ->modalSubmitActionLabel('確認清除')
                         ->action(fn (Survey $record) => $record->responses()->delete()),
 

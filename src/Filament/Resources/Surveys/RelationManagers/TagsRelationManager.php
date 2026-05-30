@@ -12,6 +12,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Lalalili\SurveyFilament\Support\PanelLabel;
 
 class TagsRelationManager extends RelationManager
 {
@@ -39,7 +40,7 @@ class TagsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('name')->label('名稱')->searchable(),
                 ColorColumn::make('color')->label('顏色'),
-                TextColumn::make('responses_count')->counts('responses')->label('回應數'),
+                TextColumn::make('responses_count')->counts('responses')->label(PanelLabel::get('response_count') ?? '回應數'),
             ])
             ->headerActions([
                 CreateAction::make()->label('新增標籤'),

@@ -6,13 +6,20 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use Lalalili\SurveyCore\Enums\SurveyResponseCompletionStatus;
+use Lalalili\SurveyFilament\Support\PanelLabel;
 
 class ResponsesRelationManager extends RelationManager
 {
     protected static string $relationship = 'responses';
 
     protected static ?string $title = '回應';
+
+    public static function getTitle(Model $ownerRecord, string $pageClass): string
+    {
+        return PanelLabel::get('response') ?? static::$title;
+    }
 
     public function form(Schema $schema): Schema
     {
