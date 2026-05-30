@@ -212,7 +212,9 @@ class SurveyResource extends Resource
                 TextColumn::make('responses_count')
                     ->counts('responses')
                     ->label('回應數')
-                    ->url(fn (Survey $record) => ResponseResource::getUrl('index').'?'.http_build_query(['tableFilters' => ['survey_id' => ['value' => $record->getKey()]]]))
+                    // Filament v5 將 table filters 的 query string 別名為 'filters'（#[Url(as: 'filters')]）；
+                    // 舊的 'tableFilters' key 不會被還原，會導致連結帶入後過濾失效（顯示全部回應）。
+                    ->url(fn (Survey $record) => ResponseResource::getUrl('index').'?'.http_build_query(['filters' => ['survey_id' => ['value' => $record->getKey()]]]))
                     ->color('primary'),
 
                 TextColumn::make('starts_at')
