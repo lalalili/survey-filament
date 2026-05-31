@@ -5,6 +5,7 @@ namespace Lalalili\SurveyFilament\Filament\Resources\Responses;
 use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Facades\Filament;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -169,34 +170,36 @@ class ResponseResource extends Resource
                     }),
             ])
             ->actions([
-                ViewAction::make(),
+                ActionGroup::make([
+                    ViewAction::make(),
 
-                Action::make('accept')
-                    ->label('標記為接受')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->visible(fn (SurveyResponse $record) => static::canEdit($record))
-                    ->action(fn (SurveyResponse $record) => $record->update(['quality_status' => SurveyResponseQualityStatus::Accepted])),
+                    Action::make('accept')
+                        ->label('標記為接受')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->visible(fn (SurveyResponse $record) => static::canEdit($record))
+                        ->action(fn (SurveyResponse $record) => $record->update(['quality_status' => SurveyResponseQualityStatus::Accepted])),
 
-                Action::make('quarantine')
-                    ->label('隔離')
-                    ->icon('heroicon-o-no-symbol')
-                    ->color('danger')
-                    ->visible(fn (SurveyResponse $record) => static::canEdit($record))
-                    ->action(fn (SurveyResponse $record) => $record->update(['quality_status' => SurveyResponseQualityStatus::Quarantined])),
+                    Action::make('quarantine')
+                        ->label('隔離')
+                        ->icon('heroicon-o-no-symbol')
+                        ->color('danger')
+                        ->visible(fn (SurveyResponse $record) => static::canEdit($record))
+                        ->action(fn (SurveyResponse $record) => $record->update(['quality_status' => SurveyResponseQualityStatus::Quarantined])),
 
-                Action::make('export_survey_csv')
-                    ->label('匯出此問卷 CSV')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->visible(fn (SurveyResponse $record) => static::canView($record))
-                    ->action(fn (SurveyResponse $record) => app(ExportSurveyResponsesAction::class)->execute($record->survey, 'csv')),
-                Action::make('export_survey_xlsx')
-                    ->label('匯出此問卷 Excel')
-                    ->icon('heroicon-o-table-cells')
-                    ->color('success')
-                    ->visible(fn (SurveyResponse $record) => static::canView($record))
-                    ->action(fn (SurveyResponse $record) => app(ExportSurveyResponsesAction::class)->execute($record->survey, 'xlsx')),
-                DeleteAction::make()->label('刪除'),
+                    Action::make('export_survey_csv')
+                        ->label('匯出此問卷 CSV')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->visible(fn (SurveyResponse $record) => static::canView($record))
+                        ->action(fn (SurveyResponse $record) => app(ExportSurveyResponsesAction::class)->execute($record->survey, 'csv')),
+                    Action::make('export_survey_xlsx')
+                        ->label('匯出此問卷 Excel')
+                        ->icon('heroicon-o-table-cells')
+                        ->color('success')
+                        ->visible(fn (SurveyResponse $record) => static::canView($record))
+                        ->action(fn (SurveyResponse $record) => app(ExportSurveyResponsesAction::class)->execute($record->survey, 'xlsx')),
+                    DeleteAction::make()->label('刪除'),
+                ]),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
