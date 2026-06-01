@@ -18,7 +18,7 @@ class ResponsesRelationManager extends RelationManager
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
-        return PanelLabel::get('response') ?? static::$title;
+        return PanelLabel::get('response') ?? static::$title ?? '回應';
     }
 
     public function form(Schema $schema): Schema
