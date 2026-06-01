@@ -16,6 +16,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Lalalili\SurveyCore\Actions\ExportSurveyResponsesAction;
@@ -143,6 +144,16 @@ class ResponseResource extends Resource
                     ->query(fn ($query, array $data) => filled($data['value'] ?? null)
                         ? $query->whereHas('tags', fn ($tagQuery) => $tagQuery->whereKey($data['value']))
                         : $query),
+                TernaryFilter::make('is_test')
+                    ->label('測試資料')
+                    ->placeholder('僅正式資料')
+                    ->trueLabel('僅測試資料')
+                    ->falseLabel('僅正式資料')
+                    ->queries(
+                        true: fn ($query) => $query->where('is_test', true),
+                        false: fn ($query) => $query->where('is_test', false),
+                        blank: fn ($query) => $query->where('is_test', false),
+                    ),
             ])
             ->headerActions([
                 Action::make('export_csv')
