@@ -232,7 +232,7 @@ class SurveyResource extends Resource
 
                 TextColumn::make('created_at')
                     ->label('建立時間')
-                    ->dateTime()
+                    ->dateTime('Y/m/d H:i')
                     ->sortable()
                     ->toggleable(),
             ])

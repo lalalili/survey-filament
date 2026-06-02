@@ -119,7 +119,7 @@ class ResponseResource extends Resource
                     ->state(fn (SurveyResponse $record): string => $record->tags->pluck('name')->implode('、'))
                     ->badge()
                     ->toggleable(),
-                TextColumn::make('submitted_at')->label('提交時間')->dateTime()->sortable(),
+                TextColumn::make('submitted_at')->label('提交時間')->dateTime('Y/m/d H:i')->sortable(),
                 TextColumn::make('ip')->label('IP')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
