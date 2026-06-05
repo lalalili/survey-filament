@@ -24,6 +24,11 @@ class SurveyTriggerAllowedHostResource extends Resource
         return 'heroicon-o-shield-check';
     }
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     protected static ?string $navigationLabel = '觸發白名單';
 
     protected static ?string $modelLabel = '允許 Host';

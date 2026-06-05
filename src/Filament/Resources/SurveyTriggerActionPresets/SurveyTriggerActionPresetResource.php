@@ -34,6 +34,11 @@ class SurveyTriggerActionPresetResource extends Resource
         return 'heroicon-o-cog-6-tooth';
     }
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     protected static ?string $navigationLabel = 'DMS 動作設定';
 
     protected static ?string $modelLabel = 'DMS 動作';

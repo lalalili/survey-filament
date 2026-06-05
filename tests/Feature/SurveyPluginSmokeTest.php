@@ -3,6 +3,9 @@
 use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\RecipientResource;
+use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerActionPresets\SurveyTriggerActionPresetResource;
+use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerAllowedHosts\SurveyTriggerAllowedHostResource;
+use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\SurveyTriggerRuleResource;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers\CollectorsRelationManager;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\SurveyAnalytics;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
@@ -43,6 +46,12 @@ it('can hide recipient navigation through config', function () {
     config()->set('survey-filament.recipient_navigation_enabled', false);
 
     expect(RecipientResource::shouldRegisterNavigation())->toBeFalse();
+});
+
+it('hides survey trigger resources from navigation', function () {
+    expect(SurveyTriggerRuleResource::shouldRegisterNavigation())->toBeFalse()
+        ->and(SurveyTriggerActionPresetResource::shouldRegisterNavigation())->toBeFalse()
+        ->and(SurveyTriggerAllowedHostResource::shouldRegisterNavigation())->toBeFalse();
 });
 
 it('registers the survey analytics resource page', function () {

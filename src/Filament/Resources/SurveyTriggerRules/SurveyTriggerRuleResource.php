@@ -36,6 +36,11 @@ class SurveyTriggerRuleResource extends Resource
         return 'heroicon-o-bolt';
     }
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     protected static ?string $navigationLabel = '問卷觸發規則';
 
     protected static ?string $modelLabel = '觸發規則';
