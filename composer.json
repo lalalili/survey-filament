@@ -5,8 +5,6 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "lalalili/audience-core": "@dev",
-        "lalalili/email-campaign": "@dev",
         "lalalili/survey-core": "@dev",
         "filament/filament": "^4.0|^5.0",
         "filament/forms": "^4.0|^5.0",

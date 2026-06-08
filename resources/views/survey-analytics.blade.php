@@ -1,63 +1,48 @@
 <x-filament-panels::page>
     @php
         $totals = $analytics['totals'] ?? [];
-        $collectors = $analytics['collectors'] ?? [];
         $questions = $analytics['questions'] ?? [];
         $daily = $analytics['daily'] ?? [];
-        $totalResponses = $totals['responses'] ?? 0;
     @endphp
 
-    {{-- 總覽數字 --}}
-    <div class="grid gap-4 md:grid-cols-4">
-        @foreach([
-            ['label' => '總回應', 'value' => $totals['responses'] ?? 0, 'icon' => '📥'],
-            ['label' => '開始填寫', 'value' => $totals['started'] ?? 0, 'icon' => '✏️'],
-            ['label' => '已提交', 'value' => $totals['submitted'] ?? 0, 'icon' => '✅'],
-            ['label' => '完成率', 'value' => ($totals['completion_rate'] ?? 0) . '%', 'icon' => '📊'],
-        ] as $stat)
-            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                <div class="flex items-center gap-2">
-                    <span class="text-lg">{{ $stat['icon'] }}</span>
-                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ $stat['label'] }}</span>
+    {{-- 左：總覽數字（已提交／完成率）｜右：每日趨勢，各佔 50% --}}
+    <div class="grid items-start gap-6 lg:grid-cols-2">
+        {{-- 總覽數字 --}}
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+            @foreach([
+                ['label' => '已提交', 'value' => $totals['submitted'] ?? 0, 'icon' => '✅'],
+                ['label' => '完成率', 'value' => ($totals['completion_rate'] ?? 0) . '%', 'icon' => '📊'],
+            ] as $stat)
+                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">{{ $stat['icon'] }}</span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">{{ $stat['label'] }}</span>
+                    </div>
+                    <div class="mt-2 text-3xl font-bold tabular-nums text-gray-900 dark:text-white">{{ $stat['value'] }}</div>
                 </div>
-                <div class="mt-2 text-3xl font-bold tabular-nums text-gray-900 dark:text-white">{{ $stat['value'] }}</div>
-            </div>
-        @endforeach
-    </div>
+            @endforeach
+        </div>
 
-    {{-- Collector 成效 + 每日趨勢 --}}
-    <div class="grid gap-6 lg:grid-cols-2">
-        <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Collector 成效</h2>
-            <div class="mt-4 overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="border-b border-gray-200 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                        <tr>
-                            <th class="pb-2 pr-4 font-medium">名稱</th>
-                            <th class="pb-2 pr-4 font-medium">類型</th>
-                            <th class="pb-2 pr-3 text-right font-medium">開始</th>
-                            <th class="pb-2 pr-3 text-right font-medium">提交</th>
-                            <th class="pb-2 text-right font-medium">完成率</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                        @forelse($collectors as $collector)
-                            <tr>
-                                <td class="py-2 pr-4 font-medium text-gray-900 dark:text-white">{{ $collector['name'] }}</td>
-                                <td class="py-2 pr-4 text-gray-500">{{ $collector['type'] }}</td>
-                                <td class="py-2 pr-3 text-right tabular-nums">{{ $collector['started'] }}</td>
-                                <td class="py-2 pr-3 text-right tabular-nums">{{ $collector['submitted'] }}</td>
-                                <td class="py-2 text-right tabular-nums font-semibold">{{ $collector['completion_rate'] }}%</td>
-                            </tr>
-                        @empty
-                            <tr><td class="py-8 text-center text-sm text-gray-400" colspan="5">尚未建立 Collector。</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        {{-- 每日趨勢 --}}
+        <section
+            x-data="{
+                page: 1,
+                perPage: 10,
+                rows: @js(array_values(array_reverse($daily))),
+                get totalPages() { return Math.max(1, Math.ceil(this.rows.length / this.perPage)); },
+                get paged() {
+                    const start = (this.page - 1) * this.perPage;
+                    return this.rows.slice(start, start + this.perPage);
+                },
+                get rangeLabel() {
+                    if (this.rows.length === 0) { return '0'; }
+                    const start = (this.page - 1) * this.perPage + 1;
+                    const end = Math.min(this.page * this.perPage, this.rows.length);
+                    return start + '–' + end;
+                },
+            }"
+            class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+        >
             <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">每日趨勢</h2>
             <div class="mt-4 overflow-x-auto">
                 <table class="w-full text-left text-sm">
@@ -69,17 +54,38 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                        @forelse(array_reverse($daily) as $day)
+                        <template x-for="day in paged" :key="day.date">
                             <tr>
-                                <td class="py-2 pr-4 font-medium text-gray-900 dark:text-white">{{ $day['date'] }}</td>
-                                <td class="py-2 pr-4 text-right tabular-nums">{{ $day['started'] }}</td>
-                                <td class="py-2 text-right tabular-nums font-semibold">{{ $day['submitted'] }}</td>
+                                <td class="py-2 pr-4 font-medium text-gray-900 dark:text-white" x-text="day.date"></td>
+                                <td class="py-2 pr-4 text-right tabular-nums" x-text="day.started"></td>
+                                <td class="py-2 text-right tabular-nums font-semibold" x-text="day.submitted"></td>
                             </tr>
-                        @empty
-                            <tr><td class="py-8 text-center text-sm text-gray-400" colspan="3">尚無趨勢資料。</td></tr>
-                        @endforelse
+                        </template>
+                        <tr x-show="rows.length === 0">
+                            <td class="py-8 text-center text-sm text-gray-400" colspan="3">尚無趨勢資料。</td>
+                        </tr>
                     </tbody>
                 </table>
+            </div>
+
+            {{-- 分頁控制：每頁 10 筆，僅在超過 1 頁時顯示 --}}
+            <div x-show="totalPages > 1" class="mt-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                <span>顯示 <span class="tabular-nums" x-text="rangeLabel"></span> / 共 <span class="tabular-nums" x-text="rows.length"></span> 天</span>
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        @click="page = Math.max(1, page - 1)"
+                        :disabled="page === 1"
+                        class="rounded-md border border-gray-200 px-2.5 py-1 font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-800"
+                    >上一頁</button>
+                    <span class="tabular-nums">第 <span x-text="page"></span> / <span x-text="totalPages"></span> 頁</span>
+                    <button
+                        type="button"
+                        @click="page = Math.min(totalPages, page + 1)"
+                        :disabled="page === totalPages"
+                        class="rounded-md border border-gray-200 px-2.5 py-1 font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-800"
+                    >下一頁</button>
+                </div>
             </div>
         </section>
     </div>

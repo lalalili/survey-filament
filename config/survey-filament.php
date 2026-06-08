@@ -68,4 +68,18 @@ return [
     */
     'query_scope' => null,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Response Query Scope
+    |--------------------------------------------------------------------------
+    | An optional closure that receives the SurveyResponse Eloquent Builder and
+    | the current authenticated user, returning a scoped Builder. Unlike
+    | `query_scope` (which is applied through the `survey` relationship), this
+    | runs directly on the response query, so it can filter by recipient
+    | payload (e.g. dealer / location) as well as the related survey.
+    |
+    | Set to null to disable.
+    */
+    'response_query_scope' => null,
+
 ];

@@ -48,8 +48,9 @@ class EditSurveyBuilder extends Page
         $survey = $this->getRecord();
 
         return [
-            'survey'           => $survey,
-            'builderEndpoints' => [
+            'survey'              => $survey,
+            'turnstileConfigured' => filled(config('survey-core.turnstile.secret_key')),
+            'builderEndpoints'    => [
                 'show'         => route('survey-filament.builder.show', $survey),
                 'update'       => route('survey-filament.builder.update', $survey),
                 'publish'      => route('survey-filament.builder.publish', $survey),

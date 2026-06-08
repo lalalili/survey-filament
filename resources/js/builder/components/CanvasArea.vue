@@ -567,6 +567,11 @@ function deletePage(pageId: string) {
   store.removePage(pageId);
 }
 
+function selectPage(pageId: string) {
+  store.selectedPageId = pageId;
+  store.selectedElementId = null;
+}
+
 // ── Drag-and-drop ───────────────────────────────────────────────────────────
 function onDragStart(e: DragEvent, qId: string) {
   dragQId.value = qId;
@@ -696,12 +701,12 @@ function textInputType(element: SurveyElement) {
               v-if="store.welcomePage"
               class="sb-page-tab welcome"
               :class="{ active: store.selectedPageId === store.welcomePage.id }"
-              @click="store.selectedPageId = store.welcomePage.id; store.selectedElementId = null"
+              @click="selectPage(store.welcomePage.id)"
             >
               <span class="sb-page-tab-num">歡迎</span>
             </button>
 
-            <button
+            <div
               v-for="(page, i) in store.questionPages"
               :key="page.id"
               class="sb-page-tab"
@@ -710,7 +715,11 @@ function textInputType(element: SurveyElement) {
                 'drop-target': isTabTarget(page.id),
                 'has-error': errorPageIds.has(page.id),
               }"
-              @click="store.selectedPageId = page.id; store.selectedElementId = null"
+              role="button"
+              tabindex="0"
+              @click="selectPage(page.id)"
+              @keydown.enter.prevent="selectPage(page.id)"
+              @keydown.space.prevent="selectPage(page.id)"
               @dragover="onDragOverTab($event, page.id)"
               @dragleave="onDragLeave"
               @drop="onDropTab($event, page.id)"
@@ -725,13 +734,13 @@ function textInputType(element: SurveyElement) {
                 @click.stop="deletePage(page.id)"
                 title="刪除此頁"
               >×</button>
-            </button>
+            </div>
 
             <button
               v-if="store.thankYouPage"
               class="sb-page-tab thanks"
               :class="{ active: store.selectedPageId === store.thankYouPage.id }"
-              @click="store.selectedPageId = store.thankYouPage.id; store.selectedElementId = null"
+              @click="selectPage(store.thankYouPage.id)"
             >
               <span class="sb-page-tab-num">感謝</span>
             </button>

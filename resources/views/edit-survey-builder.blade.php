@@ -16,6 +16,7 @@
         data-endpoint-publish="{{ $builderEndpoints['publish'] }}"
         data-endpoint-upload-image="{{ $builderEndpoints['upload_image'] }}"
         data-csrf-token="{{ csrf_token() }}"
+        data-turnstile-configured="{{ $turnstileConfigured ? '1' : '0' }}"
     ></div>
 
     @vite('packages/survey-filament/resources/js/builder/app.ts')

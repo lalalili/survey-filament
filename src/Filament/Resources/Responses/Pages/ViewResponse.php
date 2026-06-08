@@ -12,7 +12,6 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
-use Lalalili\SurveyCore\Actions\ExportSurveyResponsesAction;
 use Lalalili\SurveyCore\Enums\SurveyResponseCompletionStatus;
 use Lalalili\SurveyCore\Models\SurveyResponse;
 use Lalalili\SurveyCore\Models\SurveyTag;
@@ -73,10 +72,6 @@ class ViewResponse extends ViewRecord
                     $this->record->tags()->sync($data['tag_ids'] ?? []);
                     $this->record->refresh()->load(['tags']);
                 }),
-            Action::make('export_survey')
-                ->label('匯出此問卷 CSV')
-                ->icon('heroicon-o-arrow-down-tray')
-                ->action(fn () => app(ExportSurveyResponsesAction::class)->execute($this->record->survey)),
         ];
     }
 

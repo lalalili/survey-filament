@@ -35,6 +35,9 @@ if (root) {
     csrfToken: csrfToken(),
   });
 
+  // 伺服器是否已設定 Turnstile 金鑰；未設定時建立器停用「我不是機器人」開關。
+  app.provide('turnstileConfigured', root.dataset.turnstileConfigured === '1');
+
   app.use(createPinia());
   app.mount(root);
 }

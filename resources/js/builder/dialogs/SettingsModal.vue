@@ -1,8 +1,20 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, inject, ref } from 'vue';
 import type { AudienceListColumn, SurveySettings } from '../types/schema';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
 import SurveyRichEditor from '../components/SurveyRichEditor.vue';
+
+// 伺服器是否已設定 Turnstile 金鑰（由 app.ts provide）。未設定時停用「我不是機器人」開關。
+const turnstileConfigured = inject<boolean>('turnstileConfigured', false);
+
+function toggleTurnstile() {
+  // 僅在伺服器已設定金鑰時允許開啟；未設定時僅允許關閉（避免開了卻無金鑰導致全部送出被擋）。
+  const next = !store.schema?.settings?.anomaly?.turnstile;
+  if (next && !turnstileConfigured) {
+    return;
+  }
+  store.updateAnomalySettings({ turnstile: next });
+}
 
 const props = defineProps<{
   uploadImageUrl: string;
@@ -594,12 +606,17 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                   <div class="sb-set-field-label">我不是機器人</div>
                   <button
                     class="sb-set-toggle"
-                    :class="{ on: store.schema?.settings?.anomaly?.turnstile }"
+                    :class="{ on: store.schema?.settings?.anomaly?.turnstile, disabled: !turnstileConfigured && !store.schema?.settings?.anomaly?.turnstile }"
+                    :disabled="!turnstileConfigured && !store.schema?.settings?.anomaly?.turnstile"
+                    :title="!turnstileConfigured ? '伺服器尚未設定 Turnstile 金鑰，無法啟用' : ''"
                     type="button"
-                    @click="store.updateAnomalySettings({ turnstile: !store.schema?.settings?.anomaly?.turnstile })"
+                    @click="toggleTurnstile"
                   ></button>
                 </div>
-                <div v-if="store.schema?.settings?.anomaly?.turnstile" class="sb-set-hint">
+                <div v-if="!turnstileConfigured" class="sb-set-hint" style="color:#b45309">
+                  ⚠️ 伺服器尚未設定 Turnstile 金鑰（<code>TURNSTILE_SECRET_KEY</code>），無法啟用人機驗證。請先請系統管理員設定後再開啟。
+                </div>
+                <div v-else-if="store.schema?.settings?.anomaly?.turnstile" class="sb-set-hint">
                   啟用 Cloudflare Turnstile 驗證，防止機器人灌票與異常填寫。
                 </div>
               </div>

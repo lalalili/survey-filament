@@ -4,6 +4,7 @@ namespace Lalalili\SurveyFilament;
 
 use Filament\Contracts\Plugin;
 use Filament\Panel;
+use Lalalili\AudienceCore\Models\AudienceList;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\RecipientResource;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
@@ -29,14 +30,20 @@ class SurveyFilamentPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
-        $panel->resources([
+        $resources = [
             SurveyResource::class,
-            RecipientResource::class,
             ResponseResource::class,
             SurveyTriggerRuleResource::class,
             SurveyTriggerActionPresetResource::class,
             SurveyTriggerAllowedHostResource::class,
-        ]);
+        ];
+
+        // RecipientResource 需要 audience-core，有安裝時才啟用
+        if (class_exists(AudienceList::class)) {
+            $resources[] = RecipientResource::class;
+        }
+
+        $panel->resources($resources);
 
         if (config('survey-filament.widgets_enabled', true)) {
             $panel->widgets([
@@ -48,7 +55,5 @@ class SurveyFilamentPlugin implements Plugin
         }
     }
 
-    public function boot(Panel $panel): void
-    {
-    }
+    public function boot(Panel $panel): void {}
 }

@@ -14,8 +14,8 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Lalalili\SurveyCore\Enums\SurveyFieldType;
 use Lalalili\AudienceCore\Models\AudienceList;
+use Lalalili\SurveyCore\Enums\SurveyFieldType;
 use Lalalili\SurveyCore\Models\SurveyField;
 
 class FieldsRelationManager extends RelationManager
@@ -83,6 +83,10 @@ class FieldsRelationManager extends RelationManager
                     $audienceListId = $settings['personalization']['audience_list_id'] ?? null;
 
                     if (! $audienceListId) {
+                        return [];
+                    }
+
+                    if (! class_exists(AudienceList::class)) {
                         return [];
                     }
 

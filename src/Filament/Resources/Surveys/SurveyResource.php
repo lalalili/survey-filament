@@ -20,16 +20,16 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Lalalili\AudienceCore\Models\AudienceList;
 use Lalalili\SurveyCore\Actions\CloseSurveyAction;
 use Lalalili\SurveyCore\Actions\DuplicateSurveyAction;
 use Lalalili\SurveyCore\Actions\ExportSurveyBuilderSchemaAction;
 use Lalalili\SurveyCore\Actions\PublishSurveyAction;
+use Lalalili\SurveyCore\Enums\SurveyCategory;
 use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Enums\SurveyUniquenessMode;
-use Lalalili\AudienceCore\Models\AudienceList;
 use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
-use Lalalili\SurveyFilament\Support\PanelLabel;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\CreateSurvey;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\EditSurvey;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\EditSurveyBuilder;
@@ -41,6 +41,7 @@ use Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers\FieldsRe
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers\RecipientsRelationManager;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers\ResponsesRelationManager;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers\TagsRelationManager;
+use Lalalili\SurveyFilament\Support\PanelLabel;
 
 class SurveyResource extends Resource
 {
@@ -86,6 +87,12 @@ class SurveyResource extends Resource
                 ->options(collect(SurveyStatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->label()]))
                 ->required()
                 ->default(SurveyStatus::Draft->value),
+
+            Select::make('category')
+                ->label('問卷分類')
+                ->options(SurveyCategory::options())
+                ->placeholder('未分類')
+                ->helperText('決定各角色的資料範圍：SSI 銷售、CSI 服務、IQS 新車品質。'),
 
             TextInput::make('public_key')
                 ->label('公開金鑰')
@@ -135,7 +142,9 @@ class SurveyResource extends Resource
 
             Select::make('settings_json.personalization.audience_list_id')
                 ->label('個性化名單')
-                ->options(fn (): array => AudienceList::query()->orderBy('name')->pluck('name', 'id')->toArray())
+                ->options(fn (): array => class_exists(AudienceList::class)
+                    ? AudienceList::query()->orderBy('name')->pluck('name', 'id')->toArray()
+                    : [])
                 ->searchable()
                 ->nullable()
                 ->live()
@@ -194,11 +203,17 @@ class SurveyResource extends Resource
                     ->badge()
                     ->color(fn ($state) => match ($state) {
                         SurveyStatus::Published => 'success',
-                        SurveyStatus::Closed    => 'warning',
-                        SurveyStatus::Archived  => 'danger',
-                        default                 => 'gray',
+                        SurveyStatus::Closed => 'warning',
+                        SurveyStatus::Archived => 'danger',
+                        default => 'gray',
                     })
                     ->formatStateUsing(fn ($state) => $state instanceof SurveyStatus ? $state->label() : $state),
+
+                TextColumn::make('category')
+                    ->label('分類')
+                    ->badge()
+                    ->placeholder('未分類')
+                    ->formatStateUsing(fn ($state) => $state instanceof SurveyCategory ? $state->value : $state),
 
                 TextColumn::make('fields_count')
                     ->counts('fields')
@@ -220,13 +235,13 @@ class SurveyResource extends Resource
 
                 TextColumn::make('starts_at')
                     ->label('開始時間')
-                    ->dateTime()
+                    ->dateTime('Y/m/d H:i')
                     ->sortable()
                     ->toggleable(),
 
                 TextColumn::make('ends_at')
                     ->label('結束時間')
-                    ->dateTime()
+                    ->dateTime('Y/m/d H:i')
                     ->sortable()
                     ->toggleable(),
 
@@ -334,12 +349,12 @@ class SurveyResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'     => ListSurveys::route('/'),
-            'create'    => CreateSurvey::route('/create'),
-            'edit'      => EditSurvey::route('/{record}/edit'),
-            'builder'   => EditSurveyBuilder::route('/{record}/builder'),
+            'index' => ListSurveys::route('/'),
+            'create' => CreateSurvey::route('/create'),
+            'edit' => EditSurvey::route('/{record}/edit'),
+            'builder' => EditSurveyBuilder::route('/{record}/builder'),
             'analytics' => SurveyAnalytics::route('/{record}/analytics'),
-            'view'      => ViewSurvey::route('/{record}'),
+            'view' => ViewSurvey::route('/{record}'),
         ];
     }
 
@@ -349,6 +364,10 @@ class SurveyResource extends Resource
     private static function audienceColumnOptions(mixed $audienceListId): array
     {
         if (! $audienceListId) {
+            return [];
+        }
+
+        if (! class_exists(AudienceList::class)) {
             return [];
         }
 

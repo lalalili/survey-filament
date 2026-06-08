@@ -8,7 +8,6 @@ use Filament\Resources\Pages\Page;
 use Lalalili\SurveyCore\Actions\ComputeSurveyAnalyticsAction;
 use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
-use Lalalili\SurveyFilament\Support\PanelLabel;
 
 class SurveyAnalytics extends Page
 {
@@ -44,10 +43,6 @@ class SurveyAnalytics extends Page
                 ->label('編輯問卷')
                 ->icon('heroicon-o-pencil-square')
                 ->url(fn (): string => SurveyResource::getUrl('builder', ['record' => $this->getRecord()])),
-            Action::make('responses')
-                ->label(PanelLabel::get('view_responses') ?? '查看回應')
-                ->icon('heroicon-o-inbox-stack')
-                ->url(fn (): string => SurveyResource::getUrl('view', ['record' => $this->getRecord()])),
         ];
     }
 }
