@@ -41,7 +41,6 @@ class RowsRelationManager extends RelationManager
                             ->modalSubmitAction(false)
                             ->modalCancelActionLabel('關閉')
                             ->modalContent(fn ($record): \Illuminate\Contracts\View\View => view(
-                                /** @phpstan-ignore argument.type */
                                 'survey-filament::modals.row-data',
                                 [
                                     'data' => self::labelRowData($record->data_json, $this->currentColumnLabelMap()),
