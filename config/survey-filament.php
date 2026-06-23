@@ -23,6 +23,47 @@ return [
     // Keep the standalone survey package recipient list visible by default.
     'recipient_navigation_enabled' => true,
 
+    // How to handle legacy marketing automation dispatch references when deleting a list.
+    // Supported values: detach, restrict.
+    'recipient_activity_dispatch_delete_strategy' => 'detach',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Builder JSON Actions
+    |--------------------------------------------------------------------------
+    | Controls whether admins can import and export survey builder JSON from
+    | the survey resource. Disabled by default because these actions expose the
+    | full editable survey schema.
+    */
+    'builder_json_actions_enabled' => false,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Builder Display Setting Gates
+    |--------------------------------------------------------------------------
+    | These keep builder controls opt-in until the public renderer in each host
+    | supports the corresponding behavior.
+    */
+    'builder_language_setting_enabled' => false,
+
+    'builder_thank_you_redirect_enabled' => false,
+
+    'builder_accent_color_setting_enabled' => false,
+
+    // Survey table columns hidden by default. Supported values include:
+    // category, fields_count, recipients_count.
+    'survey_table_hidden_columns' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Resource Class Overrides
+    |--------------------------------------------------------------------------
+    | Replace package resources with application-specific subclasses.
+    */
+    'survey_resource_class' => null,
+
+    'response_resource_class' => null,
+
     /*
     |--------------------------------------------------------------------------
     | Resource Discovery
@@ -81,5 +122,14 @@ return [
     | Set to null to disable.
     */
     'response_query_scope' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Response Export Action
+    |--------------------------------------------------------------------------
+    | Optional callable(Survey $survey, Collection $records): void that replaces
+    | the default synchronous XLSX download with a host-specific async flow.
+    */
+    'response_export_action' => null,
 
 ];

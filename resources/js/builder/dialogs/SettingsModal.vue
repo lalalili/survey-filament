@@ -6,6 +6,9 @@ import SurveyRichEditor from '../components/SurveyRichEditor.vue';
 
 // 伺服器是否已設定 Turnstile 金鑰（由 app.ts provide）。未設定時停用「我不是機器人」開關。
 const turnstileConfigured = inject<boolean>('turnstileConfigured', false);
+const languageSettingEnabled = inject<boolean>('languageSettingEnabled', false);
+const thankYouRedirectEnabled = inject<boolean>('thankYouRedirectEnabled', false);
+const accentColorSettingEnabled = inject<boolean>('accentColorSettingEnabled', false);
 
 function toggleTurnstile() {
   // 僅在伺服器已設定金鑰時允許開啟；未設定時僅允許關閉（避免開了卻無金鑰導致全部送出被擋）。
@@ -175,7 +178,7 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                       style="max-width:100px"
                     />
                   </div>
-                  <div class="sb-set-field full">
+                  <div v-if="thankYouRedirectEnabled" class="sb-set-field full">
                     <SurveyRichEditor
                       :model-value="store.welcomePage.welcome_settings?.content ?? ''"
                       placeholder="在此輸入歡迎頁說明文字…"
@@ -192,7 +195,7 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
             <!-- ── 感謝頁 ── -->
             <template v-if="settingsTab === 'thank_you'">
               <div class="sb-set-card">
-                <div class="sb-set-field">
+                <div v-if="languageSettingEnabled" class="sb-set-field">
                   <div class="sb-set-field-label">啟用感謝頁</div>
                   <button
                     class="sb-set-toggle"
@@ -232,7 +235,7 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
             <!-- ── 問卷顯示 ── -->
             <template v-if="settingsTab === 'display'">
               <div class="sb-set-card">
-                <div class="sb-set-field">
+                <div v-if="accentColorSettingEnabled" class="sb-set-field">
                   <div class="sb-set-field-label">問卷語言</div>
                   <select
                     class="sb-prop-input"

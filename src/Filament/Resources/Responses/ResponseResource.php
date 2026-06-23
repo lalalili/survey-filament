@@ -3,18 +3,17 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\Responses;
 
 use BackedEnum;
-use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
-use Filament\Facades\Filament;
-use Filament\Notifications\Notification;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -72,12 +71,12 @@ class ResponseResource extends Resource
     public static function qualityFlagLabel(string $flag): string
     {
         return match ($flag) {
-            'too_fast'          => '作答過快',
+            'too_fast' => '作答過快',
             'anomaly_duplicate' => '疑似重複作答',
-            'honeypot_hit'      => '命中蜜罐',
-            'all_same_answer'   => '答案全部相同',
-            'ip_blacklisted'    => 'IP 黑名單',
-            default             => $flag,
+            'honeypot_hit' => '命中蜜罐',
+            'all_same_answer' => '答案全部相同',
+            'ip_blacklisted' => 'IP 黑名單',
+            default => $flag,
         };
     }
 
@@ -133,10 +132,10 @@ class ResponseResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn ($state) => $state instanceof SurveyResponseQualityStatus ? $state->label() : $state)
                     ->color(fn ($state) => match ($state) {
-                        SurveyResponseQualityStatus::Accepted    => 'success',
-                        SurveyResponseQualityStatus::Flagged     => 'warning',
+                        SurveyResponseQualityStatus::Accepted => 'success',
+                        SurveyResponseQualityStatus::Flagged => 'warning',
                         SurveyResponseQualityStatus::Quarantined => 'danger',
-                        default                                  => 'gray',
+                        default => 'gray',
                     }),
                 TextColumn::make('quality_flags_json')
                     ->label('判定原因')
@@ -182,11 +181,11 @@ class ResponseResource extends Resource
                         $indicators = [];
 
                         if (filled($data['submitted_from'] ?? null)) {
-                            $indicators[] = '提交時間 ≥ ' . Carbon::parse($data['submitted_from'])->toDateString();
+                            $indicators[] = '提交時間 ≥ '.Carbon::parse($data['submitted_from'])->toDateString();
                         }
 
                         if (filled($data['submitted_until'] ?? null)) {
-                            $indicators[] = '提交時間 ≤ ' . Carbon::parse($data['submitted_until'])->toDateString();
+                            $indicators[] = '提交時間 ≤ '.Carbon::parse($data['submitted_until'])->toDateString();
                         }
 
                         return $indicators;
@@ -196,7 +195,7 @@ class ResponseResource extends Resource
                     ->options(function (): array {
                         $query = Survey::query()->orderBy('title');
                         $scope = config('survey-filament.query_scope');
-                        if ($scope instanceof Closure) {
+                        if (is_callable($scope)) {
                             $query = $scope($query, auth()->user());
                         }
 
@@ -265,7 +264,7 @@ class ResponseResource extends Resource
                         ->label('匯出 Excel')
                         ->icon('heroicon-o-table-cells')
                         ->color('success')
-                        ->visible(fn () => static::canView(new SurveyResponse()))
+                        ->visible(fn () => static::canView(new SurveyResponse))
                         ->action(function (Collection $records) {
                             $surveyIds = $records->pluck('survey_id')->unique();
 
@@ -294,13 +293,23 @@ class ResponseResource extends Resource
                                 ->whereKey($records->pluck('id')->all())
                                 ->get();
 
+                            $asyncAction = app()->bound('survey-filament.response_export_action')
+                                ? app('survey-filament.response_export_action')
+                                : config('survey-filament.response_export_action');
+
+                            if (is_callable($asyncAction)) {
+                                $asyncAction($survey, $responses);
+
+                                return;
+                            }
+
                             return app(ExportSurveyResponsesAction::class)->execute($survey, 'xlsx', $responses, answersOnly: true);
                         }),
                     BulkAction::make('bulk_quarantine')
                         ->label('批次隔離')
                         ->icon('heroicon-o-no-symbol')
                         ->color('danger')
-                        ->visible(fn () => static::canEdit(new SurveyResponse()))
+                        ->visible(fn () => static::canEdit(new SurveyResponse))
                         ->action(fn ($records) => $records->each->update(['quality_status' => SurveyResponseQualityStatus::Quarantined])),
                     DeleteBulkAction::make()->label('批次刪除'),
                 ]),
@@ -314,14 +323,14 @@ class ResponseResource extends Resource
 
         $scope = config('survey-filament.query_scope');
 
-        if ($scope instanceof Closure) {
+        if (is_callable($scope)) {
             // Scope through the survey relationship so tenant isolation propagates.
             $query->whereHas('survey', fn (Builder $q) => $scope($q, auth()->user()));
         }
 
         $responseScope = config('survey-filament.response_query_scope');
 
-        if ($responseScope instanceof Closure) {
+        if (is_callable($responseScope)) {
             // Applied directly to the response query so it can filter by recipient payload.
             $query = $responseScope($query, auth()->user());
         }
@@ -333,7 +342,7 @@ class ResponseResource extends Resource
     {
         return [
             'index' => ListResponses::route('/'),
-            'view'  => ViewResponse::route('/{record}'),
+            'view' => ViewResponse::route('/{record}'),
         ];
     }
 }

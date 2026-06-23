@@ -48,8 +48,8 @@ class CollectorsRelationManager extends RelationManager
             Select::make('status')
                 ->label('狀態')
                 ->options([
-                    'active'   => '啟用',
-                    'paused'   => '暫停',
+                    'active' => '啟用',
+                    'paused' => '暫停',
                     'archived' => '封存',
                 ])
                 ->default('active')
@@ -96,16 +96,16 @@ class CollectorsRelationManager extends RelationManager
                     ->label('狀態')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'active'   => 'success',
-                        'paused'   => 'warning',
+                        'active' => 'success',
+                        'paused' => 'warning',
                         'archived' => 'gray',
-                        default    => 'gray',
+                        default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'active'   => '啟用',
-                        'paused'   => '暫停',
+                        'active' => '啟用',
+                        'paused' => '暫停',
                         'archived' => '封存',
-                        default    => $state,
+                        default => $state,
                     }),
 
                 TextColumn::make('responses_count')
@@ -125,8 +125,8 @@ class CollectorsRelationManager extends RelationManager
                 SelectFilter::make('status')
                     ->label('狀態')
                     ->options([
-                        'active'   => '啟用',
-                        'paused'   => '暫停',
+                        'active' => '啟用',
+                        'paused' => '暫停',
                         'archived' => '封存',
                     ]),
             ])
@@ -147,9 +147,9 @@ class CollectorsRelationManager extends RelationManager
     private static function typeOptions(): array
     {
         return [
-            'web_link'     => '網頁連結',
+            'web_link' => '網頁連結',
             'email_invite' => 'Email 邀請',
-            'qr_code'      => 'QR Code',
+            'qr_code' => 'QR Code',
             'embed_iframe' => '嵌入 iframe',
         ];
     }

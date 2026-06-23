@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyCore\Http\Controllers\SurveyBuilderController;
+use Lalalili\SurveyCore\Models\Survey;
 
 Route::middleware(['web', 'auth', 'verified'])
     ->prefix('admin/surveys')

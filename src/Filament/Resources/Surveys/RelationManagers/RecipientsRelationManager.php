@@ -50,9 +50,9 @@ class RecipientsRelationManager extends RelationManager
                     ->label('已讀取邀請')
                     ->state(
                         fn (SurveyRecipient $record): ?string => $record->tokens()
-                        ->whereNotNull('viewed_at')
-                        ->orderBy('viewed_at')
-                        ->value('viewed_at')
+                            ->whereNotNull('viewed_at')
+                            ->orderBy('viewed_at')
+                            ->value('viewed_at')
                     )
                     ->dateTime()
                     ->placeholder('未讀取')

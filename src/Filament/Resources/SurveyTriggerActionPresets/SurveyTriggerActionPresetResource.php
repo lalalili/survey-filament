@@ -174,9 +174,9 @@ class SurveyTriggerActionPresetResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => ListSurveyTriggerActionPresets::route('/'),
+            'index' => ListSurveyTriggerActionPresets::route('/'),
             'create' => CreateSurveyTriggerActionPreset::route('/create'),
-            'edit'   => EditSurveyTriggerActionPreset::route('/{record}/edit'),
+            'edit' => EditSurveyTriggerActionPreset::route('/{record}/edit'),
         ];
     }
 }

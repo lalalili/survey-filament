@@ -17,6 +17,9 @@
         data-endpoint-upload-image="{{ $builderEndpoints['upload_image'] }}"
         data-csrf-token="{{ csrf_token() }}"
         data-turnstile-configured="{{ $turnstileConfigured ? '1' : '0' }}"
+        data-language-setting-enabled="{{ $languageSettingEnabled ? '1' : '0' }}"
+        data-thank-you-redirect-enabled="{{ $thankYouRedirectEnabled ? '1' : '0' }}"
+        data-accent-color-setting-enabled="{{ $accentColorSettingEnabled ? '1' : '0' }}"
     ></div>
 
     @vite('packages/survey-filament/resources/js/builder/app.ts')

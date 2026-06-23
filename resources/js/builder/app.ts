@@ -37,6 +37,9 @@ if (root) {
 
   // 伺服器是否已設定 Turnstile 金鑰；未設定時建立器停用「我不是機器人」開關。
   app.provide('turnstileConfigured', root.dataset.turnstileConfigured === '1');
+  app.provide('languageSettingEnabled', root.dataset.languageSettingEnabled === '1');
+  app.provide('thankYouRedirectEnabled', root.dataset.thankYouRedirectEnabled === '1');
+  app.provide('accentColorSettingEnabled', root.dataset.accentColorSettingEnabled === '1');
 
   app.use(createPinia());
   app.mount(root);

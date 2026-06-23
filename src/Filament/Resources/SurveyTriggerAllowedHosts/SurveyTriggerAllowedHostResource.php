@@ -91,9 +91,9 @@ class SurveyTriggerAllowedHostResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => ListSurveyTriggerAllowedHosts::route('/'),
+            'index' => ListSurveyTriggerAllowedHosts::route('/'),
             'create' => CreateSurveyTriggerAllowedHost::route('/create'),
-            'edit'   => EditSurveyTriggerAllowedHost::route('/{record}/edit'),
+            'edit' => EditSurveyTriggerAllowedHost::route('/{record}/edit'),
         ];
     }
 }

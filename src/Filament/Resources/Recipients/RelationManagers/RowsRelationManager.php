@@ -8,6 +8,7 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Contracts\View\View;
 
 class RowsRelationManager extends RelationManager
 {
@@ -37,15 +38,20 @@ class RowsRelationManager extends RelationManager
                     ->action(
                         Action::make('viewRowData')
                             ->label('查看完整資料')
-                            ->modalHeading(fn ($record) => '名單資料 #' . $record->id)
+                            ->modalHeading(fn ($record) => '名單資料 #'.$record->id)
                             ->modalSubmitAction(false)
                             ->modalCancelActionLabel('關閉')
-                            ->modalContent(fn ($record): \Illuminate\Contracts\View\View => view(
-                                'survey-filament::modals.row-data',
-                                [
-                                    'data' => self::labelRowData($record->data_json, $this->currentColumnLabelMap()),
-                                ]
-                            ))
+                            ->modalContent(function ($record): View {
+                                /** @var view-string $rowDataView */
+                                $rowDataView = 'survey-filament::modals.row-data';
+
+                                return view(
+                                    $rowDataView,
+                                    [
+                                        'data' => self::labelRowData($record->data_json, $this->currentColumnLabelMap()),
+                                    ]
+                                );
+                            })
                     )
                     ->wrap(),
                 TextColumn::make('status')->label('狀態')->badge(),
@@ -94,10 +100,10 @@ class RowsRelationManager extends RelationManager
         }
 
         $text = collect($preview)
-            ->map(fn (mixed $value, string|int $key): string => self::labelForKey((string) $key, $labelMap) . ': ' . self::formatValue($value))
+            ->map(fn (mixed $value, string|int $key): string => self::labelForKey((string) $key, $labelMap).': '.self::formatValue($value))
             ->implode(' / ');
 
-        return count($data) > count($preview) ? $text . ' ...' : $text;
+        return count($data) > count($preview) ? $text.' ...' : $text;
     }
 
     /**

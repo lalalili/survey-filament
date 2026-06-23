@@ -3,17 +3,19 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\Recipients;
 
 use BackedEnum;
-use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema as SchemaFacade;
 use Lalalili\AudienceCore\Models\AudienceList;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\Pages\CreateRecipient;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\Pages\EditRecipient;
@@ -95,9 +97,76 @@ class RecipientResource extends Resource
                     ->icon('heroicon-o-arrow-up-tray')
                     ->url(fn (AudienceList $record) => static::getUrl('import', ['audience_list_id' => $record->id])),
 
-                DeleteAction::make()->label('刪除'),
+                self::deleteAction(),
             ])
             ->bulkActions([]);
+    }
+
+    public static function deleteAction(): DeleteAction
+    {
+        return DeleteAction::make()
+            ->label('刪除')
+            ->before(function (DeleteAction $action, AudienceList $record): void {
+                self::prepareActivityDispatchReferencesForDelete($record, $action);
+            });
+    }
+
+    public static function prepareActivityDispatchReferencesForDelete(AudienceList $record, DeleteAction $action): int
+    {
+        $referencesCount = self::activityDispatchReferencesCount($record);
+
+        if ($referencesCount === 0) {
+            return 0;
+        }
+
+        if (config('survey-filament.recipient_activity_dispatch_delete_strategy', 'detach') === 'restrict') {
+            Notification::make()
+                ->danger()
+                ->title('無法刪除名單')
+                ->body("此名單已有 {$referencesCount} 筆自動化發送紀錄引用。請保留名單以維持歷史紀錄完整。")
+                ->persistent()
+                ->send();
+
+            $action->halt();
+
+            return $referencesCount;
+        }
+
+        return self::detachActivityDispatchReferences($record);
+    }
+
+    public static function activityDispatchReferencesCount(AudienceList $record): int
+    {
+        if (! self::hasActivityDispatchAudienceListRowColumn()) {
+            return 0;
+        }
+
+        return (int) DB::table('activity_dispatches')
+            ->whereIn('audience_list_row_id', $record->rows()->select('id'))
+            ->count();
+    }
+
+    public static function detachActivityDispatchReferences(AudienceList $record): int
+    {
+        if (! self::hasActivityDispatchAudienceListRowColumn()) {
+            return 0;
+        }
+
+        $values = ['audience_list_row_id' => null];
+
+        if (SchemaFacade::hasColumn('activity_dispatches', 'updated_at')) {
+            $values['updated_at'] = now();
+        }
+
+        return DB::table('activity_dispatches')
+            ->whereIn('audience_list_row_id', $record->rows()->select('id'))
+            ->update($values);
+    }
+
+    private static function hasActivityDispatchAudienceListRowColumn(): bool
+    {
+        return SchemaFacade::hasTable('activity_dispatches')
+            && SchemaFacade::hasColumn('activity_dispatches', 'audience_list_row_id');
     }
 
     public static function getEloquentQuery(): Builder
@@ -106,7 +175,7 @@ class RecipientResource extends Resource
 
         $scope = config('survey-filament.query_scope');
 
-        if ($scope instanceof Closure) {
+        if (is_callable($scope)) {
             $query = $scope($query, auth()->user());
         }
 
@@ -123,9 +192,9 @@ class RecipientResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => ListRecipients::route('/'),
+            'index' => ListRecipients::route('/'),
             'create' => CreateRecipient::route('/create'),
-            'edit'   => EditRecipient::route('/{record}/edit'),
+            'edit' => EditRecipient::route('/{record}/edit'),
             'import' => ImportRecipients::route('/import'),
         ];
     }

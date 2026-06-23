@@ -36,8 +36,8 @@ class TriggerDispatchesRelationManager extends RelationManager
                     ->label('狀態')
                     ->badge()
                     ->color(fn (TriggerDispatchStatus $state): string => match ($state) {
-                        TriggerDispatchStatus::Sent    => 'success',
-                        TriggerDispatchStatus::Failed  => 'danger',
+                        TriggerDispatchStatus::Sent => 'success',
+                        TriggerDispatchStatus::Failed => 'danger',
                         TriggerDispatchStatus::Pending => 'warning',
                     })
                     ->formatStateUsing(fn (TriggerDispatchStatus $state): string => $state->label()),

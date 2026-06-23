@@ -59,12 +59,12 @@ class ViewResponse extends ViewRecord
                         ])
                         ->createOptionUsing(fn (array $data): int => SurveyTag::create([
                             'survey_id' => $this->record->survey_id,
-                            'name'      => $data['name'],
-                            'color'     => $data['color'] ?? '#6366f1',
+                            'name' => $data['name'],
+                            'color' => $data['color'] ?? '#6366f1',
                         ])->id),
                 ])
                 ->fillForm(fn (): array => [
-                    'notes'   => $this->record->notes,
+                    'notes' => $this->record->notes,
                     'tag_ids' => $this->record->tags->pluck('id')->all(),
                 ])
                 ->action(function (array $data): void {

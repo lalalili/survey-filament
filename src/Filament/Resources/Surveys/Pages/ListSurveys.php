@@ -25,6 +25,7 @@ class ListSurveys extends ListRecords
             Action::make('import_builder_json')
                 ->label('匯入問卷 JSON')
                 ->icon('heroicon-o-arrow-up-tray')
+                ->visible(fn (): bool => SurveyResource::builderJsonActionsEnabled() && SurveyResource::canCreate())
                 ->schema([
                     FileUpload::make('json_file')
                         ->label('Builder JSON')

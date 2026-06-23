@@ -48,12 +48,15 @@ class EditSurveyBuilder extends Page
         $survey = $this->getRecord();
 
         return [
-            'survey'              => $survey,
+            'survey' => $survey,
             'turnstileConfigured' => filled(config('survey-core.turnstile.secret_key')),
-            'builderEndpoints'    => [
-                'show'         => route('survey-filament.builder.show', $survey),
-                'update'       => route('survey-filament.builder.update', $survey),
-                'publish'      => route('survey-filament.builder.publish', $survey),
+            'languageSettingEnabled' => (bool) config('survey-filament.builder_language_setting_enabled', false),
+            'thankYouRedirectEnabled' => (bool) config('survey-filament.builder_thank_you_redirect_enabled', false),
+            'accentColorSettingEnabled' => (bool) config('survey-filament.builder_accent_color_setting_enabled', false),
+            'builderEndpoints' => [
+                'show' => route('survey-filament.builder.show', $survey),
+                'update' => route('survey-filament.builder.update', $survey),
+                'publish' => route('survey-filament.builder.publish', $survey),
                 'upload_image' => route('survey-filament.builder.upload-image', $survey),
             ],
         ];

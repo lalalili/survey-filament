@@ -31,8 +31,8 @@ class SurveyFilamentPlugin implements Plugin
     public function register(Panel $panel): void
     {
         $resources = [
-            SurveyResource::class,
-            ResponseResource::class,
+            config('survey-filament.survey_resource_class') ?? SurveyResource::class,
+            config('survey-filament.response_resource_class') ?? ResponseResource::class,
             SurveyTriggerRuleResource::class,
             SurveyTriggerActionPresetResource::class,
             SurveyTriggerAllowedHostResource::class,

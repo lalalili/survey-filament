@@ -3,7 +3,6 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\Surveys;
 
 use BackedEnum;
-use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
@@ -213,16 +212,19 @@ class SurveyResource extends Resource
                     ->label('分類')
                     ->badge()
                     ->placeholder('未分類')
+                    ->hidden(fn (): bool => self::isSurveyTableColumnHidden('category'))
                     ->formatStateUsing(fn ($state) => $state instanceof SurveyCategory ? $state->value : $state),
 
                 TextColumn::make('fields_count')
                     ->counts('fields')
                     ->label('題目數')
+                    ->hidden(fn (): bool => self::isSurveyTableColumnHidden('fields_count'))
                     ->url(fn (Survey $record) => SurveyResource::getUrl('view', ['record' => $record]))
                     ->color('primary'),
 
                 TextColumn::make('recipients_count')
                     ->counts('recipients')
+                    ->hidden(fn (): bool => self::isSurveyTableColumnHidden('recipients_count'))
                     ->label('個性化連結數'),
 
                 TextColumn::make('responses_count')
@@ -270,7 +272,7 @@ class SurveyResource extends Resource
                     Action::make('export_builder_json')
                         ->label('匯出問卷 JSON')
                         ->icon('heroicon-o-arrow-down-tray')
-                        ->visible(fn (Survey $record) => static::canView($record))
+                        ->visible(fn (Survey $record) => static::canView($record) && self::builderJsonActionsEnabled())
                         ->action(function (Survey $record) {
                             $exportSchema = app(ExportSurveyBuilderSchemaAction::class);
 
@@ -328,11 +330,21 @@ class SurveyResource extends Resource
 
         $scope = config('survey-filament.query_scope');
 
-        if ($scope instanceof Closure) {
+        if (is_callable($scope)) {
             $query = $scope($query, auth()->user());
         }
 
         return $query;
+    }
+
+    public static function isSurveyTableColumnHidden(string $column): bool
+    {
+        return in_array($column, config('survey-filament.survey_table_hidden_columns', []), true);
+    }
+
+    public static function builderJsonActionsEnabled(): bool
+    {
+        return (bool) config('survey-filament.builder_json_actions_enabled', false);
     }
 
     public static function getRelations(): array
