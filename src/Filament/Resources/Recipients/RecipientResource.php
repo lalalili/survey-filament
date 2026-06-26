@@ -4,6 +4,7 @@ namespace Lalalili\SurveyFilament\Filament\Resources\Recipients;
 
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
@@ -90,14 +91,16 @@ class RecipientResource extends Resource
                 TextColumn::make('created_at')->label('建立時間')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->actions([
-                EditAction::make()->label('編輯'),
+                ActionGroup::make([
+                    EditAction::make()->label('編輯'),
 
-                Action::make('import')
-                    ->label('重新匯入')
-                    ->icon('heroicon-o-arrow-up-tray')
-                    ->url(fn (AudienceList $record) => static::getUrl('import', ['audience_list_id' => $record->id])),
+                    Action::make('import')
+                        ->label('重新匯入')
+                        ->icon('heroicon-o-arrow-up-tray')
+                        ->url(fn (AudienceList $record) => static::getUrl('import', ['audience_list_id' => $record->id])),
 
-                self::deleteAction(),
+                    self::deleteAction(),
+                ]),
             ])
             ->bulkActions([]);
     }
@@ -119,7 +122,7 @@ class RecipientResource extends Resource
             return 0;
         }
 
-        if (config('survey-filament.recipient_activity_dispatch_delete_strategy', 'detach') === 'restrict') {
+        if (config('survey-filament.recipient_activity_dispatch_delete_strategy', 'restrict') === 'restrict') {
             Notification::make()
                 ->danger()
                 ->title('無法刪除名單')

@@ -3,10 +3,12 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules;
 
 use BackedEnum;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
@@ -26,6 +28,7 @@ use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\Pages\CreateSu
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\Pages\EditSurveyTriggerRule;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\Pages\ListSurveyTriggerRules;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\RelationManagers\TriggerDispatchesRelationManager;
+use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\RelationManagers\TriggerRuleRunsRelationManager;
 
 class SurveyTriggerRuleResource extends Resource
 {
@@ -36,25 +39,20 @@ class SurveyTriggerRuleResource extends Resource
         return 'heroicon-o-bolt';
     }
 
-    public static function shouldRegisterNavigation(): bool
-    {
-        return false;
-    }
+    protected static ?string $navigationLabel = 'DMS立案規則';
 
-    protected static ?string $navigationLabel = '問卷觸發規則';
+    protected static ?string $modelLabel = 'DMS立案規則';
 
-    protected static ?string $modelLabel = '觸發規則';
-
-    protected static ?string $pluralModelLabel = '觸發規則列表';
+    protected static ?string $pluralModelLabel = 'DMS立案規則';
 
     public static function getNavigationGroup(): ?string
     {
-        return config('survey-filament.navigation_group', '問卷管理');
+        return '系統';
     }
 
     public static function getNavigationSort(): ?int
     {
-        return config('survey-filament.navigation_sort', 50) + 5;
+        return 82;
     }
 
     public static function form(Schema $schema): Schema
@@ -79,6 +77,33 @@ class SurveyTriggerRuleResource extends Resource
                     ->label('啟用')
                     ->default(true),
             ]),
+
+            Section::make('排程設定')
+                ->description('開啟後，系統每日於指定時間批次掃描近 N 天內、尚未派送過的填答，符合條件者自動派送動作。')
+                ->schema([
+                    Toggle::make('schedule_enabled')
+                        ->label('啟用排程')
+                        ->default(false)
+                        ->live(),
+
+                    Grid::make(2)
+                        ->schema([
+                            TimePicker::make('schedule_time')
+                                ->label('每日執行時間')
+                                ->seconds(false)
+                                ->format('H:i')
+                                ->required(fn (Get $get): bool => (bool) $get('schedule_enabled')),
+
+                            TextInput::make('schedule_window_days')
+                                ->label('掃描近幾天填答')
+                                ->numeric()
+                                ->minValue(1)
+                                ->default(7)
+                                ->suffix('天')
+                                ->required(fn (Get $get): bool => (bool) $get('schedule_enabled')),
+                        ])
+                        ->visible(fn (Get $get): bool => (bool) $get('schedule_enabled')),
+                ]),
 
             Section::make('篩選條件')->schema([
                 RuleTreeField::make('rule_tree_json')
@@ -150,6 +175,14 @@ class SurveyTriggerRuleResource extends Resource
                     ->label('啟用')
                     ->boolean(),
 
+                IconColumn::make('schedule_enabled')
+                    ->label('排程')
+                    ->boolean(),
+
+                TextColumn::make('schedule_time')
+                    ->label('排程時間')
+                    ->placeholder('—'),
+
                 TextColumn::make('triggered_count')
                     ->label('觸發次數')
                     ->numeric(),
@@ -165,9 +198,12 @@ class SurveyTriggerRuleResource extends Resource
                     ->dateTime('Y/m/d')
                     ->sortable(),
             ])
+            ->recordUrl(null)
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make(),
+                ]),
             ])
             ->defaultSort('created_at', 'desc');
     }
@@ -178,6 +214,7 @@ class SurveyTriggerRuleResource extends Resource
     public static function getRelationManagers(): array
     {
         return [
+            TriggerRuleRunsRelationManager::class,
             TriggerDispatchesRelationManager::class,
         ];
     }

@@ -131,11 +131,11 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                   <textarea
                     class="sb-prop-input"
                     rows="3"
-                    placeholder="可選填，供內部管理使用"
+                    placeholder="可選填，說明問卷目的或填寫注意事項"
                     :value="store.schema?.settings?.description ?? ''"
                     @input="store.updateSurveySettings({ description: ($event.target as HTMLTextAreaElement).value || null })"
                   ></textarea>
-                  <div class="sb-set-hint" style="margin-top:4px">僅後台顯示，不會出現在填答頁面</div>
+                  <div class="sb-set-hint" style="margin-top:4px">顯示於填答頁標題下方，適合補充問卷目的或填寫說明</div>
                 </div>
               </div>
             </template>
@@ -178,7 +178,7 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                       style="max-width:100px"
                     />
                   </div>
-                  <div v-if="thankYouRedirectEnabled" class="sb-set-field full">
+                  <div class="sb-set-field full">
                     <SurveyRichEditor
                       :model-value="store.welcomePage.welcome_settings?.content ?? ''"
                       placeholder="在此輸入歡迎頁說明文字…"
@@ -195,7 +195,7 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
             <!-- ── 感謝頁 ── -->
             <template v-if="settingsTab === 'thank_you'">
               <div class="sb-set-card">
-                <div v-if="languageSettingEnabled" class="sb-set-field">
+                <div class="sb-set-field">
                   <div class="sb-set-field-label">啟用感謝頁</div>
                   <button
                     class="sb-set-toggle"
@@ -208,17 +208,7 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                 </div>
                 <template v-if="store.thankYouPage && store.thankYouPage.thank_you_settings?.enabled !== false">
                   <div class="sb-set-field full">
-                    <div class="sb-set-field-label">轉址 URL（送出後自動跳轉，留空則不跳轉）</div>
-                    <input
-                      class="sb-prop-input"
-                      type="url"
-                      placeholder="https://example.com"
-                      :value="store.thankYouPage.thank_you_settings?.redirect_url ?? ''"
-                      @input="store.updatePage(store.thankYouPage!.id, { thank_you_settings: { ...(store.thankYouPage!.thank_you_settings ?? {}), redirect_url: ($event.target as HTMLInputElement).value || null } })"
-                    />
-                  </div>
-                  <div class="sb-set-field full">
-                    <div class="sb-set-field-label sb-set-hint-inline">感謝文字支援富文字，可插入 <code v-pre>{{response_number}}</code> 顯示填答編號</div>
+                    <div class="sb-set-field-label sb-set-hint-inline">感謝文字支援富文字，可插入 <code v-pre>{{response_number}}</code> 顯示填答追蹤編號；需先在「問卷結果」啟用。</div>
                     <SurveyRichEditor
                       :model-value="store.thankYouPage.thank_you_settings?.message ?? ''"
                       placeholder="感謝您的填寫！"
@@ -229,13 +219,53 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                   </div>
                 </template>
                 <div v-if="!store.thankYouPage" class="sb-set-hint">尚未新增感謝頁。啟用後將自動建立。</div>
+
+                <template v-if="thankYouRedirectEnabled">
+                  <div class="sb-set-field full">
+                    <div class="sb-set-field-label">送出後轉址 URL（留空則不轉址）</div>
+                    <input
+                      class="sb-prop-input"
+                      type="url"
+                      placeholder="https://example.com"
+                      :value="store.schema?.settings?.redirect?.url ?? ''"
+                      @input="store.updateSurveySettings({ redirect: { ...(store.schema?.settings?.redirect ?? {}), url: ($event.target as HTMLInputElement).value || null } })"
+                    />
+                    <div class="sb-set-hint">僅允許 http(s) 網址；填答送出後依下列方式引導使用者前往。</div>
+                  </div>
+                  <template v-if="store.schema?.settings?.redirect?.url">
+                    <div class="sb-set-field full">
+                      <div class="sb-set-field-label">轉址方式</div>
+                      <select
+                        class="sb-prop-input"
+                        style="max-width:200px"
+                        :value="store.schema?.settings?.redirect?.mode ?? 'link'"
+                        @change="store.updateSurveySettings({ redirect: { ...(store.schema?.settings?.redirect ?? {}), mode: ($event.target as HTMLSelectElement).value } })"
+                      >
+                        <option value="link">顯示連結（使用者自行點選）</option>
+                        <option value="auto">自動跳轉（倒數後前往）</option>
+                      </select>
+                    </div>
+                    <div v-if="(store.schema?.settings?.redirect?.mode ?? 'link') === 'auto'" class="sb-set-field full">
+                      <div class="sb-set-field-label">自動跳轉倒數秒數（0–30）</div>
+                      <input
+                        class="sb-prop-input"
+                        type="number"
+                        min="0"
+                        max="30"
+                        style="max-width:120px"
+                        :value="store.schema?.settings?.redirect?.delay_seconds ?? 5"
+                        @input="store.updateSurveySettings({ redirect: { ...(store.schema?.settings?.redirect ?? {}), delay_seconds: Math.max(0, Math.min(30, Number(($event.target as HTMLInputElement).value) || 0)) } })"
+                      />
+                    </div>
+                  </template>
+                </template>
               </div>
             </template>
 
             <!-- ── 問卷顯示 ── -->
             <template v-if="settingsTab === 'display'">
               <div class="sb-set-card">
-                <div v-if="accentColorSettingEnabled" class="sb-set-field">
+                <div v-if="languageSettingEnabled" class="sb-set-field">
                   <div class="sb-set-field-label">問卷語言</div>
                   <select
                     class="sb-prop-input"
@@ -292,7 +322,7 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
               </div>
               <div class="sb-set-section-title">外觀主題</div>
               <div class="sb-set-card">
-                <div class="sb-set-field">
+                <div v-if="store.themes.length > 0" class="sb-set-field">
                   <div class="sb-set-field-label">系統主題</div>
                   <select
                     class="sb-prop-input"
@@ -304,13 +334,15 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                     <option v-for="theme in store.themes" :key="theme.id" :value="theme.id">{{ theme.name }}</option>
                   </select>
                 </div>
-                <div class="sb-set-field">
-                  <div class="sb-set-field-label">Primary 色</div>
-                  <input type="color" :value="store.schema?.theme_overrides?.primary ?? '#6366f1'" @input="store.updateThemeOverride('primary', ($event.target as HTMLInputElement).value)" />
+                <div class="sb-set-field sb-set-color-row">
+                  <div class="sb-set-field-label">主要操作色</div>
+                  <input type="color" class="sb-set-color-input" :value="store.schema?.theme_overrides?.primary ?? '#6366f1'" @input="store.updateThemeOverride('primary', ($event.target as HTMLInputElement).value)" />
+                  <div class="sb-set-color-desc">套用於公開問卷的主要按鈕、選取狀態、滑桿與核取方塊。</div>
                 </div>
-                <div class="sb-set-field">
-                  <div class="sb-set-field-label">Accent 色</div>
-                  <input type="color" :value="store.schema?.theme_overrides?.accent ?? '#f59e0b'" @input="store.updateThemeOverride('accent', ($event.target as HTMLInputElement).value)" />
+                <div v-if="accentColorSettingEnabled" class="sb-set-field sb-set-color-row">
+                  <div class="sb-set-field-label">輔助強調色</div>
+                  <input type="color" class="sb-set-color-input" :value="store.schema?.theme_overrides?.accent ?? '#f59e0b'" @input="store.updateThemeOverride('accent', ($event.target as HTMLInputElement).value)" />
+                  <div class="sb-set-color-desc">套用於公開問卷的次要動作（上一頁按鈕、感謝頁的繼續連結），與主要操作色區隔。</div>
                 </div>
               </div>
               <div class="sb-set-section-title">使用條款與聲明</div>
@@ -341,7 +373,7 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
               <div class="sb-set-card">
                 <div class="sb-set-field">
                   <div class="sb-set-field-label">
-                    自動產生填答編號
+                    自動產生填答追蹤編號
                     <span class="sb-set-hint-inline">格式：SR-YYYYMMDD-XXXXXX</span>
                   </div>
                   <button
@@ -351,8 +383,11 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                     @click="store.updateSurveySettings({ response_number: !store.schema?.settings?.response_number })"
                   ></button>
                 </div>
+                <div class="sb-set-hint">
+                  開啟後，每筆完成填答會取得唯一編號，可顯示於感謝頁，並供後台搜尋、客服追蹤與資料匯出使用。
+                </div>
                 <div v-if="store.schema?.settings?.response_number" class="sb-set-hint">
-                  填答編號可在感謝頁文字中以 <code v-pre>{{response_number}}</code> 帶入。
+                  在感謝頁文字插入 <code v-pre>{{response_number}}</code>，送出成功後會自動替換為該筆填答編號。
                 </div>
               </div>
               <div class="sb-set-section-title">回應通知</div>

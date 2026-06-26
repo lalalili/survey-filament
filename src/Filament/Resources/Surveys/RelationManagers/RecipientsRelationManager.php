@@ -3,19 +3,27 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers;
 
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Lalalili\SurveyCore\Actions\GenerateSurveyTokenAction;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema as SchemaFacade;
+use Illuminate\Support\Facades\View as ViewFacade;
+use Lalalili\MarketingAutomation\Enums\Channel;
 use Lalalili\SurveyCore\Enums\SurveyRecipientStatus;
 use Lalalili\SurveyCore\Enums\SurveyTokenStatus;
 use Lalalili\SurveyCore\Models\SurveyRecipient;
+use Lalalili\SurveyCore\Models\SurveyToken;
 
 class RecipientsRelationManager extends RelationManager
 {
@@ -38,82 +46,116 @@ class RecipientsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('name')->label('姓名')->searchable(),
                 TextColumn::make('email')->label('Email')->searchable(),
-                TextColumn::make('external_id')->label('外部 ID')->toggleable(),
+                TextColumn::make('external_id')->label('ID')->toggleable(isToggledHiddenByDefault: true),
+
+                // 手機／車牌取自名單 payload_json（上游調查名單欄位），供發券回填 DMS 辨識顧客。
+                TextColumn::make('mobile')
+                    ->label('手機')
+                    ->state(fn (SurveyRecipient $record): ?string => $record->payload_json['mobile'] ?? null)
+                    ->placeholder('—')
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where('payload_json->mobile', 'like', "%{$search}%")),
+
+                TextColumn::make('regono')
+                    ->label('車牌')
+                    ->state(fn (SurveyRecipient $record): ?string => $record->payload_json['regono'] ?? null)
+                    ->placeholder('—')
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where('payload_json->regono', 'like', "%{$search}%")),
+
                 TextColumn::make('status')
                     ->label('狀態')
-                    ->formatStateUsing(fn ($state) => $state instanceof SurveyRecipientStatus ? $state->label() : $state->value),
+                    ->formatStateUsing(fn ($state) => $state instanceof SurveyRecipientStatus ? $state->label() : $state->value)
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('tokens_count')
                     ->counts('tokens')
-                    ->label('Token 數'),
+                    ->label('已產生連結數')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                // 邀請信被開啟（email tracking pixel），由 email-campaign 回寫。
+                TextColumn::make('invitation_opened_at')
+                    ->label('Email開啟時間')
+                    ->dateTime('Y/m/d H:i')
+                    ->placeholder('未開啟')
+                    ->sortable()
+                    ->toggleable(),
 
                 TextColumn::make('invitation_viewed_at')
-                    ->label('已讀取邀請')
+                    ->label('連結開啟時間')
                     ->state(
                         fn (SurveyRecipient $record): ?string => $record->tokens()
                             ->whereNotNull('viewed_at')
                             ->orderBy('viewed_at')
                             ->value('viewed_at')
                     )
-                    ->dateTime()
-                    ->placeholder('未讀取')
+                    ->dateTime('Y/m/d H:i')
+                    ->placeholder('未開啟')
                     ->toggleable(),
             ])
             ->headerActions([CreateAction::make()->label('新增收件人')])
             ->actions([
-                EditAction::make()->label('編輯'),
+                ActionGroup::make([
+                    EditAction::make()->label('編輯'),
 
-                Action::make('generate_token')
-                    ->label('產生 Token')
-                    ->icon('heroicon-o-key')
-                    ->action(function (SurveyRecipient $record) {
-                        app(GenerateSurveyTokenAction::class)->execute(
-                            $record->survey,
-                            $record,
-                        );
-                    }),
+                    Action::make('show_links')
+                        ->label('顯示連結')
+                        ->icon('heroicon-o-link')
+                        ->modalHeading('個人化連結')
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('關閉')
+                        ->modalContent(fn (SurveyRecipient $record): View => ViewFacade::make('survey-filament::modals.recipient-links', [
+                            'links' => $this->activeLinksFor($record),
+                        ])),
 
-                Action::make('copy_link')
-                    ->label('複製連結')
-                    ->icon('heroicon-o-link')
-                    ->action(function (SurveyRecipient $record) {
-                        $token = $record->tokens()
-                            ->where('status', SurveyTokenStatus::Active->value)
-                            ->latest()
-                            ->first();
-
-                        if (! $token) {
-                            Notification::make()
-                                ->warning()
-                                ->title('找不到有效 Token，請先產生一個。')
-                                ->send();
-
-                            return;
-                        }
-
-                        $survey = $record->survey;
-                        $url = url(config('survey-core.route_prefix', 'survey').'/'.$survey->public_key.'?t='.$token->token);
-
-                        $this->js("navigator.clipboard.writeText('{$url}')");
-
-                        Notification::make()
-                            ->success()
-                            ->title('連結已複製')
-                            ->send();
-                    }),
-
-                Action::make('deactivate_token')
-                    ->label('停用 Token')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('確認停用所有 Token')
-                    ->action(function (SurveyRecipient $record) {
-                        $record->tokens()
-                            ->where('status', SurveyTokenStatus::Active->value)
-                            ->update(['status' => SurveyTokenStatus::Inactive->value]);
-                    }),
-
-                DeleteAction::make()->label('刪除'),
+                    DeleteAction::make()->label('刪除'),
+                ]),
             ]);
+    }
+
+    /**
+     * 收件人所有「啟用中」的個人化連結，含對應通道與產生時間（新到舊）。
+     *
+     * @return Collection<int, array{channel: ?string, created_at: ?Carbon, url: string}>
+     */
+    private function activeLinksFor(SurveyRecipient $record): Collection
+    {
+        $routePrefix = config('survey-core.route_prefix', 'survey');
+        $publicKey = $record->survey->public_key;
+
+        return $record->tokens()
+            ->where('status', SurveyTokenStatus::Active->value)
+            ->latest()
+            ->get()
+            ->map(fn (SurveyToken $token): array => [
+                'channel' => $this->resolveChannelLabel($token->id),
+                'created_at' => $token->created_at,
+                'url' => url($routePrefix.'/'.$publicKey.'?t='.$token->token),
+            ]);
+    }
+
+    /**
+     * 由 token 解析其發送通道（透過 marketing-automation 的 short link → dispatch）。
+     * survey-filament 不硬依賴 marketing-automation：無對應資料表或 Channel enum 時優雅退回原始值/null。
+     */
+    private function resolveChannelLabel(int $tokenId): ?string
+    {
+        if (! SchemaFacade::hasTable('activity_short_links') || ! SchemaFacade::hasTable('activity_dispatches')) {
+            return null;
+        }
+
+        $channel = DB::table('activity_short_links')
+            ->join('activity_dispatches', 'activity_dispatches.id', '=', 'activity_short_links.activity_dispatch_id')
+            ->where('activity_short_links.survey_token_id', $tokenId)
+            ->value('activity_dispatches.channel');
+
+        if ($channel === null) {
+            return null;
+        }
+
+        $channelEnum = Channel::class;
+
+        if (class_exists($channelEnum)) {
+            return $channelEnum::tryFrom($channel)?->label() ?? $channel;
+        }
+
+        return $channel;
     }
 }

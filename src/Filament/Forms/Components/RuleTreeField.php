@@ -7,7 +7,7 @@ use Filament\Forms\Components\Field;
 
 class RuleTreeField extends Field
 {
-    protected string $view = 'filament.forms.components.rule-tree-field';
+    protected string $view = 'survey-filament::forms.components.rule-tree-field';
 
     /**
      * @var Closure|array<int, array<string, mixed>>

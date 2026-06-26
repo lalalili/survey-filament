@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useSurveyBuilderStore } from './stores/useSurveyBuilderStore';
 import type { BuilderEndpoints } from './types/schema';
 import { BuilderShell } from '@builder-ui-core';
 import CanvasArea from './components/CanvasArea.vue';
+import BuilderActivityPanel from './dialogs/BuilderActivityPanel.vue';
 import SettingsModal from './dialogs/SettingsModal.vue';
 
 const props = defineProps<{
@@ -12,6 +13,7 @@ const props = defineProps<{
 }>();
 
 const store = useSurveyBuilderStore();
+const showActivityPanel = ref(false);
 
 // Save status
 const saveStatus = computed(() => {
@@ -63,6 +65,15 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
         </span>
 
         <button
+          type="button"
+          class="sb-icon-btn"
+          :class="{ active: showActivityPanel }"
+          title="編輯紀錄"
+          aria-label="編輯紀錄"
+          @click="showActivityPanel = true"
+        >↺</button>
+
+        <button
           v-if="store.isPreviewMode"
           type="button"
           class="sb-icon-btn"
@@ -97,6 +108,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
       :upload-image-url="props.endpoints.uploadImage"
       :csrf-token="props.csrfToken"
     />
+
+    <BuilderActivityPanel v-model="showActivityPanel" />
   </BuilderShell>
 </template>
 

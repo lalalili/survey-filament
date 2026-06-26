@@ -20,6 +20,12 @@ Route::middleware(['web', 'auth', 'verified'])
         Route::post('/{survey}/builder-publish', [SurveyBuilderController::class, 'publish'])
             ->name('publish');
 
+        Route::get('/{survey}/builder-activities', [SurveyBuilderController::class, 'activities'])
+            ->name('activities');
+
+        Route::post('/{survey}/builder-restore-published', [SurveyBuilderController::class, 'restorePublished'])
+            ->name('restore-published');
+
         Route::post('/{survey}/builder-image', [SurveyBuilderController::class, 'uploadImage'])
             ->name('upload-image');
     });

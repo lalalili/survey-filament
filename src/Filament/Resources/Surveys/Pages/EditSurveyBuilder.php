@@ -57,6 +57,8 @@ class EditSurveyBuilder extends Page
                 'show' => route('survey-filament.builder.show', $survey),
                 'update' => route('survey-filament.builder.update', $survey),
                 'publish' => route('survey-filament.builder.publish', $survey),
+                'activities' => route('survey-filament.builder.activities', $survey),
+                'restore_published' => route('survey-filament.builder.restore-published', $survey),
                 'upload_image' => route('survey-filament.builder.upload-image', $survey),
             ],
         ];

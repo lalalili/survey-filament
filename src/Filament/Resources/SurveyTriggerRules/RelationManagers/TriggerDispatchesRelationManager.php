@@ -3,6 +3,7 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\RelationManagers;
 
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Notifications\Notification;
@@ -39,6 +40,7 @@ class TriggerDispatchesRelationManager extends RelationManager
                         TriggerDispatchStatus::Sent => 'success',
                         TriggerDispatchStatus::Failed => 'danger',
                         TriggerDispatchStatus::Pending => 'warning',
+                        TriggerDispatchStatus::Skipped => 'gray',
                     })
                     ->formatStateUsing(fn (TriggerDispatchStatus $state): string => $state->label()),
                 TextColumn::make('attempts')->label('嘗試次數'),
@@ -47,18 +49,20 @@ class TriggerDispatchesRelationManager extends RelationManager
             ])
             ->defaultSort('id', 'desc')
             ->actions([
-                Action::make('retry')
-                    ->label('重送')
-                    ->icon('heroicon-o-arrow-path')
-                    ->color('warning')
-                    ->requiresConfirmation()
-                    ->modalHeading('確認重送')
-                    ->modalDescription('將此派送記錄重設為等待中，並重新排入佇列。')
-                    ->visible(fn (SurveyTriggerDispatch $record): bool => $record->status === TriggerDispatchStatus::Failed)
-                    ->action(function (SurveyTriggerDispatch $record): void {
-                        app(RetryTriggerDispatchAction::class)->execute($record);
-                        Notification::make()->title('已重新排入佇列')->success()->send();
-                    }),
+                ActionGroup::make([
+                    Action::make('retry')
+                        ->label('重送')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->modalHeading('確認重送')
+                        ->modalDescription('將此派送記錄重設為等待中，並重新排入佇列。')
+                        ->visible(fn (SurveyTriggerDispatch $record): bool => $record->status === TriggerDispatchStatus::Failed)
+                        ->action(function (SurveyTriggerDispatch $record): void {
+                            app(RetryTriggerDispatchAction::class)->execute($record);
+                            Notification::make()->title('已重新排入佇列')->success()->send();
+                        }),
+                ]),
             ])
             ->bulkActions([
                 BulkActionGroup::make([

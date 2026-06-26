@@ -9,6 +9,10 @@ use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
@@ -20,10 +24,11 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Lalalili\SurveyCore\Actions\ExportSurveyResponsesAction;
 use Lalalili\SurveyCore\Enums\SurveyResponseCompletionStatus;
 use Lalalili\SurveyCore\Enums\SurveyResponseQualityStatus;
@@ -33,6 +38,9 @@ use Lalalili\SurveyCore\Models\SurveyTag;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\Pages\ListResponses;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\Pages\ViewResponse;
 
+/**
+ * @extends resource<SurveyResponse>
+ */
 class ResponseResource extends Resource
 {
     protected static ?string $model = SurveyResponse::class;
@@ -42,7 +50,7 @@ class ResponseResource extends Resource
         return 'heroicon-o-inbox-stack';
     }
 
-    protected static ?string $navigationLabel = '回應';
+    protected static ?string $navigationLabel = '回覆紀錄';
 
     protected static ?string $modelLabel = '回應';
 
@@ -99,12 +107,12 @@ class ResponseResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return config('survey-filament.navigation_group', '問卷管理');
+        return '報表';
     }
 
     public static function getNavigationSort(): ?int
     {
-        return config('survey-filament.navigation_sort', 52);
+        return 63;
     }
 
     public static function form(Schema $schema): Schema
@@ -118,6 +126,12 @@ class ResponseResource extends Resource
             ->modifyQueryUsing(fn ($query) => $query->with('tags'))
             ->columns([
                 TextColumn::make('id')->label('ID')->sortable()->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('response_number')
+                    ->label('填答編號')
+                    ->searchable()
+                    ->sortable()
+                    ->copyable()
+                    ->placeholder('—'),
                 TextColumn::make('survey.title')->label('問卷')->searchable()->sortable(),
                 TextColumn::make('recipient.name')->label('收件人姓名')->searchable(),
                 TextColumn::make('recipient.email')->label('收件人 Email')->searchable(),
@@ -208,6 +222,7 @@ class ResponseResource extends Resource
                 SelectFilter::make('quality_status')
                     ->label('接受狀態')
                     ->options(collect(SurveyResponseQualityStatus::cases())->mapWithKeys(fn ($status) => [$status->value => $status->label()])),
+                TrashedFilter::make(),
                 SelectFilter::make('tag')
                     ->label('標籤')
                     ->options(SurveyTag::query()->orderBy('name')->pluck('name', 'id'))
@@ -225,6 +240,8 @@ class ResponseResource extends Resource
                         blank: fn ($query) => $query->where('is_test', false),
                     ),
             ])
+            ->filtersFormColumns(2)
+            ->columnToggleFormColumns(2)
             ->actions([
                 ActionGroup::make([
                     ViewAction::make(),
@@ -256,14 +273,16 @@ class ResponseResource extends Resource
                         }),
 
                     DeleteAction::make()->label('刪除'),
+                    RestoreAction::make()->label('還原'),
+                    ForceDeleteAction::make()->label('永久刪除'),
                 ]),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
                     BulkAction::make('export_xlsx')
-                        ->label('匯出 Excel')
-                        ->icon('heroicon-o-table-cells')
-                        ->color('success')
+                        ->label('匯出')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('primary')
                         ->visible(fn () => static::canView(new SurveyResponse))
                         ->action(function (Collection $records) {
                             $surveyIds = $records->pluck('survey_id')->unique();
@@ -278,32 +297,23 @@ class ResponseResource extends Resource
                                 return;
                             }
 
-                            $surveyId = $surveyIds->first();
-                            if (! is_numeric($surveyId)) {
-                                return;
-                            }
-
-                            $survey = Survey::query()->whereKey((int) $surveyId)->first();
+                            $survey = Survey::query()->where('id', $surveyIds->first())->first();
 
                             if ($survey === null) {
                                 return;
                             }
-
-                            $responses = SurveyResponse::query()
-                                ->whereKey($records->pluck('id')->all())
-                                ->get();
 
                             $asyncAction = app()->bound('survey-filament.response_export_action')
                                 ? app('survey-filament.response_export_action')
                                 : config('survey-filament.response_export_action');
 
                             if (is_callable($asyncAction)) {
-                                $asyncAction($survey, $responses);
+                                $asyncAction($survey, $records);
 
                                 return;
                             }
 
-                            return app(ExportSurveyResponsesAction::class)->execute($survey, 'xlsx', $responses, answersOnly: true);
+                            return app(ExportSurveyResponsesAction::class)->execute($survey, 'xlsx', $records, answersOnly: true);
                         }),
                     BulkAction::make('bulk_quarantine')
                         ->label('批次隔離')
@@ -312,6 +322,8 @@ class ResponseResource extends Resource
                         ->visible(fn () => static::canEdit(new SurveyResponse))
                         ->action(fn ($records) => $records->each->update(['quality_status' => SurveyResponseQualityStatus::Quarantined])),
                     DeleteBulkAction::make()->label('批次刪除'),
+                    RestoreBulkAction::make()->label('批次還原'),
+                    ForceDeleteBulkAction::make()->label('批次永久刪除'),
                 ]),
             ])
             ->defaultSort('submitted_at', 'desc');

@@ -75,6 +75,8 @@ function cascadePreviewSelect(elementId: string, levelIndex: number, nodeId: str
 // ── Drag state ──────────────────────────────────────────────────────────────
 const dragQId = ref<string | null>(null);
 const dropTarget = ref<{ type: 'zone'; pageId: string; index: number } | { type: 'tab'; pageId: string } | null>(null);
+const dragPageId = ref<string | null>(null);
+const pageDropTarget = ref<{ pageId: string; position: 'before' | 'after' } | null>(null);
 
 // ── Validation error parsing ────────────────────────────────────────────────
 interface ParsedError {
@@ -580,6 +582,48 @@ function onDragStart(e: DragEvent, qId: string) {
 
 function onDragEnd() { dragQId.value = null; dropTarget.value = null; }
 
+function onPageDragStart(e: DragEvent, pageId: string) {
+  dragPageId.value = pageId;
+
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/x-survey-page', pageId);
+  }
+}
+
+function onPageDragEnd() {
+  dragPageId.value = null;
+  pageDropTarget.value = null;
+}
+
+function onPageDragOver(e: DragEvent, pageId: string) {
+  if (!dragPageId.value || dragPageId.value === pageId) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const position = e.clientX < rect.left + (rect.width / 2) ? 'before' : 'after';
+  pageDropTarget.value = { pageId, position };
+
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+}
+
+function onPageDragLeave(e: DragEvent, pageId: string) {
+  if ((e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null)) return;
+  if (pageDropTarget.value?.pageId === pageId) pageDropTarget.value = null;
+}
+
+function onPageDrop(e: DragEvent, pageId: string) {
+  if (!dragPageId.value || !pageDropTarget.value) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  store.moveQuestionPage(dragPageId.value, pageId, pageDropTarget.value.position);
+  onPageDragEnd();
+}
+
 function onDragOverZone(e: DragEvent, pageId: string, index: number) {
   if (!dragQId.value) return;
   e.preventDefault();
@@ -612,6 +656,36 @@ function onDropTab(e: DragEvent, pageId: string) {
   dragQId.value = null; dropTarget.value = null;
 }
 
+function onPageTabDragOver(e: DragEvent, pageId: string) {
+  if (dragPageId.value) {
+    onPageDragOver(e, pageId);
+
+    return;
+  }
+
+  onDragOverTab(e, pageId);
+}
+
+function onPageTabDragLeave(e: DragEvent, pageId: string) {
+  if (dragPageId.value) {
+    onPageDragLeave(e, pageId);
+
+    return;
+  }
+
+  onDragLeave();
+}
+
+function onPageTabDrop(e: DragEvent, pageId: string) {
+  if (dragPageId.value) {
+    onPageDrop(e, pageId);
+
+    return;
+  }
+
+  onDropTab(e, pageId);
+}
+
 function moveQuestion(qId: string, targetPageId: string, targetIndex: number) {
   if (!store.schema) return;
   let movingEl: SurveyElement | null = null;
@@ -632,6 +706,10 @@ function isZoneActive(pageId: string, index: number) {
 
 function isTabTarget(pageId: string) {
   return dropTarget.value?.type === 'tab' && (dropTarget.value as any).pageId === pageId;
+}
+
+function isPageDropTarget(pageId: string, position: 'before' | 'after') {
+  return pageDropTarget.value?.pageId === pageId && pageDropTarget.value.position === position;
 }
 
 function textInputType(element: SurveyElement) {
@@ -713,16 +791,22 @@ function textInputType(element: SurveyElement) {
               :class="{
                 active: store.selectedPageId === page.id,
                 'drop-target': isTabTarget(page.id),
+                'page-drop-before': isPageDropTarget(page.id, 'before'),
+                'page-drop-after': isPageDropTarget(page.id, 'after'),
+                'is-page-dragging': dragPageId === page.id,
                 'has-error': errorPageIds.has(page.id),
               }"
               role="button"
               tabindex="0"
+              draggable="true"
               @click="selectPage(page.id)"
               @keydown.enter.prevent="selectPage(page.id)"
               @keydown.space.prevent="selectPage(page.id)"
-              @dragover="onDragOverTab($event, page.id)"
-              @dragleave="onDragLeave"
-              @drop="onDropTab($event, page.id)"
+              @dragstart="onPageDragStart($event, page.id)"
+              @dragend="onPageDragEnd"
+              @dragover="onPageTabDragOver($event, page.id)"
+              @dragleave="onPageTabDragLeave($event, page.id)"
+              @drop="onPageTabDrop($event, page.id)"
             >
               <span class="sb-page-tab-num" :class="{ 'error-num': errorPageIds.has(page.id) }">P{{ String(i + 1).padStart(2, '0') }}</span>
               <span>{{ page.title || '未命名頁面' }}</span>

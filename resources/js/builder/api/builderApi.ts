@@ -1,4 +1,4 @@
-import type { BuilderEndpoints, BuilderPayload, SurveyBuilderSchema } from '../types/schema';
+import type { BuilderActivitiesPayload, BuilderEndpoints, BuilderPayload, SurveyBuilderSchema } from '../types/schema';
 
 interface RequestOptions {
   csrfToken: string;
@@ -60,6 +60,17 @@ export function createBuilderApi(endpoints: BuilderEndpoints, options: RequestOp
     },
     publish() {
       return requestJson<BuilderPayload & { published_at: string | null }>(endpoints.publish, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': options.csrfToken,
+        },
+      });
+    },
+    listActivities() {
+      return requestJson<BuilderActivitiesPayload>(endpoints.activities);
+    },
+    restorePublished() {
+      return requestJson<BuilderPayload & { restored_at: string }>(endpoints.restorePublished, {
         method: 'POST',
         headers: {
           'X-CSRF-TOKEN': options.csrfToken,

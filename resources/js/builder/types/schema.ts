@@ -83,7 +83,9 @@ export interface Condition {
 
 export interface ConditionGroup {
   logic: 'and' | 'or';
-  conditions: Condition[];
+  // A condition entry is either a leaf condition or a nested group, allowing
+  // nested AND/OR trees (evaluated recursively at runtime and on the backend).
+  conditions: Array<Condition | ConditionGroup>;
 }
 
 export interface PageJumpRule {
@@ -176,6 +178,11 @@ export interface SurveySettings {
     detect_duplicate?: 'none' | 'cookie' | 'ip' | 'both';
     turnstile?: boolean;
   };
+  redirect?: {
+    url?: string | null;
+    mode?: 'link' | 'auto';
+    delay_seconds?: number;
+  };
 }
 
 export interface SurveyBuilderSchema {
@@ -195,6 +202,8 @@ export interface BuilderEndpoints {
   show: string;
   update: string;
   publish: string;
+  activities: string;
+  restorePublished: string;
   uploadImage: string;
 }
 
@@ -210,4 +219,22 @@ export interface BuilderPayload {
   themes?: SurveyTheme[];
   audience_lists?: AudienceListSummary[];
   capabilities?: BuilderCapabilities;
+}
+
+export interface BuilderActivity {
+  id: number;
+  event: string | null;
+  label: string;
+  description: string;
+  causer_name: string | null;
+  created_at: string | null;
+  version: number | null;
+  autosave_count: number | null;
+}
+
+export interface BuilderActivitiesPayload {
+  items: BuilderActivity[];
+  can_restore_published: boolean;
+  published_at: string | null;
+  current_version: number;
 }

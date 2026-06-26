@@ -20,6 +20,12 @@ class SurveyAnalytics extends Page
     /** @var array<string, mixed> */
     public array $analytics = [];
 
+    /** 篩選的 collector id；空字串代表全部（Livewire select 綁定值為字串）。 */
+    public string $collectorId = '';
+
+    /** @var array<int, array{id: int, name: string}> */
+    public array $collectorOptions = [];
+
     public function mount(int|string $record, ComputeSurveyAnalyticsAction $computeAnalytics): void
     {
         $this->record = $this->resolveRecord($record);
@@ -28,7 +34,24 @@ class SurveyAnalytics extends Page
         abort_unless($survey instanceof Survey, 404);
         abort_unless(static::getResource()::canView($survey), 403);
 
+        $this->collectorOptions = $survey->collectors
+            ->map(fn ($collector): array => ['id' => (int) $collector->id, 'name' => (string) $collector->name])
+            ->values()
+            ->all();
+
         $this->analytics = $computeAnalytics->execute($survey);
+    }
+
+    public function updatedCollectorId(): void
+    {
+        $survey = $this->getRecord();
+
+        abort_unless($survey instanceof Survey, 404);
+
+        $this->analytics = app(ComputeSurveyAnalyticsAction::class)->execute(
+            $survey,
+            $this->collectorId === '' ? null : (int) $this->collectorId,
+        );
     }
 
     public function getTitle(): string

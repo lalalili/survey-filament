@@ -8,5 +8,5 @@ parameters:
 
     level: 8
 
-    tmpDir: build/phpstan
+    tmpDir: ../../storage/framework/cache/phpstan/survey-filament
     checkModelProperties: false

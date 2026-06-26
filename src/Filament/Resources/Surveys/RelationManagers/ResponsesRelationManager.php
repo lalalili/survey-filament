@@ -31,6 +31,12 @@ class ResponsesRelationManager extends RelationManager
         return $table
             ->columns([
                 TextColumn::make('id')->label('ID')->sortable(),
+                TextColumn::make('response_number')
+                    ->label('填答編號')
+                    ->searchable()
+                    ->sortable()
+                    ->copyable()
+                    ->placeholder('—'),
                 TextColumn::make('recipient.name')->label('收件人姓名')->searchable(),
                 TextColumn::make('recipient.email')->label('收件人 Email')->searchable(),
                 TextColumn::make('completion_status')

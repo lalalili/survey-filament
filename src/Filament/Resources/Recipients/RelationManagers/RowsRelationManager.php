@@ -9,6 +9,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\View as ViewFacade;
 
 class RowsRelationManager extends RelationManager
 {
@@ -41,17 +42,9 @@ class RowsRelationManager extends RelationManager
                             ->modalHeading(fn ($record) => '名單資料 #'.$record->id)
                             ->modalSubmitAction(false)
                             ->modalCancelActionLabel('關閉')
-                            ->modalContent(function ($record): View {
-                                /** @var view-string $rowDataView */
-                                $rowDataView = 'survey-filament::modals.row-data';
-
-                                return view(
-                                    $rowDataView,
-                                    [
-                                        'data' => self::labelRowData($record->data_json, $this->currentColumnLabelMap()),
-                                    ]
-                                );
-                            })
+                            ->modalContent(fn ($record): View => ViewFacade::make('survey-filament::modals.row-data', [
+                                'data' => self::labelRowData($record->data_json, $this->currentColumnLabelMap()),
+                            ]))
                     )
                     ->wrap(),
                 TextColumn::make('status')->label('狀態')->badge(),

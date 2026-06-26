@@ -2,6 +2,7 @@
 
 namespace Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers;
 
+use Filament\Actions\ActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -46,8 +47,10 @@ class TagsRelationManager extends RelationManager
                 CreateAction::make()->label('新增標籤'),
             ])
             ->actions([
-                EditAction::make()->label('編輯'),
-                DeleteAction::make()->label('刪除'),
+                ActionGroup::make([
+                    EditAction::make()->label('編輯'),
+                    DeleteAction::make()->label('刪除'),
+                ]),
             ]);
     }
 }

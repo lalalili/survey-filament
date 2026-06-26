@@ -23,9 +23,9 @@ return [
     // Keep the standalone survey package recipient list visible by default.
     'recipient_navigation_enabled' => true,
 
-    // How to handle legacy marketing automation dispatch references when deleting a list.
-    // Supported values: detach, restrict.
-    'recipient_activity_dispatch_delete_strategy' => 'detach',
+    // How to handle marketing automation dispatch references when deleting a list.
+    // Supported values: restrict, detach.
+    'recipient_activity_dispatch_delete_strategy' => 'restrict',
 
     /*
     |--------------------------------------------------------------------------
@@ -39,30 +39,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Builder Display Setting Gates
+    | Builder Language Setting
     |--------------------------------------------------------------------------
-    | These keep builder controls opt-in until the public renderer in each host
-    | supports the corresponding behavior.
+    | Controls whether admins can choose the public survey language in the
+    | builder display settings. Disabled until the public survey UI supports
+    | localized labels, buttons, and validation messages.
     */
     'builder_language_setting_enabled' => false,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Builder Thank-you Redirect Setting
+    |--------------------------------------------------------------------------
+    | Controls whether admins can configure a thank-you redirect URL in the
+    | builder. Disabled until the public survey UI consistently supports the
+    | redirect behavior across all frontend rendering modes.
+    */
     'builder_thank_you_redirect_enabled' => false,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Builder Accent Color Setting
+    |--------------------------------------------------------------------------
+    | Controls whether admins can configure the public survey accent color in
+    | the builder display settings. Disabled until the public survey UI uses the
+    | accent token consistently across rendering modes.
+    */
     'builder_accent_color_setting_enabled' => false,
 
     // Survey table columns hidden by default. Supported values include:
     // category, fields_count, recipients_count.
     'survey_table_hidden_columns' => [],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Resource Class Overrides
-    |--------------------------------------------------------------------------
-    | Replace package resources with application-specific subclasses.
-    */
-    'survey_resource_class' => null,
-
-    'response_resource_class' => null,
 
     /*
     |--------------------------------------------------------------------------
@@ -72,6 +79,17 @@ return [
     | them manually inside your AdminPanelProvider instead.
     */
     'resource_discovery' => true,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Survey Resource Class Override
+    |--------------------------------------------------------------------------
+    | Replace the default SurveyResource with an application-specific subclass.
+    | Set to null to use the package default.
+    */
+    'survey_resource_class' => null,
+
+    'response_resource_class' => null,
 
     /*
     |--------------------------------------------------------------------------
@@ -125,10 +143,13 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Response Export Action
+    | Response Export Action (Async override)
     |--------------------------------------------------------------------------
-    | Optional callable(Survey $survey, Collection $records): void that replaces
-    | the default synchronous XLSX download with a host-specific async flow.
+    | An optional callable(Survey $survey, Collection $records): void that
+    | replaces the default synchronous XLSX download with an async flow
+    | (e.g. dispatch a queued job and show a notification).
+    |
+    | Set to null to keep the default synchronous streaming download.
     */
     'response_export_action' => null,
 

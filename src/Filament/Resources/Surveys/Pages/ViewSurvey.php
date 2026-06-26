@@ -8,9 +8,8 @@ use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Schema;
 use Illuminate\Contracts\Support\Htmlable;
 use Lalalili\SurveyCore\Enums\SurveyStatus;
-use Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers\FieldsRelationManager;
+use Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers\RecipientsRelationManager;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
-use Lalalili\SurveyFilament\Filament\Widgets\SurveyInvitationEmailStatsWidget;
 
 class ViewSurvey extends ViewRecord
 {
@@ -33,24 +32,29 @@ class ViewSurvey extends ViewRecord
             TextEntry::make('status')
                 ->label('狀態')
                 ->formatStateUsing(fn ($state) => $state instanceof SurveyStatus ? $state->label() : $state),
-            TextEntry::make('public_key')->label('公開金鑰'),
             TextEntry::make('starts_at')->label('開始時間')->dateTime()->placeholder('—'),
             TextEntry::make('ends_at')->label('結束時間')->dateTime()->placeholder('—'),
         ]);
     }
 
+    /**
+     * @var list<class-string>
+     */
+    private const RELATION_MANAGERS = [
+        RecipientsRelationManager::class,
+    ];
+
     public function getRelationManagers(): array
     {
-        return [
-            FieldsRelationManager::class,
-        ];
+        return self::RELATION_MANAGERS;
     }
 
-    protected function getFooterWidgets(): array
+    /**
+     * 收件人關聯在分頁清單中的 key，供外部產生 ?relation=<key> 深層連結（避免硬編索引）。
+     */
+    public static function recipientsRelationKey(): int|string
     {
-        return [
-            SurveyInvitationEmailStatsWidget::class,
-        ];
+        return array_search(RecipientsRelationManager::class, self::RELATION_MANAGERS, true);
     }
 
     public function getTitle(): string|Htmlable

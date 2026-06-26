@@ -3,6 +3,7 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerAllowedHosts;
 
 use BackedEnum;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
@@ -31,18 +32,18 @@ class SurveyTriggerAllowedHostResource extends Resource
 
     protected static ?string $navigationLabel = '觸發白名單';
 
-    protected static ?string $modelLabel = '允許 Host';
+    protected static ?string $modelLabel = '觸發白名單';
 
-    protected static ?string $pluralModelLabel = '允許 Host 列表';
+    protected static ?string $pluralModelLabel = '觸發白名單';
 
     public static function getNavigationGroup(): ?string
     {
-        return config('survey-filament.navigation_group', '問卷管理');
+        return '系統';
     }
 
     public static function getNavigationSort(): ?int
     {
-        return config('survey-filament.navigation_sort', 50) + 10;
+        return 85;
     }
 
     public static function form(Schema $schema): Schema
@@ -82,8 +83,10 @@ class SurveyTriggerAllowedHostResource extends Resource
                     ->sortable(),
             ])
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make(),
+                ]),
             ])
             ->defaultSort('host');
     }

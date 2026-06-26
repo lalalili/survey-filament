@@ -1,15 +1,13 @@
 # survey-filament
 
-`survey-core` 的 Filament 後台 UI 套件。提供三個 Resource 與四個 Widget，透過 Plugin 模式掛載至 Filament Panel。
+`survey-core` 的 Filament v4 後台 UI 套件。提供三個 Resource 與四個 Widget，透過 Plugin 模式掛載至 Filament Panel。
 
 ## 需求
 
-- PHP 8.2+
-- Laravel 11 / 12 / 13
-- Filament 4 / 5
+- PHP 8.4+
+- Laravel 12+
+- Filament 4.x
 - `lalalili/survey-core`
-
-目前 aitehub host 使用 Laravel 13 與 Filament 5。
 
 ## 安裝
 

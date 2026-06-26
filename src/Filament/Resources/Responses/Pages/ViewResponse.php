@@ -12,7 +12,6 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
-use Lalalili\SurveyCore\Enums\SurveyResponseCompletionStatus;
 use Lalalili\SurveyCore\Models\SurveyResponse;
 use Lalalili\SurveyCore\Models\SurveyTag;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
@@ -70,7 +69,7 @@ class ViewResponse extends ViewRecord
                 ->action(function (array $data): void {
                     $this->record->update(['notes' => $data['notes'] ?? null]);
                     $this->record->tags()->sync($data['tag_ids'] ?? []);
-                    $this->record->refresh()->load(['tags']);
+                    $this->record->refresh()->load(['survey', 'recipient', 'answers.field', 'tags']);
                 }),
         ];
     }
@@ -79,36 +78,23 @@ class ViewResponse extends ViewRecord
     {
         return $schema->components([
             TextEntry::make('survey.title')->label('問卷'),
+            TextEntry::make('response_number')->label('填答編號')->placeholder('—')->copyable(),
             TextEntry::make('recipient.name')->label('收件人姓名')->placeholder('—'),
             TextEntry::make('recipient.email')->label('收件人 Email')->placeholder('—'),
-            TextEntry::make('recipient.external_id')->label('外部 ID')->placeholder('—'),
-            TextEntry::make('completion_status')
-                ->label('完成狀態')
-                ->formatStateUsing(fn ($state) => $state instanceof SurveyResponseCompletionStatus ? $state->label() : $state->value),
             TextEntry::make('submitted_at')->label('提交時間')->dateTime(),
-            TextEntry::make('ip')->label('IP')->placeholder('—'),
-            TextEntry::make('notes')->label('備註')->placeholder('—')->columnSpanFull(),
-            TextEntry::make('tags')
-                ->label('標籤')
-                ->state(fn () => $this->record->tags->pluck('name')->implode('、') ?: '—'),
-            TextEntry::make('user_agent')->label('User Agent')->columnSpanFull()->placeholder('—'),
 
             RepeatableEntry::make('answers')
                 ->label('填答內容')
                 ->schema([
                     TextEntry::make('field.label')->label('題目'),
-                    TextEntry::make('field.type')
-                        ->label('類型')
-                        ->formatStateUsing(fn ($state) => $state?->label() ?? '—'),
-                    TextEntry::make('field.is_hidden')
-                        ->label('隱藏')
-                        ->formatStateUsing(fn ($state) => $state ? '是' : '否'),
                     TextEntry::make('value')
                         ->label('答案')
                         ->state(fn ($record) => is_array($record->answer_json)
                             ? implode('、', $record->answer_json)
                             : ($record->answer_text ?? '—')),
                 ])
+                // 電腦版兩題一行（手機仍單欄）。
+                ->grid(['default' => 1, 'md' => 2])
                 ->columnSpanFull(),
         ]);
     }

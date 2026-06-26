@@ -6,6 +6,8 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
@@ -17,6 +19,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\IconPosition;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Lalalili\AudienceCore\Models\AudienceList;
@@ -24,7 +27,6 @@ use Lalalili\SurveyCore\Actions\CloseSurveyAction;
 use Lalalili\SurveyCore\Actions\DuplicateSurveyAction;
 use Lalalili\SurveyCore\Actions\ExportSurveyBuilderSchemaAction;
 use Lalalili\SurveyCore\Actions\PublishSurveyAction;
-use Lalalili\SurveyCore\Enums\SurveyCategory;
 use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Enums\SurveyUniquenessMode;
 use Lalalili\SurveyCore\Models\Survey;
@@ -51,20 +53,20 @@ class SurveyResource extends Resource
         return 'heroicon-o-clipboard-document-list';
     }
 
-    protected static ?string $navigationLabel = '問卷';
+    protected static ?string $navigationLabel = '問卷管理';
 
     protected static ?string $modelLabel = '問卷';
 
-    protected static ?string $pluralModelLabel = '問卷列表';
+    protected static ?string $pluralModelLabel = '問卷';
 
     public static function getNavigationGroup(): ?string
     {
-        return config('survey-filament.navigation_group', '問卷管理');
+        return config('survey-filament.navigation_group', '活動自動化');
     }
 
     public static function getNavigationSort(): ?int
     {
-        return config('survey-filament.navigation_sort', 50);
+        return 30;
     }
 
     public static function form(Schema $schema): Schema
@@ -86,12 +88,6 @@ class SurveyResource extends Resource
                 ->options(collect(SurveyStatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->label()]))
                 ->required()
                 ->default(SurveyStatus::Draft->value),
-
-            Select::make('category')
-                ->label('問卷分類')
-                ->options(SurveyCategory::options())
-                ->placeholder('未分類')
-                ->helperText('決定各角色的資料範圍：SSI 銷售、CSI 服務、IQS 新車品質。'),
 
             TextInput::make('public_key')
                 ->label('公開金鑰')
@@ -208,24 +204,22 @@ class SurveyResource extends Resource
                     })
                     ->formatStateUsing(fn ($state) => $state instanceof SurveyStatus ? $state->label() : $state),
 
-                TextColumn::make('category')
-                    ->label('分類')
-                    ->badge()
-                    ->placeholder('未分類')
-                    ->hidden(fn (): bool => self::isSurveyTableColumnHidden('category'))
-                    ->formatStateUsing(fn ($state) => $state instanceof SurveyCategory ? $state->value : $state),
-
                 TextColumn::make('fields_count')
                     ->counts('fields')
                     ->label('題目數')
-                    ->hidden(fn (): bool => self::isSurveyTableColumnHidden('fields_count'))
-                    ->url(fn (Survey $record) => SurveyResource::getUrl('view', ['record' => $record]))
-                    ->color('primary'),
+                    ->hidden(fn (): bool => self::isSurveyTableColumnHidden('fields_count')),
 
                 TextColumn::make('recipients_count')
                     ->counts('recipients')
+                    ->label('個性化連結數')
                     ->hidden(fn (): bool => self::isSurveyTableColumnHidden('recipients_count'))
-                    ->label('個性化連結數'),
+                    // edit 頁會轉走 builder，收件人關聯只在 view 頁呈現（見 ViewSurvey::getRelationManagers）。
+                    // 導向 view 頁的「收件人」分頁，並僅在有檢視權時才給連結，避免角色看得到列卻無權點出 404。
+                    ->url(fn (Survey $record): ?string => static::canView($record)
+                        ? SurveyResource::getUrl('view', ['record' => $record])
+                            .'?relation='.ViewSurvey::recipientsRelationKey()
+                        : null)
+                    ->color('primary'),
 
                 TextColumn::make('responses_count')
                     ->counts('responses')
@@ -258,7 +252,10 @@ class SurveyResource extends Resource
                 SelectFilter::make('status')
                     ->label('狀態')
                     ->options(collect(SurveyStatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->label()])),
+                TrashedFilter::make(),
             ])
+            ->filtersFormColumns(2)
+            ->columnToggleFormColumns(2)
             ->actions([
                 ActionGroup::make([
                     Action::make('edit')
@@ -272,7 +269,7 @@ class SurveyResource extends Resource
                     Action::make('export_builder_json')
                         ->label('匯出問卷 JSON')
                         ->icon('heroicon-o-arrow-down-tray')
-                        ->visible(fn (Survey $record) => static::canView($record) && self::builderJsonActionsEnabled())
+                        ->visible(fn (Survey $record) => self::builderJsonActionsEnabled() && static::canView($record))
                         ->action(function (Survey $record) {
                             $exportSchema = app(ExportSurveyBuilderSchemaAction::class);
 
@@ -316,9 +313,11 @@ class SurveyResource extends Resource
                         ->modalHeading(PanelLabel::get('clear_responses') ?? '清除全部回應')
                         ->modalDescription(fn (Survey $record): string => '確定要刪除「'.$record->title.'」的所有'.(PanelLabel::get('responses_word') ?? '回應').'嗎？此操作無法復原。')
                         ->modalSubmitActionLabel('確認清除')
-                        ->action(fn (Survey $record) => $record->responses()->delete()),
+                        ->action(fn (Survey $record) => $record->responses()->forceDelete()),
 
                     DeleteAction::make()->label('刪除'),
+                    RestoreAction::make()->label('還原'),
+                    ForceDeleteAction::make()->label('永久刪除'),
                 ]),
             ])
             ->bulkActions([]);

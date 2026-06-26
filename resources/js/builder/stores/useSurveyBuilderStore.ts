@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ValidationError, createBuilderApi } from '../api/builderApi';
 import { getQuestionType } from '../registry/questionTypes';
-import type { AudienceListSummary, BuilderCapabilities, BuilderEndpoints, Condition, SurveyBuilderSchema, SurveyElement, SurveyOptionAction, SurveyPage, SurveySettings, SurveyTheme } from '../types/schema';
+import type { AudienceListSummary, BuilderActivity, BuilderCapabilities, BuilderEndpoints, Condition, SurveyBuilderSchema, SurveyElement, SurveyOptionAction, SurveyPage, SurveySettings, SurveyTheme } from '../types/schema';
 
 type BuilderApi = ReturnType<typeof createBuilderApi>;
 
@@ -35,6 +35,11 @@ function alertAutosaveValidationError(errors: Record<string, string[]>): void {
   if (hasIncompleteShowIfConditionError(errors)) {
     window.alert('顯示條件尚未填寫完整，請填寫輸入值後再儲存。');
   }
+}
+
+function clearAutosaveTimer(): void {
+  window.clearTimeout(autosaveTimer);
+  autosaveTimer = undefined;
 }
 
 function cloneElement(element: SurveyElement): SurveyElement {
@@ -93,6 +98,12 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
     isPreviewMode: false,
     isLoading: false,
     isPublishing: false,
+    activities: [] as BuilderActivity[],
+    canRestorePublished: false,
+    publishedAt: null as string | null,
+    isLoadingActivities: false,
+    activitiesError: '',
+    isRestoringPublished: false,
     rightPanelTab: 'library' as 'library' | 'properties' | 'logic',
     jumpLogicOpen: false,
     showSettingsModal: false,
@@ -138,6 +149,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       this.surveyTitle = payload.survey.title;
       this.status = payload.survey.status;
       this.version = payload.survey.version;
+      this.publishedAt = payload.survey.published_at ?? null;
       this.schema = payload.schema;
       this.schema.settings ??= { progress: { mode: 'bar', show_estimated_time: true } };
       this.schema.settings.progress ??= { mode: 'bar', show_estimated_time: true };
@@ -285,6 +297,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         this.surveyTitle = payload.survey.title;
         this.status = payload.survey.status;
         this.version = payload.survey.version;
+        this.publishedAt = payload.survey.published_at ?? this.publishedAt;
         this.lastSavedAt = payload.saved_at;
         this.isDirty = false;
         this.validationErrors = {};
@@ -325,9 +338,11 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         this.schema = payload.schema;
         this.status = payload.survey.status;
         this.version = payload.survey.version;
+        this.publishedAt = payload.survey.published_at ?? this.publishedAt;
         this.isDirty = false;
         this.hasUnpublishedChanges = false;
         this.validationErrors = {};
+        await this.loadActivities();
       } catch (error) {
         if (error instanceof ValidationError) {
           this.saveError = error.message;
@@ -338,6 +353,54 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         }
       } finally {
         this.isPublishing = false;
+      }
+    },
+    async loadActivities() {
+      if (!this.api) {
+        return;
+      }
+
+      this.isLoadingActivities = true;
+      this.activitiesError = '';
+
+      try {
+        const payload = await this.api.listActivities();
+        this.activities = payload.items;
+        this.canRestorePublished = payload.can_restore_published;
+        this.publishedAt = payload.published_at;
+        this.version = payload.current_version;
+      } catch (error) {
+        this.activitiesError = error instanceof Error ? error.message : '載入編輯紀錄失敗。';
+      } finally {
+        this.isLoadingActivities = false;
+      }
+    },
+    async restorePublished() {
+      if (!this.api || this.isRestoringPublished || !this.canRestorePublished) {
+        return;
+      }
+
+      clearAutosaveTimer();
+      this.isRestoringPublished = true;
+      this.saveError = '';
+      this.validationErrors = {};
+
+      try {
+        const payload = await this.api.restorePublished();
+        this.schema = payload.schema;
+        this.surveyTitle = payload.survey.title;
+        this.status = payload.survey.status;
+        this.version = payload.survey.version;
+        this.publishedAt = payload.survey.published_at ?? this.publishedAt;
+        this.selectedPageId = payload.schema.pages[0]?.id ?? null;
+        this.selectedElementId = null;
+        this.isDirty = false;
+        this.hasUnpublishedChanges = false;
+        await this.loadActivities();
+      } catch (error) {
+        this.activitiesError = error instanceof Error ? error.message : '回復至目前發布版本失敗。';
+      } finally {
+        this.isRestoringPublished = false;
       }
     },
     updateOptionAction(elementId: string, optionId: string, action: SurveyOptionAction | null) {
@@ -468,6 +531,46 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       }
 
       Object.assign(page, patch);
+      this.markDirty();
+    },
+    moveQuestionPage(pageId: string, targetPageId: string, position: 'before' | 'after') {
+      if (!this.schema || pageId === targetPageId) {
+        return;
+      }
+
+      const sourceIndex = this.schema.pages.findIndex((page) => page.id === pageId);
+      const sourcePage = this.schema.pages[sourceIndex];
+
+      if (sourceIndex < 0 || !sourcePage || (sourcePage.kind ?? 'question') !== 'question') {
+        return;
+      }
+
+      const targetPage = this.schema.pages.find((page) => page.id === targetPageId);
+
+      if (!targetPage || (targetPage.kind ?? 'question') !== 'question') {
+        return;
+      }
+
+      this.schema.pages.splice(sourceIndex, 1);
+
+      const targetIndex = this.schema.pages.findIndex((page) => page.id === targetPageId);
+
+      if (targetIndex < 0) {
+        this.schema.pages.splice(sourceIndex, 0, sourcePage);
+
+        return;
+      }
+
+      const welcomeIndex = this.schema.pages.findIndex((page) => page.kind === 'welcome');
+      const thankYouIndex = this.schema.pages.findIndex((page) => page.kind === 'thank_you');
+      const minIndex = welcomeIndex >= 0 ? welcomeIndex + 1 : 0;
+      const maxIndex = thankYouIndex >= 0 ? thankYouIndex : this.schema.pages.length;
+      const requestedIndex = targetIndex + (position === 'after' ? 1 : 0);
+      const insertIndex = Math.min(Math.max(requestedIndex, minIndex), maxIndex);
+
+      this.schema.pages.splice(insertIndex, 0, sourcePage);
+      this.selectedPageId = sourcePage.id;
+      this.selectedElementId = null;
       this.markDirty();
     },
     updateProgressSettings(mode: 'none' | 'bar' | 'steps' | 'percent', showEstimatedTime?: boolean) {

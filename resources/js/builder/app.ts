@@ -10,11 +10,13 @@ function csrfToken(): string {
     ?? '';
 }
 
-function builderEndpoint(path: 'builder-data' | 'builder-schema' | 'builder-publish' | 'builder-image'): string {
+type BuilderEndpointPath = 'builder-data' | 'builder-schema' | 'builder-publish' | 'builder-activities' | 'builder-restore-published' | 'builder-image';
+
+function builderEndpoint(path: BuilderEndpointPath): string {
   return window.location.pathname.replace(/\/builder\/?$/, `/${path}`);
 }
 
-function normalizeBuilderEndpoint(endpoint: string | undefined, path: 'builder-data' | 'builder-schema' | 'builder-publish' | 'builder-image'): string {
+function normalizeBuilderEndpoint(endpoint: string | undefined, path: BuilderEndpointPath): string {
   const resolvedEndpoint = endpoint || builderEndpoint(path);
 
   if (path !== 'builder-schema') {
@@ -30,6 +32,8 @@ if (root) {
       show: normalizeBuilderEndpoint(root.dataset.endpointShow, 'builder-data'),
       update: normalizeBuilderEndpoint(root.dataset.endpointUpdate, 'builder-schema'),
       publish: normalizeBuilderEndpoint(root.dataset.endpointPublish, 'builder-publish'),
+      activities: normalizeBuilderEndpoint(root.dataset.endpointActivities, 'builder-activities'),
+      restorePublished: normalizeBuilderEndpoint(root.dataset.endpointRestorePublished, 'builder-restore-published'),
       uploadImage: normalizeBuilderEndpoint(root.dataset.endpointUploadImage, 'builder-image'),
     },
     csrfToken: csrfToken(),

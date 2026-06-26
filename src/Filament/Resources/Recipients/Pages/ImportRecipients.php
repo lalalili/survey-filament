@@ -31,6 +31,13 @@ class ImportRecipients extends Page implements HasForms
     /** @var array<string, mixed>|null */
     public ?array $data = [];
 
+    /**
+     * @var array{columns: list<string>, rows: list<array<string, string>>, total_rows: int, displayed_rows: int}|null
+     */
+    public ?array $previewData = null;
+
+    public ?string $previewedImportPath = null;
+
     public function mount(): void
     {
         $this->form->fill([
@@ -67,36 +74,69 @@ class ImportRecipients extends Page implements HasForms
             ]);
     }
 
-    public function import(AudienceFileReader $reader, ImportAudienceListAction $action): void
+    public function preview(AudienceFileReader $reader): void
     {
-        $data = $this->form->getState();
-        $storedFile = $data['import_file'] ?? null;
-        $storedPath = is_array($storedFile) ? reset($storedFile) : $storedFile;
+        $this->previewData = null;
+        $this->previewedImportPath = null;
 
-        if (! is_string($storedPath) || $storedPath === '') {
-            Notification::make()->danger()->title('請上傳名單檔案。')->send();
+        try {
+            $upload = $this->readUploadedFile($reader);
+        } catch (RuntimeException $e) {
+            Notification::make()->danger()->title('無法預覽名單')->body($e->getMessage())->send();
 
             return;
         }
 
-        $path = Storage::disk('local')->path($storedPath);
+        $columns = $upload['parsed']['columns'];
+        $previewRows = array_slice($upload['parsed']['rows'], 0, 5);
+
+        $this->previewData = [
+            'columns' => $columns,
+            'rows' => array_map(
+                fn (array $row): array => $this->formatPreviewRow($columns, $row),
+                $previewRows,
+            ),
+            'total_rows' => count($upload['parsed']['rows']),
+            'displayed_rows' => count($previewRows),
+        ];
+        $this->previewedImportPath = $upload['stored_path'];
+    }
+
+    public function import(AudienceFileReader $reader, ImportAudienceListAction $action): void
+    {
+        if ($this->previewData === null) {
+            Notification::make()->danger()->title('請先預覽名單檔案。')->send();
+
+            return;
+        }
 
         try {
-            $parsed = $reader->read($path);
+            $upload = $this->readUploadedFile($reader);
         } catch (RuntimeException $e) {
             Notification::make()->danger()->title('匯入失敗')->body($e->getMessage())->send();
 
             return;
         }
 
+        if ($this->previewedImportPath !== $upload['stored_path']) {
+            $this->previewData = null;
+            $this->previewedImportPath = null;
+
+            Notification::make()->danger()->title('檔案已變更，請重新預覽。')->send();
+
+            return;
+        }
+
+        $data = $upload['data'];
+
         $audienceList = $action->execute(
-            parsed: $parsed,
+            parsed: $upload['parsed'],
             name: filled($data['audience_list_id'] ?? null) ? null : (string) $data['name'],
             existingId: filled($data['audience_list_id'] ?? null) ? (int) $data['audience_list_id'] : null,
             createdBy: Auth::id() === null ? null : (int) Auth::id(),
         );
 
-        Storage::disk('local')->delete($storedPath);
+        Storage::disk('local')->delete($upload['stored_path']);
 
         Notification::make()
             ->success()
@@ -105,5 +145,66 @@ class ImportRecipients extends Page implements HasForms
             ->send();
 
         $this->redirect(RecipientResource::getUrl('edit', ['record' => $audienceList]));
+    }
+
+    /**
+     * @return array{
+     *     data: array<string, mixed>,
+     *     stored_path: string,
+     *     parsed: array{columns: list<string>, rows: list<array<string, mixed>>}
+     * }
+     */
+    private function readUploadedFile(AudienceFileReader $reader): array
+    {
+        $data = $this->form->getState();
+        $storedFile = $data['import_file'] ?? null;
+        $storedPath = is_array($storedFile) ? reset($storedFile) : $storedFile;
+
+        if (! is_string($storedPath) || $storedPath === '') {
+            throw new RuntimeException('請上傳名單檔案。');
+        }
+
+        $path = Storage::disk('local')->path($storedPath);
+
+        return [
+            'data' => $data,
+            'stored_path' => $storedPath,
+            'parsed' => $reader->read($path),
+        ];
+    }
+
+    /**
+     * @param  list<string>  $columns
+     * @param  array<string, mixed>  $row
+     * @return array<string, string>
+     */
+    private function formatPreviewRow(array $columns, array $row): array
+    {
+        $previewRow = [];
+
+        foreach ($columns as $column) {
+            $previewRow[$column] = $this->formatPreviewValue($row[$column] ?? null);
+        }
+
+        return $previewRow;
+    }
+
+    private function formatPreviewValue(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        $encoded = json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        return is_string($encoded) ? $encoded : '';
     }
 }

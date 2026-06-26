@@ -5,7 +5,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "lalalili/survey-core": "^0.1.0",
+        "lalalili/survey-core": "^0.1.1",
         "filament/filament": "^4.0|^5.0",
         "filament/forms": "^4.0|^5.0",
         "filament/schemas": "^4.0|^5.0",
@@ -21,8 +21,9 @@
         "pestphp/pest-plugin-livewire": "^3.0|^4.0",
         "larastan/larastan": "^3.0",
         "laravel/pint": "^1.0",
+        "lalalili/marketing-automation": "^0.1.1",
         "phpstan/phpstan": "^2.1",
-        "lalalili/package-testing-support": "^0.1.0"
+        "lalalili/package-testing-support": "*"
     },
     "repositories": [
         {
@@ -31,7 +32,7 @@
             "options": {
                 "symlink": true,
                 "versions": {
-                    "lalalili/audience-core": "0.1.0"
+                    "lalalili/audience-core": "0.1.1"
                 }
             }
         },
@@ -41,7 +42,17 @@
             "options": {
                 "symlink": true,
                 "versions": {
-                    "lalalili/email-campaign": "0.1.0"
+                    "lalalili/email-campaign": "0.1.1"
+                }
+            }
+        },
+        {
+            "type": "path",
+            "url": "../marketing-automation",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "lalalili/marketing-automation": "0.1.1"
                 }
             }
         },
@@ -51,7 +62,7 @@
             "options": {
                 "symlink": true,
                 "versions": {
-                    "lalalili/survey-core": "0.1.0"
+                    "lalalili/survey-core": "0.1.1"
                 }
             }
         },
@@ -59,10 +70,7 @@
             "type": "path",
             "url": "../package-testing-support",
             "options": {
-                "symlink": false,
-                "versions": {
-                    "lalalili/package-testing-support": "0.1.0"
-                }
+                "symlink": false
             }
         }
     ],

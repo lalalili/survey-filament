@@ -2,6 +2,7 @@
 
 namespace Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers;
 
+use Filament\Actions\ActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -196,7 +197,12 @@ class FieldsRelationManager extends RelationManager
                 IconColumn::make('is_hidden')->label('隱藏')->boolean(),
             ])
             ->headerActions([CreateAction::make()->label('新增題目')])
-            ->actions([EditAction::make()->label('編輯'), DeleteAction::make()->label('刪除')])
+            ->actions([
+                ActionGroup::make([
+                    EditAction::make()->label('編輯'),
+                    DeleteAction::make()->label('刪除'),
+                ]),
+            ])
             ->defaultSort('sort_order');
     }
 

@@ -5,6 +5,24 @@
         $daily = $analytics['daily'] ?? [];
     @endphp
 
+    {{-- 收集器篩選 --}}
+    @if(count($collectorOptions) > 0)
+        <div class="flex items-center gap-3">
+            <label for="analytics-collector-filter" class="text-sm font-medium text-gray-700 dark:text-gray-300">收集器</label>
+            <select
+                id="analytics-collector-filter"
+                wire:model.live="collectorId"
+                class="rounded-lg border-gray-300 bg-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            >
+                <option value="">全部</option>
+                @foreach($collectorOptions as $option)
+                    <option value="{{ $option['id'] }}">{{ $option['name'] }}</option>
+                @endforeach
+            </select>
+            <span wire:loading wire:target="collectorId" class="text-xs text-gray-400">統計中…</span>
+        </div>
+    @endif
+
     {{-- 左：總覽數字（已提交／完成率）｜右：每日趨勢，各佔 50% --}}
     <div class="grid items-start gap-6 lg:grid-cols-2">
         {{-- 總覽數字 --}}
@@ -23,8 +41,9 @@
             @endforeach
         </div>
 
-        {{-- 每日趨勢 --}}
+        {{-- 每日趨勢（wire:key 讓切換 collector 後 Alpine 以新資料重建） --}}
         <section
+            wire:key="daily-trend-{{ $collectorId === '' ? 'all' : $collectorId }}"
             x-data="{
                 page: 1,
                 perPage: 10,

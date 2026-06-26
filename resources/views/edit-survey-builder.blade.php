@@ -14,6 +14,8 @@
         data-endpoint-show="{{ $builderEndpoints['show'] }}"
         data-endpoint-update="{{ $builderEndpoints['update'] }}"
         data-endpoint-publish="{{ $builderEndpoints['publish'] }}"
+        data-endpoint-activities="{{ $builderEndpoints['activities'] }}"
+        data-endpoint-restore-published="{{ $builderEndpoints['restore_published'] }}"
         data-endpoint-upload-image="{{ $builderEndpoints['upload_image'] }}"
         data-csrf-token="{{ csrf_token() }}"
         data-turnstile-configured="{{ $turnstileConfigured ? '1' : '0' }}"
@@ -22,5 +24,5 @@
         data-accent-color-setting-enabled="{{ $accentColorSettingEnabled ? '1' : '0' }}"
     ></div>
 
-    @vite('packages/survey-filament/resources/js/builder/app.ts')
+    @vite('vendor/lalalili/survey-filament/resources/js/builder/app.ts')
 </x-filament-panels::page>
