@@ -3,6 +3,19 @@
 use Illuminate\Support\Facades\Route;
 use Lalalili\SurveyCore\Http\Controllers\SurveyBuilderController;
 use Lalalili\SurveyCore\Models\Survey;
+use Lalalili\SurveyFilament\Http\Controllers\GoogleDriveOAuthController;
+
+Route::middleware(['web', 'auth', 'verified'])
+    ->prefix('admin/surveys')
+    ->name('survey-filament.google-drive.')
+    ->group(function () {
+        // callback 不帶 {survey}，survey id 由加密 state 還原。
+        Route::get('/google-drive/callback', [GoogleDriveOAuthController::class, 'callback'])
+            ->name('callback');
+
+        Route::get('/{survey}/google-drive/connect', [GoogleDriveOAuthController::class, 'connect'])
+            ->name('connect');
+    });
 
 Route::middleware(['web', 'auth', 'verified'])
     ->prefix('admin/surveys')
