@@ -50,6 +50,7 @@ export interface SurveyOption {
   value: string;
   capacity?: number | null;
   is_hidden?: boolean;
+  group?: string | null;
   action?: SurveyOptionAction | null;
   score_delta_json?: Record<string, number>;
 }

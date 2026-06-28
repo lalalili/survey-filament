@@ -596,10 +596,20 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
               />
             </label>
             <p class="sb-prop-hint">開啟後，每位填答者看到的選項順序會隨機調整，避免位置偏誤；隱藏選項與名額限制不受影響。</p>
-            <p class="sb-prop-hint">可限制每個選項最多被選幾次；留空代表不限名額。</p>
+            <label class="sb-prop-row">
+              <span class="sb-prop-label">隨機排列選項組順序</span>
+              <input
+                type="checkbox"
+                :checked="Boolean((store.selectedElement.settings as any)?.randomize_option_groups)"
+                @change="store.updateElementSettings(store.selectedElement!.id, { randomize_option_groups: ($event.target as HTMLInputElement).checked })"
+              />
+            </label>
+            <p class="sb-prop-hint">為選項填寫「組別」可將選項分組顯示；開啟此項時，會連同各組的呈現順序一併隨機。</p>
+            <p class="sb-prop-hint">可限制每個選項最多被選幾次（留空不限名額），並可指定選項所屬組別。</p>
             <div v-for="opt in store.selectedElement.options" :key="opt.id" class="sb-opt-prop">
               <span class="sb-opt-prop-label">{{ opt.label || opt.value }}</span>
               <input :value="opt.capacity ?? ''" type="number" min="0" placeholder="名額不限" class="sb-prop-input-sm" @input="opt.capacity = ($event.target as HTMLInputElement).value === '' ? null : Math.max(0, Number(($event.target as HTMLInputElement).value) || 0); store.markDirty()" />
+              <input :value="opt.group ?? ''" placeholder="組別" class="sb-prop-input-sm" @input="opt.group = ($event.target as HTMLInputElement).value || null; store.markDirty()" />
               <label class="sb-opt-hidden-label">
                 <input v-model="opt.is_hidden" type="checkbox" @change="store.markDirty()" /> 隱藏
               </label>
