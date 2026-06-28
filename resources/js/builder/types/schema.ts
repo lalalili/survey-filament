@@ -207,6 +207,15 @@ export interface BuilderEndpoints {
   activities: string;
   restorePublished: string;
   uploadImage: string;
+  googleDriveConnect?: string;
+  googleDriveStatus?: string;
+  googleDriveDisconnect?: string;
+}
+
+export interface GoogleDriveBinding {
+  connected: boolean;
+  email?: string | null;
+  configured: boolean;
 }
 
 export interface BuilderPayload {
@@ -216,6 +225,7 @@ export interface BuilderPayload {
     status: string;
     version: number;
     published_at?: string | null;
+    google_drive?: GoogleDriveBinding;
   };
   schema: SurveyBuilderSchema;
   themes?: SurveyTheme[];

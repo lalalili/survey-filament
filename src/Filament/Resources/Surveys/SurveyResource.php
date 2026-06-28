@@ -286,25 +286,7 @@ class SurveyResource extends Resource
                         ->icon('heroicon-o-chart-bar-square')
                         ->url(fn (Survey $record): string => SurveyResource::getUrl('analytics', ['record' => $record])),
 
-                    Action::make('connect_google_drive')
-                        ->label('連結 Google Drive')
-                        ->icon('heroicon-o-cloud-arrow-up')
-                        ->color('warning')
-                        ->visible(fn (Survey $record): bool => static::canEdit($record) && $record->hasFileUploadField() && $record->google_drive_account_id === null)
-                        ->url(fn (Survey $record): string => route('survey-filament.google-drive.connect', [
-                            'survey' => $record,
-                            'return' => SurveyResource::getUrl('builder', ['record' => $record]),
-                        ])),
-
-                    Action::make('disconnect_google_drive')
-                        ->label(fn (Survey $record): string => 'Google Drive：'.($record->googleDriveAccount->email ?? '已綁定'))
-                        ->icon('heroicon-o-cloud')
-                        ->color('gray')
-                        ->visible(fn (Survey $record): bool => static::canEdit($record) && $record->google_drive_account_id !== null)
-                        ->requiresConfirmation()
-                        ->modalHeading('解除 Google Drive 綁定')
-                        ->modalDescription('解除後，此問卷檔案上傳題將無法上傳到雲端硬碟，需重新綁定。')
-                        ->action(fn (Survey $record) => $record->forceFill(['google_drive_account_id' => null, 'google_drive_folder_id' => null])->save()),
+                    // Google Drive 綁定改於 Builder 的「上傳設定」內完成（檔案上傳題設定區）。
                     Action::make('export_builder_json')
                         ->label('匯出問卷 JSON')
                         ->icon('heroicon-o-arrow-down-tray')

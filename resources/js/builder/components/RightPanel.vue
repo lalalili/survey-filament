@@ -153,6 +153,37 @@ function replaceWithAllQuestionTypes() {
   })));
 }
 
+// ── Google Drive 綁定（檔案上傳題上傳設定）─────────────────────────────
+function toggleGoogleDrive(enabled: boolean): void {
+  if (enabled) {
+    if (store.googleDrive.connected) return;
+    const url = store.googleDriveConnectUrl();
+    if (!url) return;
+    const popupUrl = url + (url.includes('?') ? '&' : '?') + 'popup=1';
+    const popup = window.open(popupUrl, 'survey-google-drive', 'width=520,height=660');
+    const handler = (event: MessageEvent): void => {
+      if (event.data && event.data.source === 'survey-google-drive') {
+        window.removeEventListener('message', handler);
+        if (event.data.status === 'connected') void store.refreshGoogleDrive();
+      }
+    };
+    window.addEventListener('message', handler);
+    const timer = window.setInterval(() => {
+      if (popup && popup.closed) {
+        window.clearInterval(timer);
+        window.removeEventListener('message', handler);
+        void store.refreshGoogleDrive();
+      }
+    }, 1000);
+  } else {
+    if (confirm('解除 Google Drive 綁定後，此問卷的檔案上傳題將無法上傳到雲端硬碟。確定解除？')) {
+      void store.disconnectGoogleDrive();
+    } else {
+      void store.refreshGoogleDrive();
+    }
+  }
+}
+
 // ── Jump logic ───────────────────────────────────────────────────────
 watch(() => store.selectedElementId, () => {
   const el = store.selectedElement;
@@ -389,6 +420,31 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
               </div>
             </template>
             <template v-else>
+              <!-- 上傳設定：雲端硬碟綁定（暫時只支援 Google Drive）-->
+              <div class="sb-gd">
+                <p class="sb-gd-info">一份問卷只能綁定一個雲端硬碟，會共用於所有檔案上傳題。</p>
+                <div class="sb-gd-row">
+                  <span class="sb-gd-name">
+                    Google Drive
+                    <a v-if="store.googleDrive.connected && store.googleDrive.email" class="sb-gd-email" href="https://drive.google.com" target="_blank" rel="noopener">{{ store.googleDrive.email }} ↗</a>
+                  </span>
+                  <label class="sb-switch" :class="{ disabled: !store.googleDrive.configured }">
+                    <input
+                      type="checkbox"
+                      :checked="store.googleDrive.connected"
+                      :disabled="!store.googleDrive.configured"
+                      @change="toggleGoogleDrive(($event.target as HTMLInputElement).checked)"
+                    />
+                    <span class="sb-switch-slider" />
+                  </label>
+                </div>
+                <div class="sb-gd-row is-disabled">
+                  <span class="sb-gd-name">One Drive</span>
+                  <span class="sb-gd-soon">暫不支援</span>
+                </div>
+                <p v-if="!store.googleDrive.configured" class="sb-prop-help">系統尚未設定 Google Drive 整合（需設定 OAuth 金鑰）。</p>
+              </div>
+
               <div class="sb-prop-grid-2">
                 <label class="sb-prop-row col">
                   <span class="sb-prop-label">最大檔案大小 (MB)</span>
@@ -401,7 +457,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                   <span class="sb-prop-help">以逗號分隔可接受的副檔名或 MIME 類型；留空時不額外限制格式。</span>
                 </label>
               </div>
-              <p class="sb-prop-hint" style="margin-top:8px">⚠️ 檔案上傳題需綁定 Google Drive 才能發佈：上傳的檔案會存到問卷綁定的雲端硬碟。請至「問卷列表 → 該問卷 → 連結 Google Drive」完成綁定（一個問卷僅能綁定一個帳號）。</p>
+              <p class="sb-prop-hint" style="margin-top:8px">⚠️ 含檔案上傳題的問卷需先於上方綁定 Google Drive 才能發佈；上傳的檔案會存到問卷綁定的雲端硬碟。</p>
             </template>
           </div>
 

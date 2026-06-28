@@ -1,4 +1,4 @@
-import type { BuilderActivitiesPayload, BuilderEndpoints, BuilderPayload, SurveyBuilderSchema } from '../types/schema';
+import type { BuilderActivitiesPayload, BuilderEndpoints, BuilderPayload, GoogleDriveBinding, SurveyBuilderSchema } from '../types/schema';
 
 interface RequestOptions {
   csrfToken: string;
@@ -71,6 +71,26 @@ export function createBuilderApi(endpoints: BuilderEndpoints, options: RequestOp
     },
     restorePublished() {
       return requestJson<BuilderPayload & { restored_at: string }>(endpoints.restorePublished, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': options.csrfToken,
+        },
+      });
+    },
+    googleDriveConnectUrl(): string | null {
+      return endpoints.googleDriveConnect ?? null;
+    },
+    googleDriveStatus() {
+      if (!endpoints.googleDriveStatus) {
+        return Promise.resolve<GoogleDriveBinding>({ connected: false, configured: false });
+      }
+      return requestJson<GoogleDriveBinding>(endpoints.googleDriveStatus);
+    },
+    googleDriveDisconnect() {
+      if (!endpoints.googleDriveDisconnect) {
+        return Promise.resolve<GoogleDriveBinding>({ connected: false, configured: false });
+      }
+      return requestJson<GoogleDriveBinding>(endpoints.googleDriveDisconnect, {
         method: 'POST',
         headers: {
           'X-CSRF-TOKEN': options.csrfToken,

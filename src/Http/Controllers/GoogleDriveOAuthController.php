@@ -2,8 +2,10 @@
 
 namespace Lalalili\SurveyFilament\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
@@ -37,27 +39,49 @@ class GoogleDriveOAuthController extends Controller
             'survey_id' => $survey->id,
             'user_id' => Auth::id(),
             'return' => $return,
+            'popup' => $request->boolean('popup'),
             'expires_at' => now()->addMinutes(15)->timestamp,
         ], JSON_THROW_ON_ERROR));
 
         return redirect()->away($this->clients->authorizationUrl($state));
     }
 
-    public function callback(Request $request): RedirectResponse
+    public function status(Survey $survey): JsonResponse
+    {
+        Gate::authorize('update', $survey);
+
+        return response()->json([
+            'connected' => $survey->google_drive_account_id !== null,
+            'email' => $survey->googleDriveAccount?->email,
+            'configured' => $this->clients->isConfigured(),
+        ]);
+    }
+
+    public function disconnect(Survey $survey): JsonResponse
+    {
+        Gate::authorize('update', $survey);
+
+        $survey->forceFill(['google_drive_account_id' => null, 'google_drive_folder_id' => null])->save();
+
+        return response()->json(['connected' => false, 'email' => null]);
+    }
+
+    public function callback(Request $request): RedirectResponse|Response
     {
         $payload = $this->decodeState($request->query('state'));
         $return = is_string($payload['return'] ?? null) ? $payload['return'] : url('/');
+        $popup = (bool) ($payload['popup'] ?? false);
 
         $survey = $payload !== null ? Survey::query()->find($payload['survey_id'] ?? null) : null;
 
         if (! $survey instanceof Survey) {
-            return redirect($this->withFlag($return, 'expired'));
+            return $this->finish($popup, $return, 'expired');
         }
 
         Gate::authorize('update', $survey);
 
         if ($request->query('error') !== null || $request->query('code') === null) {
-            return redirect($this->withFlag($return, 'cancelled'));
+            return $this->finish($popup, $return, 'cancelled');
         }
 
         try {
@@ -83,14 +107,40 @@ class GoogleDriveOAuthController extends Controller
         } catch (Throwable $exception) {
             report($exception);
 
-            return redirect($this->withFlag($return, 'error'));
+            return $this->finish($popup, $return, 'error');
         }
 
-        return redirect($this->withFlag($return, 'connected'));
+        return $this->finish($popup, $return, 'connected', $account->email);
     }
 
     /**
-     * @return array{survey_id?: int, user_id?: int, return?: string, expires_at?: int}|null
+     * 彈窗模式回傳自關閉頁面（postMessage 通知 Builder）；否則導回 return URL。
+     */
+    private function finish(bool $popup, string $return, string $flag, ?string $email = null): RedirectResponse|Response
+    {
+        if (! $popup) {
+            return redirect($this->withFlag($return, $flag));
+        }
+
+        $message = json_encode(['source' => 'survey-google-drive', 'status' => $flag, 'email' => $email], JSON_THROW_ON_ERROR);
+        $origin = json_encode(url('/'), JSON_THROW_ON_ERROR);
+
+        $html = <<<HTML
+            <!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><title>Google Drive</title></head>
+            <body style="font-family:system-ui;padding:24px;text-align:center;color:#374151">
+            <p>處理完成，視窗即將關閉…</p>
+            <script>
+                try { if (window.opener) { window.opener.postMessage({$message}, {$origin}); } } catch (e) {}
+                window.close();
+            </script>
+            </body></html>
+            HTML;
+
+        return response($html);
+    }
+
+    /**
+     * @return array{survey_id?: int, user_id?: int, return?: string, popup?: bool, expires_at?: int}|null
      */
     private function decodeState(mixed $state): ?array
     {
@@ -99,7 +149,7 @@ class GoogleDriveOAuthController extends Controller
         }
 
         try {
-            /** @var array{survey_id?: int, user_id?: int, return?: string, expires_at?: int} $payload */
+            /** @var array{survey_id?: int, user_id?: int, return?: string, popup?: bool, expires_at?: int} $payload */
             $payload = json_decode(Crypt::decryptString($state), true, 512, JSON_THROW_ON_ERROR);
         } catch (Throwable) {
             return null;

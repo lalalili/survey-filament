@@ -81,6 +81,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
     status: 'draft',
     version: 1,
     schema: null as SurveyBuilderSchema | null,
+    googleDrive: { connected: false, email: null as string | null | undefined, configured: false },
     themes: [] as SurveyTheme[],
     audienceLists: [] as AudienceListSummary[],
     capabilities: {
@@ -150,6 +151,11 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       this.status = payload.survey.status;
       this.version = payload.survey.version;
       this.publishedAt = payload.survey.published_at ?? null;
+      this.googleDrive = {
+        connected: payload.survey.google_drive?.connected ?? false,
+        email: payload.survey.google_drive?.email ?? null,
+        configured: payload.survey.google_drive?.configured ?? false,
+      };
       this.schema = payload.schema;
       this.schema.settings ??= { progress: { mode: 'bar', show_estimated_time: true } };
       this.schema.settings.progress ??= { mode: 'bar', show_estimated_time: true };
@@ -401,6 +407,30 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         this.activitiesError = error instanceof Error ? error.message : '回復至目前發布版本失敗。';
       } finally {
         this.isRestoringPublished = false;
+      }
+    },
+
+    googleDriveConnectUrl(): string | null {
+      return this.api?.googleDriveConnectUrl() ?? null;
+    },
+
+    async refreshGoogleDrive() {
+      if (!this.api) return;
+      try {
+        const status = await this.api.googleDriveStatus();
+        this.googleDrive = { connected: status.connected, email: status.email ?? null, configured: status.configured };
+      } catch {
+        // 靜默：保留現有狀態。
+      }
+    },
+
+    async disconnectGoogleDrive() {
+      if (!this.api) return;
+      try {
+        await this.api.googleDriveDisconnect();
+        this.googleDrive = { ...this.googleDrive, connected: false, email: null };
+      } catch {
+        // 靜默。
       }
     },
     updateOptionAction(elementId: string, optionId: string, action: SurveyOptionAction | null) {

@@ -84,6 +84,45 @@ it('binds the survey to a drive account on callback and returns to the survey pa
         ->and($survey->google_drive_folder_id)->toBe('folder-abc');
 });
 
+it('reports binding status as json', function () {
+    $account = GoogleDriveAccount::create(['google_user_id' => 'sub-s', 'email' => 'bound@example.com']);
+    $survey = Survey::create(['title' => 'Files', 'status' => SurveyStatus::Draft, 'google_drive_account_id' => $account->id]);
+
+    $this->getJson(route('survey-filament.google-drive.status', $survey))
+        ->assertOk()
+        ->assertJson(['connected' => true, 'email' => 'bound@example.com', 'configured' => true]);
+});
+
+it('disconnects via json endpoint', function () {
+    $account = GoogleDriveAccount::create(['google_user_id' => 'sub-d', 'email' => 'a@b.c']);
+    $survey = Survey::create(['title' => 'Files', 'status' => SurveyStatus::Draft, 'google_drive_account_id' => $account->id, 'google_drive_folder_id' => 'f1']);
+
+    $this->postJson(route('survey-filament.google-drive.disconnect', $survey))
+        ->assertOk()
+        ->assertJson(['connected' => false]);
+
+    $survey->refresh();
+    expect($survey->google_drive_account_id)->toBeNull()
+        ->and($survey->google_drive_folder_id)->toBeNull();
+});
+
+it('returns a self-closing popup page on popup callback', function () {
+    $survey = Survey::create(['title' => 'Files', 'status' => SurveyStatus::Draft]);
+    $state = Crypt::encryptString(json_encode([
+        'survey_id' => $survey->id,
+        'user_id' => 1,
+        'return' => 'http://localhost/admin',
+        'popup' => true,
+        'expires_at' => now()->addMinutes(10)->timestamp,
+    ]));
+
+    $response = $this->get(route('survey-filament.google-drive.callback', ['code' => 'auth-code', 'state' => $state]));
+
+    $response->assertOk();
+    expect($response->getContent())->toContain('survey-google-drive')->toContain('window.close()');
+    expect($survey->refresh()->google_drive_account_id)->not->toBeNull();
+});
+
 it('rejects a callback with an expired state', function () {
     $state = Crypt::encryptString(json_encode([
         'survey_id' => 999,

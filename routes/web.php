@@ -15,6 +15,12 @@ Route::middleware(['web', 'auth', 'verified'])
 
         Route::get('/{survey}/google-drive/connect', [GoogleDriveOAuthController::class, 'connect'])
             ->name('connect');
+
+        Route::get('/{survey}/google-drive/status', [GoogleDriveOAuthController::class, 'status'])
+            ->name('status');
+
+        Route::post('/{survey}/google-drive/disconnect', [GoogleDriveOAuthController::class, 'disconnect'])
+            ->name('disconnect');
     });
 
 Route::middleware(['web', 'auth', 'verified'])

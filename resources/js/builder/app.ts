@@ -35,6 +35,9 @@ if (root) {
       activities: normalizeBuilderEndpoint(root.dataset.endpointActivities, 'builder-activities'),
       restorePublished: normalizeBuilderEndpoint(root.dataset.endpointRestorePublished, 'builder-restore-published'),
       uploadImage: normalizeBuilderEndpoint(root.dataset.endpointUploadImage, 'builder-image'),
+      googleDriveConnect: root.dataset.endpointGdConnect || undefined,
+      googleDriveStatus: root.dataset.endpointGdStatus || undefined,
+      googleDriveDisconnect: root.dataset.endpointGdDisconnect || undefined,
     },
     csrfToken: csrfToken(),
   });
