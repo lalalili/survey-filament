@@ -89,6 +89,12 @@ class SurveyResource extends Resource
                 ->required()
                 ->default(SurveyStatus::Draft->value),
 
+            TextInput::make('category')
+                ->label('分類')
+                ->maxLength(10)
+                ->helperText('用於分組與篩選問卷的短代碼，例如 CSI、SSI。')
+                ->datalist(fn (): array => static::existingCategories()),
+
             TextInput::make('public_key')
                 ->label('公開金鑰')
                 ->disabled()
@@ -204,6 +210,12 @@ class SurveyResource extends Resource
                     })
                     ->formatStateUsing(fn ($state) => $state instanceof SurveyStatus ? $state->label() : $state),
 
+                TextColumn::make('category')
+                    ->label('分類')
+                    ->badge()
+                    ->placeholder('—')
+                    ->toggleable(),
+
                 TextColumn::make('fields_count')
                     ->counts('fields')
                     ->label('題目數')
@@ -252,6 +264,9 @@ class SurveyResource extends Resource
                 SelectFilter::make('status')
                     ->label('狀態')
                     ->options(collect(SurveyStatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->label()])),
+                SelectFilter::make('category')
+                    ->label('分類')
+                    ->options(fn (): array => static::existingCategories()),
                 TrashedFilter::make(),
             ])
             ->filtersFormColumns(2)
@@ -344,6 +359,22 @@ class SurveyResource extends Resource
     public static function builderJsonActionsEnabled(): bool
     {
         return (bool) config('survey-filament.builder_json_actions_enabled', false);
+    }
+
+    /**
+     * Distinct, non-empty survey categories for the form datalist and table filter.
+     *
+     * @return array<string, string>
+     */
+    public static function existingCategories(): array
+    {
+        return Survey::query()
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->distinct()
+            ->orderBy('category')
+            ->pluck('category', 'category')
+            ->all();
     }
 
     public static function getRelations(): array
