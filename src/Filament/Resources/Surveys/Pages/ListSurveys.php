@@ -4,6 +4,7 @@ namespace Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages;
 
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
@@ -11,8 +12,10 @@ use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Storage;
 use JsonException;
 use Lalalili\SurveyCore\Actions\CreateBlankSurveyBuilderSurveyAction;
+use Lalalili\SurveyCore\Actions\CreateSurveyFromBuilderTemplateAction;
 use Lalalili\SurveyCore\Actions\ImportSurveyBuilderSchemaAction;
 use Lalalili\SurveyCore\Exceptions\SurveyValidationException;
+use Lalalili\SurveyCore\Support\SurveyBuilderTemplateRegistry;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
 
 class ListSurveys extends ListRecords
@@ -95,6 +98,41 @@ class ListSurveys extends ListRecords
 
                     return redirect(SurveyResource::getUrl('builder', ['record' => $survey]));
                 }),
+            Action::make('create_from_template')
+                ->label('從範本建立')
+                ->icon('heroicon-o-rectangle-stack')
+                ->schema([
+                    Select::make('template')
+                        ->label('選擇範本')
+                        ->options($this->templateOptions())
+                        ->required()
+                        ->native(false)
+                        ->searchable(),
+                ])
+                ->action(function (array $data) {
+                    abort_unless(SurveyResource::canCreate(), 403);
+
+                    $slug = $data['template'] ?? null;
+
+                    if (! is_string($slug) || $slug === '') {
+                        Notification::make()
+                            ->danger()
+                            ->title('請選擇範本')
+                            ->send();
+
+                        return null;
+                    }
+
+                    $survey = app(CreateSurveyFromBuilderTemplateAction::class)->execute($slug);
+
+                    Notification::make()
+                        ->success()
+                        ->title('已從範本建立問卷')
+                        ->body($survey->title)
+                        ->send();
+
+                    return redirect(SurveyResource::getUrl('builder', ['record' => $survey]));
+                }),
             Action::make('create')
                 ->label('新增問卷')
                 ->icon('heroicon-o-plus')
@@ -112,6 +150,18 @@ class ListSurveys extends ListRecords
                     return redirect(SurveyResource::getUrl('builder', ['record' => $survey]));
                 }),
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function templateOptions(): array
+    {
+        return collect(app(SurveyBuilderTemplateRegistry::class)->all())
+            ->mapWithKeys(fn (array $template, string $slug): array => [
+                $slug => $template['name'].'（'.$template['category'].'）',
+            ])
+            ->all();
     }
 
     private function uploadedJsonPath(mixed $value): ?string
