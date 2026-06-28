@@ -397,6 +397,14 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
               <button class="sb-btn-sm" type="button" @click="store.addMatrixRow(store.selectedElement!.id)">+ 新增</button>
             </div>
             <p class="sb-prop-hint">每一列是一個要讓填答者評估的項目。</p>
+            <label class="sb-prop-row">
+              <span class="sb-prop-label">隨機排列列</span>
+              <input
+                type="checkbox"
+                :checked="Boolean((store.selectedElement.settings as any)?.randomize_rows)"
+                @change="store.updateElementSettings(store.selectedElement!.id, { randomize_rows: ($event.target as HTMLInputElement).checked })"
+              />
+            </label>
             <div v-for="(row, ri) in store.selectedElement.matrix_rows" :key="row.id" class="sb-matrix-row-edit">
               <span class="sb-matrix-row-num">{{ ri + 1 }}</span>
               <input :value="row.label" class="sb-prop-input" placeholder="例如 服務態度" @input="row.label = ($event.target as HTMLInputElement).value; store.markDirty()" />
@@ -496,7 +504,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
           </div>
 
           <!-- Hidden / personalized -->
-          <div v-if="!['section_title', 'description_block', 'divider', 'quote_block'].includes(store.selectedElement.type)" class="sb-prop-section">
+          <div v-if="['short_text', 'long_text', 'number', 'address', 'date', 'time'].includes(store.selectedElement.type)" class="sb-prop-section">
             <div class="sb-prop-heading">個性化設定</div>
             <label class="sb-prop-row">
               <span class="sb-prop-label">個性化欄位</span>
@@ -548,6 +556,15 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
           <!-- Option capacity / score -->
           <div v-if="store.selectedElement.options.length > 0" class="sb-prop-section">
             <div class="sb-prop-heading">選項設定</div>
+            <label class="sb-prop-row">
+              <span class="sb-prop-label">隨機排列選項</span>
+              <input
+                type="checkbox"
+                :checked="Boolean((store.selectedElement.settings as any)?.randomize_options)"
+                @change="store.updateElementSettings(store.selectedElement!.id, { randomize_options: ($event.target as HTMLInputElement).checked })"
+              />
+            </label>
+            <p class="sb-prop-hint">開啟後，每位填答者看到的選項順序會隨機調整，避免位置偏誤；隱藏選項與名額限制不受影響。</p>
             <p class="sb-prop-hint">可限制每個選項最多被選幾次；留空代表不限名額。</p>
             <div v-for="opt in store.selectedElement.options" :key="opt.id" class="sb-opt-prop">
               <span class="sb-opt-prop-label">{{ opt.label || opt.value }}</span>
