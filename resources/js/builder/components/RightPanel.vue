@@ -130,7 +130,8 @@ const questionTypeGroups = [
   { label: '選擇題', types: ['single_choice', 'multiple_choice', 'select', 'cascade_select', 'matrix_single', 'matrix_multi', 'selection_based', 'date'] },
   { label: '輸入題', types: ['short_text', 'long_text', 'number', 'constant_sum'] },
   { label: '評分題', types: ['ranking', 'rating', 'nps', 'linear_scale'] },
-  { label: '上傳題', types: ['file_upload', 'signature'] },
+  // 簽名（signature）暫時隱藏（2026-06-28）：題型定義保留於 questionTypes.ts，僅不在題型庫顯示。
+  { label: '上傳題', types: ['file_upload'/* , 'signature' */] },
   { label: '內容與樣式', types: ['section_title', 'description_block', 'quote_block', 'divider'] },
 ];
 
