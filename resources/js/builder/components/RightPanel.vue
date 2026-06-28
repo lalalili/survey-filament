@@ -401,6 +401,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                   <span class="sb-prop-help">以逗號分隔可接受的副檔名或 MIME 類型；留空時不額外限制格式。</span>
                 </label>
               </div>
+              <p class="sb-prop-hint" style="margin-top:8px">⚠️ 檔案上傳題需綁定 Google Drive 才能發佈：上傳的檔案會存到問卷綁定的雲端硬碟。請至「問卷列表 → 該問卷 → 連結 Google Drive」完成綁定（一個問卷僅能綁定一個帳號）。</p>
             </template>
           </div>
 
