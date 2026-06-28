@@ -562,6 +562,29 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
             </label>
           </div>
 
+          <!-- Question group (題組) -->
+          <div v-if="!['section_title', 'description_block', 'divider', 'quote_block'].includes(store.selectedElement.type)" class="sb-prop-section">
+            <div class="sb-prop-heading">題組</div>
+            <p class="sb-prop-hint">為多個題目填寫相同的「題組名稱」可將它們歸為一組，便於管理與題組內隨機。</p>
+            <label class="sb-prop-row col">
+              <span class="sb-prop-label">題組名稱</span>
+              <input
+                class="sb-prop-input"
+                :value="(store.selectedElement.settings as any)?.group ?? ''"
+                placeholder="留空代表不分組"
+                @input="store.updateElementSettings(store.selectedElement!.id, { group: ($event.target as HTMLInputElement).value || null })"
+              />
+            </label>
+            <label v-if="(store.selectedElement.settings as any)?.group" class="sb-prop-row">
+              <span class="sb-prop-label">與同題組題目隨機排序</span>
+              <input
+                type="checkbox"
+                :checked="Boolean((store.selectedElement.settings as any)?.randomize_in_group)"
+                @change="store.updateElementSettings(store.selectedElement!.id, { randomize_in_group: ($event.target as HTMLInputElement).checked })"
+              />
+            </label>
+          </div>
+
           <!-- Advanced system settings -->
           <div v-if="canManageAdvancedFields && !['section_title', 'description_block', 'divider', 'quote_block'].includes(store.selectedElement.type)" class="sb-prop-section">
             <div class="sb-prop-heading">進階設定</div>
