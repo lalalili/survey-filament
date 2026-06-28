@@ -628,14 +628,22 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
               />
             </label>
             <p class="sb-prop-hint">為選項填寫「組別」可將選項分組顯示；開啟此項時，會連同各組的呈現順序一併隨機。</p>
-            <p class="sb-prop-hint">可限制每個選項最多被選幾次（留空不限名額），並可指定選項所屬組別。</p>
+            <p class="sb-prop-hint"><strong>名額</strong>：限制每個選項最多可被多少位填答者選取，適合限量、先到先得的情境；達上限時填答頁會顯示「已額滿」並停用該選項，留空代表不限名額（填 0 等同立即額滿）。<strong>組別</strong>：填寫後可將選項分組顯示。</p>
             <div v-for="opt in store.selectedElement.options" :key="opt.id" class="sb-opt-prop">
               <span class="sb-opt-prop-label">{{ opt.label || opt.value }}</span>
-              <input :value="opt.capacity ?? ''" type="number" min="0" placeholder="名額不限" class="sb-prop-input-sm" @input="opt.capacity = ($event.target as HTMLInputElement).value === '' ? null : Math.max(0, Number(($event.target as HTMLInputElement).value) || 0); store.markDirty()" />
-              <input :value="opt.group ?? ''" placeholder="組別" class="sb-prop-input-sm" @input="opt.group = ($event.target as HTMLInputElement).value || null; store.markDirty()" />
-              <label class="sb-opt-hidden-label">
-                <input v-model="opt.is_hidden" type="checkbox" @change="store.markDirty()" /> 隱藏
-              </label>
+              <div class="sb-opt-prop-fields">
+                <label class="sb-opt-field">
+                  <span class="sb-opt-field-label">名額</span>
+                  <input :value="opt.capacity ?? ''" type="number" min="0" placeholder="不限" class="sb-prop-input-sm" @input="opt.capacity = ($event.target as HTMLInputElement).value === '' ? null : Math.max(0, Number(($event.target as HTMLInputElement).value) || 0); store.markDirty()" />
+                </label>
+                <label class="sb-opt-field sb-opt-field--wide">
+                  <span class="sb-opt-field-label">組別</span>
+                  <input :value="opt.group ?? ''" placeholder="不分組" class="sb-prop-input-sm" @input="opt.group = ($event.target as HTMLInputElement).value || null; store.markDirty()" />
+                </label>
+                <label class="sb-opt-hidden-label">
+                  <input v-model="opt.is_hidden" type="checkbox" @change="store.markDirty()" /> 隱藏
+                </label>
+              </div>
             </div>
           </div>
 
