@@ -562,7 +562,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
             </label>
           </div>
 
-          <!-- Question group (題組) -->
+          <!-- Question group (題組) — 暫時隱藏（2026-06-28）：功能保留於後端，UI 先不顯示。
           <div v-if="!['section_title', 'description_block', 'divider', 'quote_block'].includes(store.selectedElement.type)" class="sb-prop-section">
             <div class="sb-prop-heading">題組</div>
             <p class="sb-prop-hint">為多個題目填寫相同的「題組名稱」可將它們歸為一組，便於管理與題組內隨機。</p>
@@ -584,6 +584,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
               />
             </label>
           </div>
+          -->
 
           <!-- Advanced system settings -->
           <div v-if="canManageAdvancedFields && !['section_title', 'description_block', 'divider', 'quote_block'].includes(store.selectedElement.type)" class="sb-prop-section">
@@ -619,6 +620,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
               />
             </label>
             <p class="sb-prop-hint">開啟後，每位填答者看到的選項順序會隨機調整，避免位置偏誤；隱藏選項與名額限制不受影響。</p>
+            <!-- 選項組（randomize_option_groups）— 暫時隱藏（2026-06-28）：功能保留於後端，UI 先不顯示。
             <label class="sb-prop-row">
               <span class="sb-prop-label">隨機排列選項組順序</span>
               <input
@@ -628,7 +630,8 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
               />
             </label>
             <p class="sb-prop-hint">為選項填寫「組別」可將選項分組顯示；開啟此項時，會連同各組的呈現順序一併隨機。</p>
-            <p class="sb-prop-hint"><strong>名額</strong>：限制每個選項最多可被多少位填答者選取，適合限量、先到先得的情境；達上限時填答頁會顯示「已額滿」並停用該選項，留空代表不限名額（填 0 等同立即額滿）。<strong>組別</strong>：填寫後可將選項分組顯示。</p>
+            -->
+            <p class="sb-prop-hint"><strong>名額</strong>：限制每個選項最多可被多少位填答者選取，適合限量、先到先得的情境；達上限時填答頁會顯示「已額滿」並停用該選項，留空代表不限名額（填 0 等同立即額滿）。</p>
             <div v-for="opt in store.selectedElement.options" :key="opt.id" class="sb-opt-prop">
               <span class="sb-opt-prop-label">{{ opt.label || opt.value }}</span>
               <div class="sb-opt-prop-fields">
@@ -636,10 +639,12 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                   <span class="sb-opt-field-label">名額</span>
                   <input :value="opt.capacity ?? ''" type="number" min="0" placeholder="不限" class="sb-prop-input-sm" @input="opt.capacity = ($event.target as HTMLInputElement).value === '' ? null : Math.max(0, Number(($event.target as HTMLInputElement).value) || 0); store.markDirty()" />
                 </label>
+                <!-- 選項組別輸入 — 暫時隱藏（2026-06-28）：功能保留於後端，UI 先不顯示。
                 <label class="sb-opt-field sb-opt-field--wide">
                   <span class="sb-opt-field-label">組別</span>
                   <input :value="opt.group ?? ''" placeholder="不分組" class="sb-prop-input-sm" @input="opt.group = ($event.target as HTMLInputElement).value || null; store.markDirty()" />
                 </label>
+                -->
                 <label class="sb-opt-hidden-label">
                   <input v-model="opt.is_hidden" type="checkbox" @change="store.markDirty()" /> 隱藏
                 </label>
