@@ -46,8 +46,75 @@ watch(() => store.isPreviewMode, (entering) => {
     previewRatingHover.value = {};
     previewNps.value = {};
     previewPageHistory.value = [];
+    // 每次進入預覽重新取種子，讓題組／選項隨機的效果可被觀察（再次進入會換順序）。
+    previewSeed.value = Math.floor(Math.random() * 0xffffffff);
   }
 });
+
+// ── 預覽用隨機（對應公開填答端 SurveyField::arrangeForDisplay / displayOptions）──
+const previewSeed = ref(Math.floor(Math.random() * 0xffffffff));
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function seededShuffle<T>(items: T[], seed: number): T[] {
+  if (items.length <= 1) return items.slice();
+  const arr = items.slice();
+  let state = (seed >>> 0) || 1;
+  const rand = (): number => {
+    state ^= state << 13; state >>>= 0;
+    state ^= state >> 17;
+    state ^= state << 5; state >>>= 0;
+    return state / 0xffffffff;
+  };
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/** 依題組設定重排同題組題目（與後端 arrangeForDisplay 同語意：成員只在原本佔據的位置間洗牌）。 */
+function arrangeElementsForPreview(elements: SurveyElement[], seed: number): SurveyElement[] {
+  const positionsByGroup: Record<string, number[]> = {};
+  const randomizedGroups: Record<string, boolean> = {};
+
+  elements.forEach((element, index) => {
+    const group = (element.settings as Record<string, unknown> | undefined)?.group;
+    if (typeof group !== 'string' || group === '') return;
+    (positionsByGroup[group] ||= []).push(index);
+    if ((element.settings as Record<string, unknown>)?.randomize_in_group) randomizedGroups[group] = true;
+  });
+
+  const result = elements.slice();
+  Object.entries(positionsByGroup).forEach(([group, positions]) => {
+    if (positions.length <= 1 || !randomizedGroups[group]) return;
+    const members = positions.map((position) => elements[position]);
+    const shuffled = seededShuffle(members, (seed ^ hashString(group)) >>> 0);
+    positions.forEach((position, k) => { result[position] = shuffled[k]; });
+  });
+  return result;
+}
+
+const previewPageElements = computed<SurveyElement[]>(() => {
+  const page = store.selectedPage;
+  if (!page || page.kind === 'welcome' || page.kind === 'thank_you') return [];
+  const elements = page.elements ?? [];
+  if (!store.isPreviewMode) return elements;
+  return arrangeElementsForPreview(elements, previewSeed.value);
+});
+
+function previewOptions(element: SurveyElement): SurveyOption[] {
+  if (store.isPreviewMode && (element.settings as Record<string, unknown> | undefined)?.randomize_options) {
+    return seededShuffle(element.options, (previewSeed.value ^ hashString(element.field_key || element.id)) >>> 0);
+  }
+  return element.options;
+}
 
 function ratingShapeIcon(shape: string): string {
   const map: Record<string, string> = { star: '★', heart: '♥', check: '✔', thumb: '👍' };
@@ -876,7 +943,7 @@ function textInputType(element: SurveyElement) {
                 </div>
               </template>
 
-              <template v-else v-for="element in (store.selectedPage?.kind === 'welcome' || store.selectedPage?.kind === 'thank_you' ? [] : store.selectedPage?.elements ?? [])" :key="element.id">
+              <template v-else v-for="element in previewPageElements" :key="element.id">
                 <template v-if="previewElementVisible(element)">
                   <div v-if="element.is_hidden" class="sb-preview-hidden">🔒 {{ element.label }}</div>
                   <section v-else-if="element.type === 'section_title'" class="sb-preview-section">
@@ -889,7 +956,7 @@ function textInputType(element: SurveyElement) {
                     <p class="sb-preview-q-title">{{ element.label }}<span v-if="element.required" class="sb-req">*</span></p>
                     <p v-if="element.description" class="sb-preview-q-desc">{{ element.description }}</p>
                     <div v-if="element.type === 'single_choice'" class="sb-preview-opts">
-                      <label v-for="opt in element.options" :key="opt.id"
+                      <label v-for="opt in previewOptions(element)" :key="opt.id"
                         class="sb-preview-opt"
                         :class="previewSelections[element.id] === opt.value ? 'selected' : ''"
                       >
@@ -898,7 +965,7 @@ function textInputType(element: SurveyElement) {
                       </label>
                     </div>
                     <div v-else-if="element.type === 'multiple_choice'" class="sb-preview-opts">
-                      <label v-for="opt in element.options" :key="opt.id"
+                      <label v-for="opt in previewOptions(element)" :key="opt.id"
                         class="sb-preview-opt"
                         :class="(previewSelections[element.id] instanceof Set && (previewSelections[element.id] as Set<string>).has(opt.value)) ? 'selected' : ''"
                         @click.prevent="previewToggleCheckbox(element.id, opt.value)"
@@ -914,7 +981,7 @@ function textInputType(element: SurveyElement) {
                       @change="previewSelectOption(element, ($event.target as HTMLSelectElement).value)"
                     >
                       <option value="">請選擇</option>
-                      <option v-for="opt in element.options" :key="opt.id" :value="opt.value">{{ opt.label }}</option>
+                      <option v-for="opt in previewOptions(element)" :key="opt.id" :value="opt.value">{{ opt.label }}</option>
                     </select>
                     <input
                       v-else-if="element.type === 'short_text' || element.type === 'email' || element.type === 'phone' || element.type === 'date' || element.type === 'time'"
@@ -982,7 +1049,7 @@ function textInputType(element: SurveyElement) {
                       <span v-if="(element.settings as any)?.unit" class="sb-preview-number-unit">{{ (element.settings as any).unit }}</span>
                     </div>
                     <div v-else-if="element.type === 'constant_sum'" class="sb-preview-opts">
-                      <label v-for="opt in element.options" :key="opt.id" class="sb-preview-opt">
+                      <label v-for="opt in previewOptions(element)" :key="opt.id" class="sb-preview-opt">
                         <span>{{ opt.label }}</span>
                         <input
                           type="number"
