@@ -5,6 +5,7 @@ namespace Lalalili\SurveyFilament;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 use Lalalili\AudienceCore\Models\AudienceList;
+use Lalalili\SurveyFilament\Filament\Pages\SurveyGuide;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\RecipientResource;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
@@ -44,6 +45,10 @@ class SurveyFilamentPlugin implements Plugin
         }
 
         $panel->resources($resources);
+
+        if (config('survey-filament.guide_enabled', true)) {
+            $panel->pages([SurveyGuide::class]);
+        }
 
         if (config('survey-filament.widgets_enabled', true)) {
             $panel->widgets([
