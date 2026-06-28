@@ -296,6 +296,19 @@ export const questionTypes: QuestionTypeDefinition[] = [
     createDefault: () => ({ ...createBase('matrix_multi', '未命名矩陣複選題'), matrix_rows: matrixRows(), matrix_cols: matrixCols() }),
   },
   {
+    id: 'selection_based',
+    type: 'selection_based',
+    label: '重複核選題',
+    icon: '⮌',
+    supportsOptions: false,
+    supportsPlaceholder: false,
+    supportsRequired: true,
+    createDefault: () => ({
+      ...createBase('selection_based', '未命名重複核選題'),
+      settings: { source_field_key: null },
+    }),
+  },
+  {
     id: 'ranking',
     type: 'ranking',
     label: '排序題',

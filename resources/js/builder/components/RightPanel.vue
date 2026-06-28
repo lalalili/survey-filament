@@ -127,7 +127,7 @@ const selectedDefinition = computed(() =>
 
 // ── Library ──────────────────────────────────────────────────────────
 const questionTypeGroups = [
-  { label: '選擇題', types: ['single_choice', 'multiple_choice', 'select', 'cascade_select', 'matrix_single', 'matrix_multi', 'date'] },
+  { label: '選擇題', types: ['single_choice', 'multiple_choice', 'select', 'cascade_select', 'matrix_single', 'matrix_multi', 'selection_based', 'date'] },
   { label: '輸入題', types: ['short_text', 'long_text', 'number', 'constant_sum'] },
   { label: '評分題', types: ['ranking', 'rating', 'nps', 'linear_scale'] },
   { label: '上傳題', types: ['file_upload', 'signature'] },
@@ -201,6 +201,18 @@ function showIfConditionValueOptions(fieldKey: string): Array<{ value: string; l
     .filter((o) => o.label || o.value)
     .map((o) => ({ value: String(o.value ?? o.id), label: o.label || String(o.value ?? o.id) }));
 }
+
+// ── Selection-based (重複核選題) source ──────────────────────────────
+const selectionSourceOptions = computed(() => {
+  if (!store.schema || !store.selectedElement) return [];
+  const elements = store.schema.pages.flatMap((p) => p.elements);
+  const currentIndex = elements.findIndex((e) => e.id === store.selectedElementId);
+  const choiceTypes = ['single_choice', 'multiple_choice', 'select'];
+  return elements
+    .slice(0, currentIndex === -1 ? elements.length : currentIndex)
+    .filter((el) => el.field_key && choiceTypes.includes(el.type))
+    .map((el) => ({ value: el.field_key!, label: el.label || el.field_key! }));
+});
 
 function addShowIfCondition(el: SurveyElement) {
   const conditions = [...(el.show_if?.conditions ?? [])];
@@ -461,6 +473,24 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                 <span>{{ (store.selectedElement.cascade_levels ?? []).length }} 個層級</span>
               </div>
             </div>
+          </div>
+
+          <!-- Selection-based (重複核選題) settings -->
+          <div v-if="store.selectedElement.type === 'selection_based'" class="sb-prop-section">
+            <div class="sb-prop-heading">重複核選設定</div>
+            <p class="sb-prop-hint">此題的選項會帶入填答者在「來源題目」中所選的答案，讓填答者進一步從中複選。</p>
+            <label class="sb-prop-row col">
+              <span class="sb-prop-label">來源題目</span>
+              <select
+                class="sb-prop-input"
+                :value="(store.selectedElement.settings as any)?.source_field_key ?? ''"
+                @change="store.updateElementSettings(store.selectedElement!.id, { source_field_key: ($event.target as HTMLSelectElement).value || null })"
+              >
+                <option value="">— 請選擇 —</option>
+                <option v-for="opt in selectionSourceOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+              <span v-if="selectionSourceOptions.length === 0" class="sb-prop-help">請先在此題之前加入單選、複選或下拉題作為來源。</span>
+            </label>
           </div>
 
           <!-- Validation rules -->

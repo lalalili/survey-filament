@@ -16,6 +16,7 @@ export type SurveyElementType =
   | 'nps'
   | 'matrix_single'
   | 'matrix_multi'
+  | 'selection_based'
   | 'ranking'
   | 'file_upload'
   | 'signature'
