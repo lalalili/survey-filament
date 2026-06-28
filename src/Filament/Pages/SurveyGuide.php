@@ -82,6 +82,7 @@ class SurveyGuide extends Page
                             '編輯內容會自動儲存為草稿；活動面板會記錄自動儲存、發佈與回復等紀錄。',
                             '完成後點「發佈」讓問卷正式開放填答；可從已發佈版本「回復」覆蓋目前草稿。',
                             '可「匯出問卷 JSON」備份，或於問卷列表「匯入問卷 JSON」還原（需於設定開啟）。',
+                            '可在問卷列表的「匯入題目 CSV」批次新增題目（欄位：type、label、required、options 以 | 分隔、description）。',
                         ],
                     ],
                     [

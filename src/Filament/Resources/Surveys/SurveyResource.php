@@ -9,6 +9,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -25,7 +26,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Lalalili\AudienceCore\Models\AudienceList;
 use Lalalili\SurveyCore\Actions\CloseSurveyAction;
 use Lalalili\SurveyCore\Actions\DuplicateSurveyAction;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Storage;
 use Lalalili\SurveyCore\Actions\ExportSurveyBuilderSchemaAction;
+use Lalalili\SurveyCore\Actions\ImportSurveyQuestionsFromCsvAction;
 use Lalalili\SurveyCore\Actions\PublishSurveyAction;
 use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Enums\SurveyUniquenessMode;
@@ -295,6 +299,45 @@ class SurveyResource extends Resource
                                 $exportSchema->filename($record),
                                 ['Content-Type' => 'application/json; charset=UTF-8'],
                             );
+                        }),
+
+                    Action::make('import_questions_csv')
+                        ->label('匯入題目 CSV')
+                        ->icon('heroicon-o-table-cells')
+                        ->visible(fn (Survey $record): bool => static::canEdit($record))
+                        ->schema([
+                            FileUpload::make('csv_file')
+                                ->label('CSV 檔案')
+                                ->helperText('欄位：type, label, required, options（以 | 分隔）, description。')
+                                ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel', 'application/octet-stream'])
+                                ->disk('local')
+                                ->directory('survey-imports')
+                                ->required(),
+                        ])
+                        ->action(function (array $data, Survey $record) {
+                            $path = is_array($data['csv_file'] ?? null)
+                                ? (string) reset($data['csv_file'])
+                                : (string) ($data['csv_file'] ?? '');
+
+                            if ($path === '' || ! Storage::disk('local')->exists($path)) {
+                                Notification::make()->danger()->title('找不到匯入檔案')->send();
+
+                                return null;
+                            }
+
+                            $csv = (string) Storage::disk('local')->get($path);
+                            $count = app(ImportSurveyQuestionsFromCsvAction::class)->execute($record, $csv);
+                            Storage::disk('local')->delete($path);
+
+                            if ($count === 0) {
+                                Notification::make()->warning()->title('沒有可匯入的題目')->body('請確認 CSV 欄位與題型是否正確。')->send();
+
+                                return null;
+                            }
+
+                            Notification::make()->success()->title("已匯入 {$count} 題")->send();
+
+                            return redirect(SurveyResource::getUrl('builder', ['record' => $record]));
                         }),
 
                     Action::make('publish')
