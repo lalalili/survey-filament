@@ -12,8 +12,10 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
+use Lalalili\SurveyCore\Models\SurveyAnswer;
 use Lalalili\SurveyCore\Models\SurveyResponse;
 use Lalalili\SurveyCore\Models\SurveyTag;
+use Throwable;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
 
 /**
@@ -89,13 +91,47 @@ class ViewResponse extends ViewRecord
                     TextEntry::make('field.label')->label('題目'),
                     TextEntry::make('value')
                         ->label('答案')
-                        ->state(fn ($record) => is_array($record->answer_json)
-                            ? implode('、', $record->answer_json)
-                            : ($record->answer_text ?? '—')),
+                        ->state(fn (SurveyAnswer $record) => $this->isFileUploadAnswer($record)
+                            ? (data_get($record->answer_json, 'filename') ?: '檔案')
+                            : (is_array($record->answer_json) ? implode('、', $record->answer_json) : ($record->answer_text ?? '—')))
+                        ->url(fn (SurveyAnswer $record): ?string => $this->isFileUploadAnswer($record) ? $this->fileUrl($record) : null)
+                        ->openUrlInNewTab(),
                 ])
                 // 電腦版兩題一行（手機仍單欄）。
                 ->grid(['default' => 1, 'md' => 2])
                 ->columnSpanFull(),
         ]);
+    }
+
+    private function isFileUploadAnswer(SurveyAnswer $answer): bool
+    {
+        return $answer->field->type->value === 'file_upload';
+    }
+
+    /**
+     * 檔案上傳答案的連結：優先 Google Drive 連結，否則本地後援。
+     */
+    private function fileUrl(SurveyAnswer $answer): ?string
+    {
+        $fieldKey = $answer->field->field_key;
+
+        $media = $this->record->getMedia('survey_files')
+            ->first(fn ($item): bool => $item->getCustomProperty('survey_field_key') === $fieldKey);
+
+        if ($media === null) {
+            return null;
+        }
+
+        $driveLink = $media->getCustomProperty('google_drive_link');
+
+        if (is_string($driveLink) && $driveLink !== '') {
+            return $driveLink;
+        }
+
+        try {
+            return $media->getUrl();
+        } catch (Throwable) {
+            return null;
+        }
     }
 }
