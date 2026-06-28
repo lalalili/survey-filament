@@ -130,6 +130,7 @@ const questionTypeGroups = [
   { label: '選擇題', types: ['single_choice', 'multiple_choice', 'select', 'cascade_select', 'matrix_single', 'matrix_multi', 'date'] },
   { label: '輸入題', types: ['short_text', 'long_text', 'number', 'constant_sum'] },
   { label: '評分題', types: ['ranking', 'rating', 'nps', 'linear_scale'] },
+  { label: '上傳題', types: ['file_upload', 'signature'] },
   { label: '內容與樣式', types: ['section_title', 'description_block', 'quote_block', 'divider'] },
 ];
 

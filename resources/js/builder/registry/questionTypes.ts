@@ -377,6 +377,29 @@ export const questionTypes: QuestionTypeDefinition[] = [
       description: '請輸入引言內容',
     }),
   },
+  {
+    id: 'file_upload',
+    type: 'file_upload',
+    label: '檔案上傳',
+    icon: '⬆',
+    supportsOptions: false,
+    supportsPlaceholder: false,
+    supportsRequired: true,
+    createDefault: () => ({
+      ...createBase('file_upload', '未命名檔案上傳題'),
+      settings: { max_size_mb: 10, allowed_mimes: [] },
+    }),
+  },
+  {
+    id: 'signature',
+    type: 'signature',
+    label: '簽名',
+    icon: '✎',
+    supportsOptions: false,
+    supportsPlaceholder: false,
+    supportsRequired: true,
+    createDefault: () => createBase('signature', '未命名簽名題'),
+  },
 ];
 
 export function getQuestionType(idOrType: string): QuestionTypeDefinition {
