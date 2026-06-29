@@ -23,6 +23,7 @@ const previewCascade = ref<Record<string, string[]>>({});
 const previewAddressValues = ref<Record<string, Record<string, string>>>({});
 const previewRankingOrders = ref<Record<string, string[]>>({});
 const previewFileNames = ref<Record<string, string>>({});
+const previewFileDragOver = ref<Record<string, boolean>>({});
 const previewSignatures = ref<Record<string, boolean>>({});
 const previewPageHistory = ref<string[]>([]);
 const previewEnded = ref(false);
@@ -41,6 +42,7 @@ watch(() => store.isPreviewMode, (entering) => {
     previewAddressValues.value = {};
     previewRankingOrders.value = {};
     previewFileNames.value = {};
+    previewFileDragOver.value = {};
     previewSignatures.value = {};
     previewRatings.value = {};
     previewRatingHover.value = {};
@@ -546,6 +548,7 @@ function resetPreview() {
   previewAddressValues.value = {};
   previewRankingOrders.value = {};
   previewFileNames.value = {};
+  previewFileDragOver.value = {};
   previewSignatures.value = {};
   previewRatings.value = {};
   previewRatingHover.value = {};
@@ -577,6 +580,70 @@ function previewUpdateAddress(elementId: string, key: string, value: string) {
 
 function previewFileSelected(elementId: string, event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0];
+  previewFileNames.value = { ...previewFileNames.value, [elementId]: file?.name ?? '' };
+}
+
+type PreviewFileFormatGroup = {
+  label: string;
+  extensions: string[];
+};
+
+const previewFileFormatGroups: PreviewFileFormatGroup[] = [
+  { label: '文件', extensions: ['pdf', 'doc', 'docx', 'txt', 'rtf'] },
+  { label: '簡報', extensions: ['ppt', 'pptx'] },
+  { label: '試算表', extensions: ['xls', 'xlsx', 'csv'] },
+  { label: '圖片', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'] },
+  { label: '影片', extensions: ['mpg', 'mpeg', 'mp4', 'mov', 'avi', 'wmv', 'mkv', 'webm'] },
+  { label: '音樂', extensions: ['mp3', 'wav', 'aac', 'm4a', 'ogg', 'flac'] },
+];
+
+function previewAllowedFileExtensions(element: SurveyElement): string[] {
+  const allowed = (element.settings as Record<string, unknown> | undefined)?.allowed_mimes;
+
+  return Array.isArray(allowed)
+    ? allowed.map((extension) => String(extension).trim().replace(/^\./, '')).filter(Boolean)
+    : [];
+}
+
+function previewFileAccept(element: SurveyElement): string | undefined {
+  const extensions = previewAllowedFileExtensions(element);
+
+  return extensions.length > 0 ? extensions.map((extension) => `.${extension}`).join(',') : undefined;
+}
+
+function previewFileSizeLabel(element: SurveyElement): string {
+  const maxSize = Number((element.settings as Record<string, unknown> | undefined)?.max_size_mb ?? 10);
+
+  return maxSize > 0 ? `${maxSize} MB以下` : '未限制大小';
+}
+
+function previewFileFormatLabel(element: SurveyElement): string {
+  const selected = previewAllowedFileExtensions(element);
+
+  if (selected.length === 0) return '不限';
+
+  const selectedSet = new Set(selected);
+  const labels = previewFileFormatGroups
+    .filter((group) => group.extensions.some((extension) => selectedSet.has(extension)))
+    .map((group) => group.label);
+
+  const known = new Set(
+    previewFileFormatGroups
+      .filter((group) => group.extensions.some((extension) => selectedSet.has(extension)))
+      .flatMap((group) => group.extensions),
+  );
+  const custom = selected.filter((extension) => !known.has(extension));
+
+  return [...new Set([...labels, ...custom])].join('、');
+}
+
+function previewChooseFile(elementId: string) {
+  document.querySelector<HTMLInputElement>(`[data-preview-file-input="${elementId}"]`)?.click();
+}
+
+function previewFileDropped(elementId: string, event: DragEvent) {
+  previewFileDragOver.value = { ...previewFileDragOver.value, [elementId]: false };
+  const file = event.dataTransfer?.files?.[0];
   previewFileNames.value = { ...previewFileNames.value, [elementId]: file?.name ?? '' };
 }
 
@@ -1075,9 +1142,26 @@ function textInputType(element: SurveyElement) {
                     <div v-else-if="element.type === 'file_upload'" class="sb-preview-file">
                       <input
                         type="file"
-                        class="sb-preview-input"
+                        class="sb-preview-file-input"
+                        :data-preview-file-input="element.id"
+                        :accept="previewFileAccept(element)"
                         @change="previewFileSelected(element.id, $event)"
                       />
+                      <button
+                        type="button"
+                        class="sb-preview-file-dropzone"
+                        :class="{ dragging: previewFileDragOver[element.id], uploaded: previewFileNames[element.id] }"
+                        @click="previewChooseFile(element.id)"
+                        @dragenter.prevent="previewFileDragOver = { ...previewFileDragOver, [element.id]: true }"
+                        @dragover.prevent="previewFileDragOver = { ...previewFileDragOver, [element.id]: true }"
+                        @dragleave.prevent="previewFileDragOver = { ...previewFileDragOver, [element.id]: false }"
+                        @drop.prevent="previewFileDropped(element.id, $event)"
+                      >
+                        <span class="sb-preview-file-icon" aria-hidden="true">☁</span>
+                        <span class="sb-preview-file-title">選擇檔案或將檔案拖曳至此</span>
+                        <span class="sb-preview-file-limit">{{ previewFileSizeLabel(element) }}</span>
+                        <span class="sb-preview-file-format">檔案格式：{{ previewFileFormatLabel(element) }}</span>
+                      </button>
                       <p v-if="previewFileNames[element.id]" class="sb-preview-help">已選擇：{{ previewFileNames[element.id] }}</p>
                     </div>
                     <div v-else-if="element.type === 'signature'" class="sb-preview-signature">
