@@ -130,9 +130,9 @@ const questionTypeGroups = [
   { label: '選擇題', types: ['single_choice', 'multiple_choice', 'select', 'cascade_select', 'matrix_single', 'matrix_multi', 'selection_based', 'date'] },
   { label: '輸入題', types: ['short_text', 'long_text', 'number', 'constant_sum'] },
   { label: '評分題', types: ['ranking', 'rating', 'nps', 'linear_scale'] },
+  { label: '內容與樣式', types: ['section_title', 'description_block', 'quote_block', 'divider'] },
   // 簽名（signature）暫時隱藏（2026-06-28）：題型定義保留於 questionTypes.ts，僅不在題型庫顯示。
   { label: '上傳題', types: ['file_upload'/* , 'signature' */] },
-  { label: '內容與樣式', types: ['section_title', 'description_block', 'quote_block', 'divider'] },
 ];
 
 const canReplaceWithAllQuestionTypes = computed(() => (
@@ -151,6 +151,68 @@ function replaceWithAllQuestionTypes() {
       .filter((qt) => group.types.includes(qt.id))
       .map((qt) => qt.id),
   })));
+}
+
+// ── File upload formats ──────────────────────────────────────────────
+type FileUploadFormatGroup = {
+  id: string;
+  label: string;
+  extensions: string[];
+};
+
+const fileUploadFormatGroups: FileUploadFormatGroup[] = [
+  { id: 'document', label: '文件', extensions: ['pdf', 'doc', 'docx', 'txt', 'rtf'] },
+  { id: 'presentation', label: '簡報', extensions: ['ppt', 'pptx'] },
+  { id: 'spreadsheet', label: '試算表', extensions: ['xls', 'xlsx', 'csv'] },
+  { id: 'image', label: '圖片', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'] },
+  { id: 'video', label: '影片', extensions: ['mpg', 'mpeg', 'mp4', 'mov', 'avi', 'wmv', 'mkv', 'webm'] },
+  { id: 'audio', label: '音樂', extensions: ['mp3', 'wav', 'aac', 'm4a', 'ogg', 'flac'] },
+];
+
+const fileUploadSizeOptions = [1, 10, 50];
+const fileUploadFormatExtensions = new Set(fileUploadFormatGroups.flatMap((group) => group.extensions));
+
+function selectedAllowedMimes(): string[] {
+  const selected = store.selectedElement?.settings.allowed_mimes;
+
+  return Array.isArray(selected)
+    ? selected.map((mime) => String(mime).trim()).filter(Boolean)
+    : [];
+}
+
+function selectedFileUploadSize(): number {
+  const selected = Number(store.selectedElement?.settings.max_size_mb ?? 10);
+
+  return fileUploadSizeOptions.includes(selected) ? selected : 10;
+}
+
+function isFileUploadFormatChecked(group: FileUploadFormatGroup): boolean {
+  const selected = new Set(selectedAllowedMimes());
+
+  return group.extensions.every((extension) => selected.has(extension));
+}
+
+function toggleFileUploadFormat(group: FileUploadFormatGroup, checked: boolean): void {
+  if (!store.selectedElement) return;
+
+  const selected = new Set(selectedAllowedMimes());
+
+  group.extensions.forEach((extension) => {
+    if (checked) {
+      selected.add(extension);
+    } else {
+      selected.delete(extension);
+    }
+  });
+
+  const customValues = [...selected].filter((extension) => !fileUploadFormatExtensions.has(extension));
+  const groupedValues = fileUploadFormatGroups
+    .flatMap((formatGroup) => formatGroup.extensions)
+    .filter((extension) => selected.has(extension));
+
+  store.updateElementSettings(store.selectedElement.id, {
+    allowed_mimes: [...groupedValues, ...customValues],
+  });
 }
 
 // ── Google Drive 綁定（檔案上傳題上傳設定）─────────────────────────────
@@ -438,23 +500,46 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                     <span class="sb-switch-slider" />
                   </label>
                 </div>
-                <div class="sb-gd-row is-disabled">
-                  <span class="sb-gd-name">One Drive</span>
-                  <span class="sb-gd-soon">暫不支援</span>
-                </div>
-                <p v-if="!store.googleDrive.configured" class="sb-prop-help">系統尚未設定 Google Drive 整合（需設定 OAuth 金鑰）。</p>
+                <p v-if="!store.googleDrive.configured && store.capabilities.is_super_admin" class="sb-prop-help">系統尚未設定 Google Drive 整合（需設定 OAuth 金鑰）。</p>
               </div>
 
               <div class="sb-prop-grid-2">
-                <label class="sb-prop-row col">
+                <label class="sb-prop-row col sb-prop-row-full">
                   <span class="sb-prop-label">最大檔案大小 (MB)</span>
-                  <input :value="store.selectedElement.settings.max_size_mb ?? ''" type="number" placeholder="例如 10" class="sb-prop-input" @input="store.updateElementSettings(store.selectedElement!.id, { max_size_mb: Number(($event.target as HTMLInputElement).value) })" />
-                  <span class="sb-prop-help">限制單一上傳檔案的容量；留空時使用系統預設限制。</span>
+                  <select
+                    :value="selectedFileUploadSize()"
+                    class="sb-prop-input"
+                    @change="store.updateElementSettings(store.selectedElement!.id, { max_size_mb: Number(($event.target as HTMLSelectElement).value) })"
+                  >
+                    <option
+                      v-for="size in fileUploadSizeOptions"
+                      :key="size"
+                      :value="size"
+                    >
+                      {{ size }} MB
+                    </option>
+                  </select>
+                  <span class="sb-prop-help">限制單一上傳檔案的容量，預設為 10 MB。</span>
                 </label>
-                <label class="sb-prop-row col">
+                <label class="sb-prop-row col sb-prop-row-full">
                   <span class="sb-prop-label">允許檔案格式</span>
-                  <input :value="(store.selectedElement.settings.allowed_mimes as string[] | undefined)?.join(',') ?? ''" placeholder="pdf,jpg,png" class="sb-prop-input" @input="store.updateElementSettings(store.selectedElement!.id, { allowed_mimes: ($event.target as HTMLInputElement).value.split(',').map(s => s.trim()).filter(Boolean) })" />
-                  <span class="sb-prop-help">以逗號分隔可接受的副檔名或 MIME 類型；留空時不額外限制格式。</span>
+                  <span class="sb-file-format-grid">
+                    <label
+                      v-for="group in fileUploadFormatGroups"
+                      :key="group.id"
+                      class="sb-file-format-option"
+                      :title="group.extensions.join(', ')"
+                    >
+                      <input
+                        type="checkbox"
+                        :checked="isFileUploadFormatChecked(group)"
+                        @change="toggleFileUploadFormat(group, ($event.target as HTMLInputElement).checked)"
+                      />
+                      <span>{{ group.label }}</span>
+                      <span class="sb-file-format-tooltip" role="tooltip">{{ group.extensions.join(', ') }}</span>
+                    </label>
+                  </span>
+                  <span class="sb-prop-help">未勾選時不額外限制格式；游標移到格式名稱可查看可接受的副檔名。</span>
                 </label>
               </div>
               <p class="sb-prop-hint" style="margin-top:8px">⚠️ 含檔案上傳題的問卷需先於上方綁定 Google Drive 才能發佈；上傳的檔案會存到問卷綁定的雲端硬碟。</p>
@@ -647,11 +732,6 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
           <!-- Advanced system settings -->
           <div v-if="canManageAdvancedFields && !['section_title', 'description_block', 'divider', 'quote_block'].includes(store.selectedElement.type)" class="sb-prop-section">
             <div class="sb-prop-heading">進階設定</div>
-            <div v-if="store.selectedElement.field_key" class="sb-prop-row col">
-              <span class="sb-prop-label">欄位代碼</span>
-              <code class="sb-field-key">{{ store.selectedElement.field_key }}</code>
-              <span class="sb-prop-help">匯出資料、Webhook 與個性化名單對應時使用的系統欄位名稱。</span>
-            </div>
             <template v-if="['short_text', 'long_text', 'phone'].includes(store.selectedElement.type)">
               <label class="sb-prop-row col">
                 <span class="sb-prop-label">格式規則</span>

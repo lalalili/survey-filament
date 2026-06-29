@@ -86,6 +86,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
     audienceLists: [] as AudienceListSummary[],
     capabilities: {
       can_manage_advanced_fields: false,
+      is_super_admin: false,
       question_types: [],
     } as BuilderCapabilities,
     selectedPageId: null as string | null,
@@ -180,6 +181,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       this.audienceLists = payload.audience_lists ?? [];
       this.capabilities = {
         can_manage_advanced_fields: payload.capabilities?.can_manage_advanced_fields ?? false,
+        is_super_admin: payload.capabilities?.is_super_admin ?? false,
         question_types: payload.capabilities?.question_types ?? [],
       };
       this.selectedPageId = payload.schema.pages[0]?.id ?? null;

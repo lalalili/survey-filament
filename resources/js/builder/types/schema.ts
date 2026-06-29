@@ -145,6 +145,7 @@ export interface AudienceListSummary {
 
 export interface BuilderCapabilities {
   can_manage_advanced_fields: boolean;
+  is_super_admin: boolean;
   question_types: string[];
 }
 
