@@ -84,7 +84,7 @@ class ViewResponse extends ViewRecord
             TextEntry::make('response_number')->label('填答編號')->placeholder('—')->copyable(),
             TextEntry::make('recipient.name')->label('收件人姓名')->placeholder('—'),
             TextEntry::make('recipient.email')->label('收件人 Email')->placeholder('—'),
-            TextEntry::make('submitted_at')->label('提交時間')->dateTime(),
+            TextEntry::make('submitted_at')->label('回覆時間')->dateTime('Y/m/d H:i'),
 
             RepeatableEntry::make('answers')
                 ->label('填答內容')
