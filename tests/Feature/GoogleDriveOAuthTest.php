@@ -6,46 +6,8 @@ use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Models\GoogleDriveAccount;
 use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyCore\Support\GoogleDriveClientFactory;
+use Lalalili\SurveyFilament\Tests\Fixtures\FakeGoogleDriveClientFactory;
 use Lalalili\SurveyFilament\Tests\Fixtures\User;
-
-/**
- * Fake factory: overrides only the methods that would call Google.
- */
-class FakeGoogleDriveClientFactory extends GoogleDriveClientFactory
-{
-    public function isConfigured(): bool
-    {
-        return true;
-    }
-
-    public function baseClient(): \Google\Client
-    {
-        $client = new \Google\Client;
-        $client->setScopes(['https://www.googleapis.com/auth/drive.file']);
-
-        return $client;
-    }
-
-    public function authorizationUrl(string $state): string
-    {
-        return 'https://accounts.google.com/o/oauth2/v2/auth?fake=1&state='.urlencode($state);
-    }
-
-    public function exchangeAuthCode(string $code): array
-    {
-        return [
-            'token' => ['access_token' => 'at-'.$code, 'refresh_token' => 'rt-'.$code, 'expires_in' => 3600],
-            'google_user_id' => 'sub-123',
-            'email' => 'creator@example.com',
-            'name' => 'Creator',
-        ];
-    }
-
-    public function ensureFolder(GoogleDriveAccount $account, string $name, ?string $existingFolderId = null): string
-    {
-        return 'folder-abc';
-    }
-}
 
 beforeEach(function () {
     app()->instance(GoogleDriveClientFactory::class, new FakeGoogleDriveClientFactory);
