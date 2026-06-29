@@ -11,6 +11,9 @@ use Lalalili\SurveyCore\Support\GoogleDriveClientFactory;
  */
 class FakeGoogleDriveClientFactory extends GoogleDriveClientFactory
 {
+    /** @var list<array{id: string, name: string, parent: ?string, existing: ?string}> */
+    public array $folders = [];
+
     public function isConfigured(): bool
     {
         return true;
@@ -47,8 +50,17 @@ class FakeGoogleDriveClientFactory extends GoogleDriveClientFactory
         ];
     }
 
-    public function ensureFolder(GoogleDriveAccount $account, string $name, ?string $existingFolderId = null): string
+    public function ensureFolder(GoogleDriveAccount $account, string $name, ?string $existingFolderId = null, ?string $parentFolderId = null): string
     {
-        return 'folder-abc';
+        foreach ($this->folders as $folder) {
+            if ($folder['name'] === $name && $folder['parent'] === $parentFolderId) {
+                return $folder['id'];
+            }
+        }
+
+        $id = 'folder-'.(count($this->folders) + 1);
+        $this->folders[] = ['id' => $id, 'name' => $name, 'parent' => $parentFolderId, 'existing' => $existingFolderId];
+
+        return $id;
     }
 }

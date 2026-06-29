@@ -98,7 +98,8 @@ class GoogleDriveOAuthController extends Controller
             );
             $this->clients->storeToken($account, $result['token']);
 
-            $folderId = $this->clients->ensureFolder($account, $this->folderName($survey), $survey->google_drive_folder_id);
+            $rootFolderId = $this->clients->ensureFolder($account, $this->rootFolderName());
+            $folderId = $this->clients->ensureFolder($account, $this->folderName($survey), $survey->google_drive_folder_id, $rootFolderId);
 
             $survey->forceFill([
                 'google_drive_account_id' => $account->id,
@@ -188,5 +189,10 @@ class GoogleDriveOAuthController extends Controller
     private function folderName(Survey $survey): string
     {
         return '問卷 #'.$survey->id.' - '.$survey->title;
+    }
+
+    private function rootFolderName(): string
+    {
+        return 'Survey File Upload';
     }
 }

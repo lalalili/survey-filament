@@ -38,12 +38,18 @@ it('binds the survey to a drive account on callback and returns to the survey pa
 
     $survey->refresh();
     $account = GoogleDriveAccount::where('google_user_id', 'sub-123')->first();
+    $factory = app(GoogleDriveClientFactory::class);
 
     expect($account)->not->toBeNull()
         ->and($account->email)->toBe('creator@example.com')
         ->and($account->refresh_token)->toBe('rt-auth-code')
         ->and($survey->google_drive_account_id)->toBe($account->id)
-        ->and($survey->google_drive_folder_id)->toBe('folder-abc');
+        ->and($survey->google_drive_folder_id)->toBe('folder-2')
+        ->and($factory)->toBeInstanceOf(FakeGoogleDriveClientFactory::class)
+        ->and($factory->folders)->toBe([
+            ['id' => 'folder-1', 'name' => 'Survey File Upload', 'parent' => null, 'existing' => null],
+            ['id' => 'folder-2', 'name' => '問卷 #'.$survey->id.' - Files', 'parent' => 'folder-1', 'existing' => null],
+        ]);
 });
 
 it('reports binding status as json', function () {
