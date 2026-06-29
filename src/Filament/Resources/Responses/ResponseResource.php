@@ -231,13 +231,13 @@ class ResponseResource extends Resource
                         : $query),
                 TernaryFilter::make('is_test')
                     ->label('測試資料')
-                    ->placeholder('僅正式資料')
+                    ->placeholder('全部資料')
                     ->trueLabel('僅測試資料')
                     ->falseLabel('僅正式資料')
                     ->queries(
-                        true: fn ($query) => $query->where('is_test', true),
-                        false: fn ($query) => $query->where('is_test', false),
-                        blank: fn ($query) => $query->where('is_test', false),
+                        true: fn (Builder $query): Builder => static::scopeIsTestFilter($query, true),
+                        false: fn (Builder $query): Builder => static::scopeIsTestFilter($query, false),
+                        blank: fn (Builder $query): Builder => static::scopeIsTestFilter($query, null),
                     ),
             ])
             ->filtersFormColumns(2)
@@ -327,6 +327,15 @@ class ResponseResource extends Resource
                 ]),
             ])
             ->defaultSort('submitted_at', 'desc');
+    }
+
+    /**
+     * @param  Builder<SurveyResponse>  $query
+     * @return Builder<SurveyResponse>
+     */
+    public static function scopeIsTestFilter(Builder $query, ?bool $isTest): Builder
+    {
+        return $isTest === null ? $query : $query->where('is_test', $isTest);
     }
 
     public static function getEloquentQuery(): Builder
