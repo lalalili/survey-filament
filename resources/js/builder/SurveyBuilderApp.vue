@@ -10,6 +10,7 @@ import SettingsModal from './dialogs/SettingsModal.vue';
 const props = defineProps<{
   endpoints: BuilderEndpoints;
   csrfToken: string;
+  guideUrl?: string;
 }>();
 
 const store = useSurveyBuilderStore();
@@ -72,6 +73,16 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
           aria-label="編輯紀錄"
           @click="showActivityPanel = true"
         >↺</button>
+
+        <a
+          v-if="props.guideUrl"
+          class="sb-icon-btn"
+          :href="props.guideUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="問卷使用說明"
+          aria-label="問卷使用說明"
+        >?</a>
 
         <button
           v-if="store.isPreviewMode"

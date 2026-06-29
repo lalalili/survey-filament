@@ -5,6 +5,7 @@ namespace Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Resources\Pages\Page;
 use Lalalili\SurveyCore\Models\Survey;
+use Lalalili\SurveyFilament\Filament\Pages\SurveyGuide;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
 
 class EditSurveyBuilder extends Page
@@ -53,6 +54,7 @@ class EditSurveyBuilder extends Page
             'languageSettingEnabled' => (bool) config('survey-filament.builder_language_setting_enabled', false),
             'thankYouRedirectEnabled' => (bool) config('survey-filament.builder_thank_you_redirect_enabled', false),
             'accentColorSettingEnabled' => (bool) config('survey-filament.builder_accent_color_setting_enabled', false),
+            'guideUrl' => config('survey-filament.guide_enabled', true) ? SurveyGuide::safeUrl() : null,
             'builderEndpoints' => [
                 'show' => route('survey-filament.builder.show', $survey),
                 'update' => route('survey-filament.builder.update', $survey),

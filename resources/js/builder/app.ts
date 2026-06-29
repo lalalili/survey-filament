@@ -40,6 +40,7 @@ if (root) {
       googleDriveDisconnect: root.dataset.endpointGdDisconnect || undefined,
     },
     csrfToken: csrfToken(),
+    guideUrl: root.dataset.guideUrl || undefined,
   });
 
   // 伺服器是否已設定 Turnstile 金鑰；未設定時建立器停用「我不是機器人」開關。

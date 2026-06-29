@@ -20,6 +20,7 @@
         data-endpoint-gd-connect="{{ $builderEndpoints['google_drive_connect'] ?? '' }}"
         data-endpoint-gd-status="{{ $builderEndpoints['google_drive_status'] ?? '' }}"
         data-endpoint-gd-disconnect="{{ $builderEndpoints['google_drive_disconnect'] ?? '' }}"
+        data-guide-url="{{ $guideUrl }}"
         data-csrf-token="{{ csrf_token() }}"
         data-turnstile-configured="{{ $turnstileConfigured ? '1' : '0' }}"
         data-language-setting-enabled="{{ $languageSettingEnabled ? '1' : '0' }}"

@@ -16,6 +16,7 @@ use Lalalili\SurveyCore\Actions\CreateSurveyFromBuilderTemplateAction;
 use Lalalili\SurveyCore\Actions\ImportSurveyBuilderSchemaAction;
 use Lalalili\SurveyCore\Exceptions\SurveyValidationException;
 use Lalalili\SurveyCore\Support\SurveyBuilderTemplateRegistry;
+use Lalalili\SurveyFilament\Filament\Pages\SurveyGuide;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
 
 class ListSurveys extends ListRecords
@@ -25,6 +26,11 @@ class ListSurveys extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('guide')
+                ->label('使用說明')
+                ->icon('heroicon-o-book-open')
+                ->visible(fn (): bool => (bool) config('survey-filament.guide_enabled', true))
+                ->url(fn (): string => SurveyGuide::safeUrl()),
             Action::make('import_builder_json')
                 ->label('匯入問卷 JSON')
                 ->icon('heroicon-o-arrow-up-tray')
