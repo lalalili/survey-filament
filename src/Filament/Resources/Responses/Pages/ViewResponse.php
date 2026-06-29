@@ -12,11 +12,12 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
+use Lalalili\SurveyCore\Enums\SurveyFieldType;
 use Lalalili\SurveyCore\Models\SurveyAnswer;
 use Lalalili\SurveyCore\Models\SurveyResponse;
 use Lalalili\SurveyCore\Models\SurveyTag;
-use Throwable;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
+use Throwable;
 
 /**
  * @property SurveyResponse $record
@@ -91,9 +92,7 @@ class ViewResponse extends ViewRecord
                     TextEntry::make('field.label')->label('題目'),
                     TextEntry::make('value')
                         ->label('答案')
-                        ->state(fn (SurveyAnswer $record) => $this->isFileUploadAnswer($record)
-                            ? (data_get($record->answer_json, 'filename') ?: '檔案')
-                            : (is_array($record->answer_json) ? implode('、', $record->answer_json) : ($record->answer_text ?? '—')))
+                        ->state(fn (SurveyAnswer $record): string => $this->answerDisplayValue($record))
                         ->url(fn (SurveyAnswer $record): ?string => $this->isFileUploadAnswer($record) ? $this->fileUrl($record) : null)
                         ->openUrlInNewTab(),
                 ])
@@ -101,6 +100,64 @@ class ViewResponse extends ViewRecord
                 ->grid(['default' => 1, 'md' => 2])
                 ->columnSpanFull(),
         ]);
+    }
+
+    private function answerDisplayValue(SurveyAnswer $answer): string
+    {
+        if ($this->isFileUploadAnswer($answer)) {
+            return (string) (data_get($answer->answer_json, 'filename') ?: '檔案');
+        }
+
+        $value = $answer->answer_json ?? $answer->answer_text;
+
+        if ($this->shouldDisplayOptionLabels($answer)) {
+            return $this->optionAnswerDisplayValue($answer, $value);
+        }
+
+        return $this->rawAnswerDisplayValue($value);
+    }
+
+    private function shouldDisplayOptionLabels(SurveyAnswer $answer): bool
+    {
+        return in_array($answer->field->type, [
+            SurveyFieldType::SingleChoice,
+            SurveyFieldType::MultipleChoice,
+            SurveyFieldType::Select,
+            SurveyFieldType::Ranking,
+        ], true);
+    }
+
+    private function optionAnswerDisplayValue(SurveyAnswer $answer, mixed $value): string
+    {
+        $labelsByValue = collect($answer->field->normalizedOptions())
+            ->mapWithKeys(fn (array $option): array => [
+                $option['value'] => $option['label'] !== '' ? $option['label'] : $option['value'],
+            ]);
+
+        if (is_array($value)) {
+            return collect(array_is_list($value) ? $value : array_values($value))
+                ->map(fn (mixed $item): string => $labelsByValue->get((string) $item, (string) $item))
+                ->filter(fn (string $item): bool => $item !== '')
+                ->implode('、') ?: '—';
+        }
+
+        if ($value === null || $value === '') {
+            return '—';
+        }
+
+        return $labelsByValue->get((string) $value, (string) $value);
+    }
+
+    private function rawAnswerDisplayValue(mixed $value): string
+    {
+        if (is_array($value)) {
+            return collect(array_is_list($value) ? $value : array_values($value))
+                ->map(fn (mixed $item): string => (string) $item)
+                ->filter(fn (string $item): bool => $item !== '')
+                ->implode('、') ?: '—';
+        }
+
+        return $value !== null && $value !== '' ? (string) $value : '—';
     }
 
     private function isFileUploadAnswer(SurveyAnswer $answer): bool
