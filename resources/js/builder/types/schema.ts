@@ -155,6 +155,7 @@ export interface SurveySettings {
     show_estimated_time?: boolean;
   };
   description?: string | null;
+  category?: string | null;
   show_question_numbers?: boolean;
   allow_back?: boolean;
   language?: 'zh-TW' | 'zh-CN' | 'en';
@@ -164,6 +165,7 @@ export interface SurveySettings {
   password?: string | null;
   starts_at?: string | null;
   ends_at?: string | null;
+  submit_success_message?: string | null;
   max_responses?: number | null;
   quota_message?: string | null;
   uniqueness_mode?: 'none' | 'email' | 'token' | 'ip' | 'cookie';

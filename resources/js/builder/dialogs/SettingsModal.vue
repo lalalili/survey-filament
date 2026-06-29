@@ -78,6 +78,14 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
     },
   });
 }
+
+function updatePersonalizationAudience(audienceListId: string) {
+  updatePersonalizationSettings({
+    audience_list_id: audienceListId || null,
+    required: audienceListId !== '',
+    field_mappings: {},
+  });
+}
 </script>
 
 <template>
@@ -136,6 +144,18 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                     @input="store.updateSurveySettings({ description: ($event.target as HTMLTextAreaElement).value || null })"
                   ></textarea>
                   <div class="sb-set-hint" style="margin-top:4px">顯示於填答頁標題下方，適合補充問卷目的或填寫說明</div>
+                </div>
+                <div class="sb-set-field">
+                  <div class="sb-set-field-label">分類</div>
+                  <input
+                    class="sb-prop-input"
+                    type="text"
+                    maxlength="10"
+                    placeholder="例如 CSI、SSI"
+                    :value="store.schema?.settings?.category ?? ''"
+                    @input="store.updateSurveySettings({ category: ($event.target as HTMLInputElement).value || null })"
+                    style="max-width:160px"
+                  />
                 </div>
               </div>
             </template>
@@ -371,6 +391,16 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
             <!-- ── 問卷結果 ── -->
             <template v-if="settingsTab === 'result'">
               <div class="sb-set-card">
+                <div class="sb-set-field full">
+                  <div class="sb-set-field-label">提交成功訊息</div>
+                  <textarea
+                    class="sb-prop-input"
+                    rows="2"
+                    placeholder="未填時顯示預設感謝訊息"
+                    :value="store.schema?.settings?.submit_success_message ?? ''"
+                    @input="store.updateSurveySettings({ submit_success_message: ($event.target as HTMLTextAreaElement).value || null })"
+                  ></textarea>
+                </div>
                 <div class="sb-set-field">
                   <div class="sb-set-field-label">
                     自動產生填答追蹤編號
@@ -526,21 +556,13 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
                     class="sb-prop-input"
                     style="max-width:260px"
                     :value="store.schema?.settings?.personalization?.audience_list_id ?? ''"
-                    @change="updatePersonalizationSettings({ audience_list_id: ($event.target as HTMLSelectElement).value || null, field_mappings: {} })"
+                    @change="updatePersonalizationAudience(($event.target as HTMLSelectElement).value)"
                   >
                     <option value="">不使用名單</option>
                     <option v-for="list in store.audienceLists" :key="list.id" :value="list.id">{{ list.name }}</option>
                   </select>
                 </div>
-                <div class="sb-set-field">
-                  <div class="sb-set-field-label">必須使用個性化網址填寫</div>
-                  <button
-                    class="sb-set-toggle"
-                    :class="{ on: store.schema?.settings?.personalization?.required !== false }"
-                    type="button"
-                    @click="updatePersonalizationSettings({ required: !(store.schema?.settings?.personalization?.required !== false) })"
-                  ></button>
-                </div>
+                <div class="sb-set-hint">選擇個性化名單後，填答者必須使用個性化網址；未選名單時使用一般正式網址。</div>
                 <div v-if="selectedAudienceList" class="sb-set-hint" style="margin-bottom:4px">
                   欄位對應：在左側畫布選取隱藏欄位，於右側「個性化」屬性面板選擇對應的名單欄位。
                 </div>

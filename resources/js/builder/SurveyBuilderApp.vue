@@ -20,6 +20,9 @@ const showActivityPanel = ref(false);
 const saveStatus = computed(() => {
   if (store.isPublishing) return 'Publishing...';
   if (store.isSaving) return '儲存中…';
+  if (store.publishError) {
+    return store.publishError.length <= 28 ? `發布失敗：${store.publishError}` : '發布失敗';
+  }
   if (store.saveError) {
     const count = Object.keys(store.validationErrors).length;
     return count > 0 ? `儲存失敗（${count} 個錯誤）` : '儲存失敗';
@@ -27,6 +30,8 @@ const saveStatus = computed(() => {
   if (store.isDirty) return '未儲存';
   return '已儲存';
 });
+
+const statusTooltip = computed(() => store.publishError || store.saveError || saveStatus.value);
 
 function beforeUnload(event: BeforeUnloadEvent) {
   if (!store.hasUnsavedChanges) return;
@@ -59,7 +64,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
       <div class="sb-topbar-right">
         <span
           class="sb-save-status"
-          :class="{ saving: store.isSaving || store.isPublishing, error: !!store.saveError }"
+          :class="{ saving: store.isSaving || store.isPublishing, error: !!store.saveError || !!store.publishError }"
+          :title="statusTooltip"
         >
           <span class="sb-save-dot" />
           {{ saveStatus }}

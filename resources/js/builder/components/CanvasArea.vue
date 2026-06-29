@@ -261,6 +261,10 @@ function parseErrorKey(key: string, messages: string[]): ParsedError {
 const parsedErrors = computed<ParsedError[]>(() =>
   Object.entries(store.validationErrors).map(([key, msgs]) => parseErrorKey(key, msgs)),
 );
+const validationErrorTitle = computed(() => {
+  const action = store.publishError ? '發布' : '儲存';
+  return `${action}失敗，請修正以下 ${parsedErrors.value.length} 個問題`;
+});
 
 const errorElementIds = computed<Set<string>>(() => {
   const ids = new Set<string>();
@@ -861,7 +865,7 @@ function textInputType(element: SurveyElement) {
   <div v-if="parsedErrors.length > 0" class="sb-errors">
     <div class="sb-errors-header">
       <span class="sb-errors-icon">⚠</span>
-      <span class="sb-errors-title">儲存失敗，請修正以下 {{ parsedErrors.length }} 個問題</span>
+      <span class="sb-errors-title">{{ validationErrorTitle }}</span>
     </div>
     <ul class="sb-errors-list">
       <li

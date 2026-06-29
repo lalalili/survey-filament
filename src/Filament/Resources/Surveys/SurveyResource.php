@@ -16,6 +16,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\IconPosition;
 use Filament\Tables\Columns\TextColumn;
@@ -152,12 +153,11 @@ class SurveyResource extends Resource
                 ->searchable()
                 ->nullable()
                 ->live()
-                ->helperText('選擇名單後，可用名單欄位自動填入個性化題目。'),
-
-            Toggle::make('settings_json.personalization.required')
-                ->label('必須使用個性化網址填寫')
-                ->default(true)
-                ->helperText('啟用後，未帶個性化 token 的公開問卷連結不能填寫。'),
+                ->afterStateUpdated(fn (Set $set, mixed $state): mixed => $set(
+                    'settings_json.personalization.required',
+                    filled($state) ? true : null,
+                ))
+                ->helperText('選擇名單後，可用名單欄位自動填入個性化題目，且必須使用個性化網址填寫。'),
 
             Select::make('settings_json.personalization.name_column')
                 ->label('姓名欄位')

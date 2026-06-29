@@ -95,6 +95,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
     hasUnpublishedChanges: false,
     isSaving: false,
     saveError: '',
+    publishError: '',
     validationErrors: {} as Record<string, string[]>,
     lastSavedAt: null as string | null,
     isPreviewMode: false,
@@ -188,6 +189,9 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       this.selectedElementId = null;
       this.isDirty = false;
       this.hasUnpublishedChanges = false;
+      this.saveError = '';
+      this.publishError = '';
+      this.validationErrors = {};
       this.isLoading = false;
     },
     updateSurveyTitle(title: string) {
@@ -283,6 +287,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       this.isDirty = true;
       this.hasUnpublishedChanges = true;
       this.saveError = '';
+      this.publishError = '';
       this.validationErrors = {};
       this.scheduleAutosave();
     },
@@ -340,6 +345,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       }
 
       this.isPublishing = true;
+      this.publishError = '';
 
       try {
         const payload = await this.api.publish();
@@ -350,13 +356,14 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         this.isDirty = false;
         this.hasUnpublishedChanges = false;
         this.validationErrors = {};
+        this.publishError = '';
         await this.loadActivities();
       } catch (error) {
         if (error instanceof ValidationError) {
-          this.saveError = error.message;
+          this.publishError = error.message;
           this.validationErrors = error.errors;
         } else {
-          this.saveError = error instanceof Error ? error.message : 'Publish failed.';
+          this.publishError = error instanceof Error ? error.message : 'Publish failed.';
           this.validationErrors = {};
         }
       } finally {
@@ -391,6 +398,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       clearAutosaveTimer();
       this.isRestoringPublished = true;
       this.saveError = '';
+      this.publishError = '';
       this.validationErrors = {};
 
       try {

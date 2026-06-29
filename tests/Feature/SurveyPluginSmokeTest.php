@@ -1,6 +1,9 @@
 <?php
 
 use Filament\Actions\DeleteAction;
+use Filament\Schemas\Concerns\InteractsWithSchemas;
+use Filament\Schemas\Contracts\HasSchemas;
+use Filament\Schemas\Schema as FilamentSchema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -16,6 +19,7 @@ use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerActionPresets\Survey
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerAllowedHosts\SurveyTriggerAllowedHostResource;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\SurveyTriggerRuleResource;
 use Lalalili\SurveyFilament\SurveyFilamentPlugin;
+use Livewire\Component;
 
 it('can instantiate the plugin', function () {
     $plugin = SurveyFilamentPlugin::make();
@@ -53,6 +57,18 @@ it('can hide optional survey table columns through config', function () {
 
     expect(SurveyResource::isSurveyTableColumnHidden('fields_count'))->toBeTrue()
         ->and(SurveyResource::isSurveyTableColumnHidden('recipients_count'))->toBeFalse();
+});
+
+it('does not expose a separate personalization required toggle', function () {
+    $livewire = new class extends Component implements HasSchemas
+    {
+        use InteractsWithSchemas;
+    };
+
+    $fields = SurveyResource::form(FilamentSchema::make($livewire))->getFlatFields();
+
+    expect($fields)->toHaveKey('settings_json.personalization.audience_list_id')
+        ->and($fields)->not->toHaveKey('settings_json.personalization.required');
 });
 
 it('defaults resource overrides to null', function () {
