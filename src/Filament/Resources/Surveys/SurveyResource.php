@@ -29,7 +29,6 @@ use Lalalili\SurveyCore\Actions\DuplicateSurveyAction;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Storage;
 use Lalalili\SurveyCore\Actions\ExportSurveyBuilderSchemaAction;
-use Lalalili\SurveyCore\Actions\ImportSurveyQuestionsFromCsvAction;
 use Lalalili\SurveyCore\Actions\PublishSurveyAction;
 use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Enums\SurveyUniquenessMode;
@@ -303,6 +302,7 @@ class SurveyResource extends Resource
                             );
                         }),
 
+                    /*
                     Action::make('import_questions_csv')
                         ->label('匯入題目 CSV')
                         ->icon('heroicon-o-table-cells')
@@ -341,6 +341,7 @@ class SurveyResource extends Resource
 
                             return redirect(SurveyResource::getUrl('builder', ['record' => $record]));
                         }),
+                    */
 
                     Action::make('publish')
                         ->label('發佈')

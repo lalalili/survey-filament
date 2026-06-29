@@ -84,9 +84,15 @@ it('documents the randomize-options feature in the guide', function () {
 it('documents the core builder workflow in the guide', function () {
     $text = surveyGuideText();
 
-    foreach (['中央畫布', '題型庫', '屬性', '邏輯', '預覽', '自動儲存', '發佈', '回復', '匯入題目 CSV'] as $keyword) {
+    foreach (['中央畫布', '題型庫', '屬性', '邏輯', '預覽', '自動儲存', '發佈', '回復'] as $keyword) {
         expect($text)->toContain($keyword);
     }
+});
+
+it('documents that question CSV import is paused', function () {
+    expect(surveyGuideText())
+        ->toContain('匯入題目 CSV')
+        ->toContain('暫停提供');
 });
 
 it('adds a guide action to the survey list header', function () {

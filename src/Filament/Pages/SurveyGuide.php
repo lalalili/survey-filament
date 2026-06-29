@@ -135,8 +135,7 @@ class SurveyGuide extends Page
                     [
                         'heading' => '匯入與匯出',
                         'items' => [
-                            '可在問卷列表的列動作使用「匯入題目 CSV」批次新增題目。',
-                            'CSV 欄位包含 type、label、required、options、description；選擇題 options 以 | 分隔，例如「紅|綠|藍」。',
+                            '「匯入題目 CSV」目前暫停提供；請先在 Builder 內新增題目，或使用「從範本建立」後再調整題目內容。',
                             '若系統設定開啟 Builder JSON 功能，可匯出問卷 JSON 備份，或用「匯入問卷 JSON」還原完整問卷結構。',
                         ],
                     ],
