@@ -22,10 +22,12 @@ function toggleTurnstile() {
 const props = defineProps<{
   uploadImageUrl: string;
   csrfToken: string;
+  categoryOptions: Record<string, string>;
 }>();
 
 const show = defineModel<boolean>({ default: false });
 const store = useSurveyBuilderStore();
+const categoryOptionEntries = computed(() => Object.entries(props.categoryOptions));
 
 type SettingsTab = 'basic' | 'welcome' | 'thank_you' | 'display' | 'result' | 'access' | 'personalization' | 'anomaly';
 const settingsTab = ref<SettingsTab>('basic');
@@ -147,7 +149,18 @@ function updatePersonalizationAudience(audienceListId: string) {
                 </div>
                 <div class="sb-set-field">
                   <div class="sb-set-field-label">分類</div>
+                  <select
+                    v-if="categoryOptionEntries.length > 0"
+                    class="sb-prop-input"
+                    style="max-width:260px"
+                    :value="store.schema?.settings?.category ?? ''"
+                    @change="store.updateSurveySettings({ category: ($event.target as HTMLSelectElement).value || null })"
+                  >
+                    <option value="">未分類</option>
+                    <option v-for="[value, label] in categoryOptionEntries" :key="value" :value="value">{{ label }}</option>
+                  </select>
                   <input
+                    v-else
                     class="sb-prop-input"
                     type="text"
                     maxlength="10"

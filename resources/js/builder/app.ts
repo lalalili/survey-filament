@@ -26,6 +26,24 @@ function normalizeBuilderEndpoint(endpoint: string | undefined, path: BuilderEnd
   return resolvedEndpoint.replace(/\/builder\/?$/, '/builder-schema');
 }
 
+function parseJsonRecord(value: string | undefined): Record<string, string> {
+  if (!value) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {};
+    }
+
+    return Object.fromEntries(Object.entries(parsed).map(([key, label]) => [key, String(label)]));
+  } catch {
+    return {};
+  }
+}
+
 if (root) {
   const app = createApp(SurveyBuilderApp, {
     endpoints: {
@@ -41,6 +59,7 @@ if (root) {
     },
     csrfToken: csrfToken(),
     guideUrl: root.dataset.guideUrl || undefined,
+    categoryOptions: parseJsonRecord(root.dataset.surveyCategoryOptions),
   });
 
   // 伺服器是否已設定 Turnstile 金鑰；未設定時建立器停用「我不是機器人」開關。

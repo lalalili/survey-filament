@@ -67,6 +67,16 @@ return [
     */
     'builder_accent_color_setting_enabled' => false,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Survey Category Options
+    |--------------------------------------------------------------------------
+    | Optional category options for the builder settings UI. Keys are persisted
+    | to surveys.category, values are displayed to admins. Leave empty to allow
+    | free-form category input in the reusable package.
+    */
+    'survey_category_options' => [],
+
     // Survey table columns hidden by default. Supported values include:
     // category, fields_count, recipients_count.
     'survey_table_hidden_columns' => [],

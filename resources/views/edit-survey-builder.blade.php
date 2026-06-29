@@ -26,6 +26,7 @@
         data-language-setting-enabled="{{ $languageSettingEnabled ? '1' : '0' }}"
         data-thank-you-redirect-enabled="{{ $thankYouRedirectEnabled ? '1' : '0' }}"
         data-accent-color-setting-enabled="{{ $accentColorSettingEnabled ? '1' : '0' }}"
+        data-survey-category-options='@json($surveyCategoryOptions)'
     ></div>
 
     @vite('vendor/lalalili/survey-filament/resources/js/builder/app.ts')

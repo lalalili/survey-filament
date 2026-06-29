@@ -54,6 +54,7 @@ class EditSurveyBuilder extends Page
             'languageSettingEnabled' => (bool) config('survey-filament.builder_language_setting_enabled', false),
             'thankYouRedirectEnabled' => (bool) config('survey-filament.builder_thank_you_redirect_enabled', false),
             'accentColorSettingEnabled' => (bool) config('survey-filament.builder_accent_color_setting_enabled', false),
+            'surveyCategoryOptions' => $this->surveyCategoryOptions(),
             'guideUrl' => config('survey-filament.guide_enabled', true) ? SurveyGuide::safeUrl() : null,
             'builderEndpoints' => [
                 'show' => route('survey-filament.builder.show', $survey),
@@ -67,5 +68,21 @@ class EditSurveyBuilder extends Page
                 'google_drive_disconnect' => route('survey-filament.google-drive.disconnect', $survey),
             ],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function surveyCategoryOptions(): array
+    {
+        $options = config('survey-filament.survey_category_options', []);
+
+        if (! is_array($options)) {
+            return [];
+        }
+
+        return collect($options)
+            ->mapWithKeys(fn (mixed $label, mixed $value): array => [(string) $value => (string) $label])
+            ->all();
     }
 }
