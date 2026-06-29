@@ -77,7 +77,7 @@ it('documents the randomize-options feature in the guide', function () {
 
     expect($text)->toContain('隨機')
         ->and($text)->toContain('檔案上傳')
-        ->and($text)->toContain('簽名')
+        ->and($text)->not->toContain('簽名：提供數位畫布供填答者親筆簽名或手繪。')
         ->and($text)->toContain('從範本建立');
 });
 
