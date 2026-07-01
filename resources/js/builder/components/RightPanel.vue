@@ -919,7 +919,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                   class="sb-prop-input-sm"
                   @change="onJumpChange(store.selectedElement!.id, opt.id, ($event.target as HTMLSelectElement).value)"
                 >
-                  <option value="next_page">無（依序前往下一頁）</option>
+                  <option value="next_page">無設定</option>
                   <option value="end_survey">結束問卷</option>
                   <optgroup v-if="jumpTargetPages.length > 0" label="前往頁面">
                     <option v-for="page in jumpTargetPages" :key="page.id" :value="`page:${page.id}`">
