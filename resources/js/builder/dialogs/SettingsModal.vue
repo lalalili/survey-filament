@@ -201,15 +201,24 @@ function updatePersonalizationAudience(audienceListId: string) {
                   </div>
                   <div class="sb-set-field">
                     <div class="sb-set-field-label">預計填寫時間（分鐘）</div>
-                    <input
-                      class="sb-prop-input"
-                      type="number"
-                      min="0"
-                      max="999"
-                      :value="store.welcomePage.welcome_settings?.estimated_time_minutes ?? 5"
-                      @input="store.updatePage(store.welcomePage!.id, { welcome_settings: { ...(store.welcomePage!.welcome_settings ?? {}), estimated_time_minutes: Number(($event.target as HTMLInputElement).value) || 0 } })"
-                      style="max-width:100px"
-                    />
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <button
+                        class="sb-set-toggle"
+                        :class="{ on: store.schema?.settings?.progress?.show_estimated_time !== false }"
+                        type="button"
+                        title="是否在歡迎頁顯示這段預計填寫時間文字"
+                        @click="store.updateProgressSettings(store.schema?.settings?.progress?.mode ?? 'bar', !(store.schema?.settings?.progress?.show_estimated_time !== false))"
+                      ></button>
+                      <input
+                        class="sb-prop-input"
+                        type="number"
+                        min="0"
+                        max="999"
+                        :value="store.welcomePage.welcome_settings?.estimated_time_minutes ?? 5"
+                        @input="store.updatePage(store.welcomePage!.id, { welcome_settings: { ...(store.welcomePage!.welcome_settings ?? {}), estimated_time_minutes: Number(($event.target as HTMLInputElement).value) || 0 } })"
+                        style="max-width:100px"
+                      />
+                    </div>
                   </div>
                   <div class="sb-set-field full">
                     <SurveyRichEditor
@@ -342,15 +351,6 @@ function updatePersonalizationAudience(audienceListId: string) {
                     <option value="steps">步驟數（第 X / Y 頁）</option>
                     <option value="percent">百分比</option>
                   </select>
-                </div>
-                <div class="sb-set-field">
-                  <div class="sb-set-field-label">顯示預估時間</div>
-                  <button
-                    class="sb-set-toggle"
-                    :class="{ on: store.schema?.settings?.progress?.show_estimated_time !== false }"
-                    type="button"
-                    @click="store.updateProgressSettings(store.schema?.settings?.progress?.mode ?? 'bar', !(store.schema?.settings?.progress?.show_estimated_time !== false))"
-                  ></button>
                 </div>
               </div>
               <div class="sb-set-section-title">外觀主題</div>
