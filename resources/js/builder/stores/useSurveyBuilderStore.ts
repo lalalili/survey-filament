@@ -671,10 +671,13 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
 
       this.schema.calculations ??= [];
       const suffix = Math.random().toString(36).slice(2, 7);
+      const index = this.schema.calculations.length + 1;
+      const isFirstCalculation = this.schema.calculations.length === 0;
+
       this.schema.calculations.push({
         id: `calc_${suffix}`,
-        key: `score_${suffix}`,
-        label: '新計算',
+        key: isFirstCalculation ? 'total_score' : `score_${suffix}`,
+        label: isFirstCalculation ? '總分' : `計算 ${index}`,
         initial_value: 0,
         output_format: 'number',
         grade_map_json: [],

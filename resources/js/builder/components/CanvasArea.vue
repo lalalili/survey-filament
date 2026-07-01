@@ -5,7 +5,7 @@ import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
 import type { BuilderEndpoints, CascadeNode, Condition, SurveyElement, SurveyOption, SurveyOptionAction, SurveyPage } from '../types/schema';
 import SurveyRichEditor from './SurveyRichEditor.vue';
 import RightPanel from './RightPanel.vue';
-import { elementSupportsJump, hasActiveJumpLogic, isContentBlockType, typeCategory } from '../utils/builderHelpers';
+import { elementSupportsJump, elementSupportsLogic, hasActiveJumpLogic, isContentBlockType, typeCategory } from '../utils/builderHelpers';
 
 const props = defineProps<{
   endpoints: BuilderEndpoints;
@@ -1853,7 +1853,7 @@ function textInputType(element: SurveyElement) {
                       @click.stop="store.updateQuestion(element.id, { required: !element.required })"
                     >✱ 必填</button>
                     <button class="sb-quick-btn" type="button" @click.stop="store.duplicateQuestion(element.id)">⊕ 複製</button>
-                    <button class="sb-quick-btn" type="button" @click.stop="selectElement(element.id); store.rightPanelTab = 'logic'">⟁ 邏輯</button>
+                    <button v-if="elementSupportsLogic(element)" class="sb-quick-btn" type="button" @click.stop="selectElement(element.id); store.rightPanelTab = 'logic'">⟁ 邏輯</button>
                     <div style="flex:1" />
                     <button class="sb-quick-btn danger" type="button" @click.stop="store.removeQuestion(element.id)">✕ 刪除</button>
                   </div>

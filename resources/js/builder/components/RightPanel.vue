@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { getQuestionType, questionTypes } from '../registry/questionTypes';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
-import type { AudienceListColumn, CascadeNode, Condition, SurveyElement, SurveyOptionAction } from '../types/schema';
+import type { AudienceListColumn, CascadeNode, Condition, SurveyCalculation, SurveyElement, SurveyOptionAction } from '../types/schema';
 import { elementSupportsJump, hasActiveJumpLogic, typeCategory } from '../utils/builderHelpers';
 import MatrixColsDialog from '../dialogs/MatrixColsDialog.vue';
 import type { MatrixColsDialogState } from '../dialogs/MatrixColsDialog.vue';
@@ -19,6 +19,7 @@ const store = useSurveyBuilderStore();
 const canManageAdvancedFields = computed(() => store.capabilities.can_manage_advanced_fields);
 const optionCapacityTypes = ['single_choice', 'multiple_choice', 'select'];
 const optionRandomizationTypes = ['single_choice', 'multiple_choice', 'select', 'ranking'];
+const optionScoringTypes = ['single_choice', 'multiple_choice', 'select'];
 const contentBlockTypes = ['section_title', 'description_block', 'quote_block', 'divider'];
 
 // ── Dialog state ─────────────────────────────────────────────────────
@@ -113,6 +114,10 @@ function supportsOptionRandomization(element: SurveyElement): boolean {
   return optionRandomizationTypes.includes(element.type);
 }
 
+function supportsOptionScoring(element: SurveyElement): boolean {
+  return optionScoringTypes.includes(element.type);
+}
+
 function isContentBlock(element: SurveyElement): boolean {
   return contentBlockTypes.includes(element.type);
 }
@@ -125,6 +130,10 @@ function contentBlockTextLabel(element: SurveyElement): string {
 
 function showsDescriptionProperty(element: SurveyElement): boolean {
   return element.type !== 'divider' && element.type !== 'description_block';
+}
+
+function calculationToken(calculation: SurveyCalculation): string {
+  return `{{ calc.${calculation.key || 'total_score'} }}`;
 }
 
 // ── Audience personalization ─────────────────────────────────────────
@@ -444,25 +453,27 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
           <!-- Calculations -->
           <div class="sb-prop-section">
             <div class="sb-prop-heading-row">
-              <span class="sb-prop-heading" style="margin:0">計算變數</span>
+              <span class="sb-prop-heading" style="margin:0">問卷計算變數</span>
               <button class="sb-btn-sm" type="button" @click="store.addCalculation()">+ 新增</button>
             </div>
+            <p class="sb-prop-hint">計算變數套用於整份問卷，用來累加填答分數。常見用法是建立「總分」，再到單選、複選或下拉選單的每個選項設定加減分。</p>
             <div v-if="(store.schema?.calculations ?? []).length === 0" class="sb-prop-empty">尚未設定計算變數</div>
             <div v-for="calc in store.schema?.calculations" :key="calc.id" class="sb-calc-card">
               <label class="sb-prop-row col">
                 <span class="sb-prop-label">變數代碼</span>
                 <input :value="calc.key" class="sb-prop-input" placeholder="例如 total_score" @input="store.updateCalculation(calc.id!, { key: ($event.target as HTMLInputElement).value })" />
-                <span class="sb-prop-help">給系統計算用的代碼，建議使用英文、數字或底線。</span>
+                <span class="sb-prop-help">系統與感謝頁引用用的代碼，例如感謝頁可用 {{ calculationToken(calc) }} 顯示結果。建議使用英文、數字或底線。</span>
               </label>
               <label class="sb-prop-row col">
                 <span class="sb-prop-label">顯示名稱</span>
                 <input :value="calc.label" class="sb-prop-input" placeholder="例如 總分" @input="store.updateCalculation(calc.id!, { label: ($event.target as HTMLInputElement).value })" />
-                <span class="sb-prop-help">後台報表與分數設定中顯示的名稱。</span>
+                <span class="sb-prop-help">顯示在分數設定、匯出欄位與後台報表中的名稱。</span>
               </label>
               <div class="sb-calc-row">
                 <label class="sb-prop-row col" style="margin:0;flex:1">
                   <span class="sb-prop-label">初始分數</span>
                   <input :value="calc.initial_value ?? 0" type="number" class="sb-prop-input" @input="store.updateCalculation(calc.id!, { initial_value: Number(($event.target as HTMLInputElement).value) || 0 })" />
+                  <span class="sb-prop-help">填答前的起始值。若為 0，填答者只會累加選到選項的分數。</span>
                 </label>
                 <button class="sb-btn-sm danger" type="button" @click="store.removeCalculation(calc.id!)">刪除</button>
               </div>
@@ -847,14 +858,14 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
           </div>
 
           <!-- Score delta -->
-          <div v-if="store.selectedElement.options.length > 0 && store.selectedElement.type !== 'constant_sum' && (store.schema?.calculations ?? []).length > 0" class="sb-prop-section">
+          <div v-if="store.selectedElement.options.length > 0 && supportsOptionScoring(store.selectedElement) && (store.schema?.calculations ?? []).length > 0" class="sb-prop-section">
             <div class="sb-prop-heading">分數設定</div>
-            <p class="sb-prop-hint">填答者選到該選項時，對指定計算變數加上或扣除多少分。</p>
+            <p class="sb-prop-hint">填答者選到該選項時，會把這裡設定的數字加到指定計算變數；填負數則扣分。例如「選項 1」的「總分」設定為 10，填答者選到選項 1 時，送出後總分會加 10。</p>
             <div v-for="opt in store.selectedElement.options" :key="opt.id" class="sb-score-row">
               <span class="sb-opt-prop-label">{{ opt.label || opt.value }}</span>
               <label v-for="calc in store.schema?.calculations" :key="calc.id" class="sb-score-label">
                 <span>{{ calc.label || calc.key }}</span>
-                <input type="number" :value="opt.score_delta_json?.[calc.key] ?? 0" placeholder="加減分" class="sb-prop-input-sm" @input="store.updateOptionScoreDelta(store.selectedElement!.id, opt.id, calc.key, Number(($event.target as HTMLInputElement).value) || 0)" />
+                <input type="number" :value="opt.score_delta_json?.[calc.key] ?? 0" placeholder="未選不加分" class="sb-prop-input-sm" @input="store.updateOptionScoreDelta(store.selectedElement!.id, opt.id, calc.key, Number(($event.target as HTMLInputElement).value) || 0)" />
               </label>
             </div>
           </div>

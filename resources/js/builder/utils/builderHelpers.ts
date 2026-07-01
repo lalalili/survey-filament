@@ -10,6 +10,10 @@ export function hasActiveJumpLogic(el: SurveyElement): boolean {
   return elementSupportsJump(el) && el.options.some((o) => o.action && o.action.type !== 'next_page');
 }
 
+export function elementSupportsLogic(el: SurveyElement): boolean {
+  return !isContentBlockType(el.type);
+}
+
 export function typeCategory(type: string): string {
   if (['single_choice', 'multiple_choice', 'select', 'cascade_select', 'ranking'].includes(type)) return 'choice';
   if (['rating', 'nps', 'linear_scale'].includes(type)) return 'scale';
