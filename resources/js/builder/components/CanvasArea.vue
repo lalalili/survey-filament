@@ -1018,6 +1018,10 @@ function textInputType(element: SurveyElement) {
 
         <!-- ── Preview mode ── -->
         <div v-if="store.isPreviewMode" class="sb-preview" :class="store.isMobilePreview ? 'mobile' : ''">
+          <div class="sb-preview-survey-header">
+            <h1 class="sb-preview-survey-title">{{ store.surveyTitle }}</h1>
+            <p v-if="store.schema?.settings?.description" class="sb-preview-survey-desc">{{ store.schema.settings.description }}</p>
+          </div>
           <div v-if="previewEnded" class="sb-preview-end">
             <p class="sb-preview-end-title">問卷已結束</p>
             <p class="sb-preview-end-sub">感謝您的填答</p>
