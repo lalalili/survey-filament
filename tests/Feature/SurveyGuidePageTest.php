@@ -27,12 +27,12 @@ function surveyGuideText(): string
         ->implode("\n");
 }
 
-it('registers the guide in navigation by default', function () {
-    expect(SurveyGuide::shouldRegisterNavigation())->toBeTrue()
+it('does not register the guide in navigation', function () {
+    expect(SurveyGuide::shouldRegisterNavigation())->toBeFalse()
         ->and(SurveyGuide::getNavigationLabel())->toBe('問卷使用說明');
 });
 
-it('can hide the guide through config', function () {
+it('keeps the guide hidden from navigation when disabled through config', function () {
     config()->set('survey-filament.guide_enabled', false);
 
     expect(SurveyGuide::shouldRegisterNavigation())->toBeFalse();

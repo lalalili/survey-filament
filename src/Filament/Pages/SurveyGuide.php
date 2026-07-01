@@ -37,7 +37,7 @@ class SurveyGuide extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        return (bool) config('survey-filament.guide_enabled', true);
+        return false;
     }
 
     public static function safeUrl(): string
