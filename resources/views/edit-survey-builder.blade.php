@@ -5,7 +5,8 @@
         .fi-page { height: 100%; }
         .fi-page-header-main-ctn { flex: 1; min-height: 0; padding-top: 0 !important; padding-bottom: 0 !important; gap: 0 !important; }
         .fi-page-main, .fi-page-content { height: 100%; min-height: 0; }
-        .fi-page-content { gap: 0 !important; }
+        .fi-page-content { display: flex; flex-direction: column; overflow: hidden; gap: 0 !important; }
+        #survey-builder-app { flex: 1; min-height: 0; height: 100%; display: flex; flex-direction: column; }
     </style>
 
     <div

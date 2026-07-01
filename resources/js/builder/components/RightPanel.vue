@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { getQuestionType, questionTypes } from '../registry/questionTypes';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
 import type { AudienceListColumn, Condition, SurveyElement, SurveyOptionAction } from '../types/schema';
@@ -252,6 +252,14 @@ watch(() => store.selectedElementId, () => {
   store.jumpLogicOpen = el ? hasActiveJumpLogic(el) : false;
 });
 
+// ── 切換題目/分頁時，將屬性面板捲回頂部，避免沿用前一題的捲動位置 ──
+const rpBodyEl = ref<HTMLElement | null>(null);
+watch([() => store.selectedElementId, () => store.rightPanelTab], () => {
+  void nextTick(() => {
+    if (rpBodyEl.value) rpBodyEl.value.scrollTop = 0;
+  });
+});
+
 const jumpTargetPages = computed(() => {
   if (!store.selectedElement || !store.schema) return [];
   const pages = store.schema.pages;
@@ -336,7 +344,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
       <button class="sb-rp-tab" :class="{ active: store.rightPanelTab === 'logic' }" @click="store.rightPanelTab = 'logic'">邏輯</button>
     </div>
 
-    <div class="sb-rp-body">
+    <div class="sb-rp-body" ref="rpBodyEl">
 
       <!-- ── 題型庫 ── -->
       <template v-if="store.rightPanelTab === 'library'">
