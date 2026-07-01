@@ -782,6 +782,7 @@
 }
 .sb-preview-page-title { font-size: 22px; font-weight: 600; margin: 0 0 24px; }
 .sb-preview-rich { font-size: 14px; color: var(--c-ink2); margin-bottom: 16px; }
+.sb-preview-estimated-time { font-size: 13px; color: var(--c-ink3); margin: 0 0 16px; }
 .sb-preview-hidden { font-size: 12px; color: var(--c-ink4); margin-bottom: 12px; }
 .sb-preview-section h3 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
 .sb-preview-section p { font-size: 13px; color: var(--c-ink3); margin: 0; }

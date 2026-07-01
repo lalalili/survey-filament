@@ -1041,6 +1041,10 @@ function textInputType(element: SurveyElement) {
                   class="sb-preview-rich survey-rich-content"
                   v-html="store.selectedPage.welcome_settings.content"
                 ></div>
+                <p
+                  v-if="store.schema?.settings?.progress?.show_estimated_time !== false && Number(store.selectedPage.welcome_settings?.estimated_time_minutes ?? 0) > 0"
+                  class="sb-preview-estimated-time"
+                >預估填寫時間：約 {{ store.selectedPage.welcome_settings?.estimated_time_minutes }} 分鐘</p>
                 <div class="sb-preview-footer" style="margin-top:24px">
                   <div style="flex:1" />
                   <button type="button" class="sb-btn accent" @click="previewGoNext()">
