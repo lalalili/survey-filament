@@ -486,6 +486,56 @@ function previewUpdateConstantSumValue(elementId: string, optionId: string, valu
   };
 }
 
+function constantSumTotal(element: SurveyElement): number | null {
+  const total = Number((element.settings as Record<string, unknown>)?.total);
+
+  return Number.isFinite(total) ? total : null;
+}
+
+function constantSumValue(elementId: string, optionId: string): string {
+  return previewConstantSumValues.value[elementId]?.[optionId] ?? '';
+}
+
+function constantSumCurrent(element: SurveyElement): number {
+  return previewOptions(element).reduce((sum, option) => {
+    const value = Number(constantSumValue(element.id, option.id));
+
+    return Number.isFinite(value) ? sum + value : sum;
+  }, 0);
+}
+
+function formatSurveyNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, '');
+}
+
+function constantSumStatus(element: SurveyElement): 'neutral' | 'matched' | 'over' | 'under' {
+  const total = constantSumTotal(element);
+
+  if (total === null) return 'neutral';
+
+  const current = constantSumCurrent(element);
+  const diff = current - total;
+
+  if (Math.abs(diff) <= 0.00001) return 'matched';
+
+  return diff > 0 ? 'over' : 'under';
+}
+
+function constantSumStatusText(element: SurveyElement): string {
+  const total = constantSumTotal(element);
+
+  if (total === null) return '尚未設定合計目標';
+
+  const current = constantSumCurrent(element);
+  const diff = total - current;
+
+  if (Math.abs(diff) <= 0.00001) return '合計符合目標';
+
+  if (diff > 0) return `剩餘 ${formatSurveyNumber(diff)}`;
+
+  return `超出 ${formatSurveyNumber(Math.abs(diff))}`;
+}
+
 function previewLinearScaleValue(element: SurveyElement): string | number {
   return previewTextValues.value[element.id] ?? Number((element.settings as Record<string, unknown>)?.min ?? 1);
 }
@@ -1267,17 +1317,25 @@ function textInputType(element: SurveyElement) {
                       />
                       <span v-if="(element.settings as any)?.unit" class="sb-preview-number-unit">{{ (element.settings as any).unit }}</span>
                     </div>
-                    <div v-else-if="element.type === 'constant_sum'" class="survey-choices">
-                      <label v-for="opt in previewOptions(element)" :key="opt.id" class="survey-choice-label survey-preview-inline-input">
+                    <div v-else-if="element.type === 'constant_sum'" class="survey-choices survey-constant-sum">
+                      <label v-for="opt in previewOptions(element)" :key="opt.id" class="survey-choice-label survey-preview-inline-input survey-constant-sum-row">
                         <span>{{ opt.label }}</span>
-                        <input
-                          type="number"
-                          class="survey-input"
-                          :placeholder="String((element.settings as any)?.unit ?? '')"
-                          :value="previewConstantSumValues[element.id]?.[opt.id] ?? ''"
-                          @input="previewUpdateConstantSumValue(element.id, opt.id, ($event.target as HTMLInputElement).value)"
-                        />
+                        <span class="survey-constant-sum-input-wrap">
+                          <input
+                            type="number"
+                            class="survey-input"
+                            :placeholder="String((element.settings as any)?.unit || '0')"
+                            :value="constantSumValue(element.id, opt.id)"
+                            @input="previewUpdateConstantSumValue(element.id, opt.id, ($event.target as HTMLInputElement).value)"
+                          />
+                          <span v-if="(element.settings as any)?.unit" class="survey-constant-sum-unit">{{ (element.settings as any).unit }}</span>
+                        </span>
                       </label>
+                      <div class="survey-constant-sum-summary" :data-status="constantSumStatus(element)">
+                        <span>目前合計 {{ formatSurveyNumber(constantSumCurrent(element)) }}</span>
+                        <span v-if="constantSumTotal(element) !== null">目標 {{ formatSurveyNumber(constantSumTotal(element)!) }}</span>
+                        <strong>{{ constantSumStatusText(element) }}</strong>
+                      </div>
                     </div>
                     <div v-else-if="element.type === 'selection_based'" class="survey-choices">
                       <p v-if="!selectionBasedSourceElement(element)" class="survey-help">請先在右側選擇來源題目。</p>
@@ -1607,7 +1665,7 @@ function textInputType(element: SurveyElement) {
                   </div>
 
                   <!-- Options preview -->
-                  <div v-if="getQuestionType(element.type).supportsOptions && element.type !== 'select'" class="sb-card-body survey-choices sb-edit-options">
+                  <div v-if="getQuestionType(element.type).supportsOptions && element.type !== 'select' && element.type !== 'constant_sum'" class="sb-card-body survey-choices sb-edit-options">
                     <div v-for="(opt, oi) in element.options" :key="opt.id" class="survey-choice-label sb-opt-row">
                       <span class="sb-opt-letter">{{ String.fromCharCode(97 + oi) }}</span>
                       <span class="survey-choice-input sb-opt-marker" :class="element.type === 'multiple_choice' ? 'square' : ''" />
@@ -1619,6 +1677,35 @@ function textInputType(element: SurveyElement) {
                         @click.stop
                       />
                       <button class="sb-opt-act" type="button" @click.stop="removeOption(element, oi)">✕</button>
+                    </div>
+                    <button class="sb-opt-add" type="button" @click.stop="addOption(element)">
+                      + 新增選項
+                    </button>
+                  </div>
+
+                  <!-- Constant sum design preview -->
+                  <div v-else-if="element.type === 'constant_sum'" class="sb-card-body survey-choices survey-constant-sum">
+                    <div v-for="(opt, oi) in element.options" :key="opt.id" class="survey-choice-label survey-preview-inline-input survey-constant-sum-row">
+                      <span class="sb-constant-sum-option-edit">
+                        <span class="sb-opt-letter">{{ String.fromCharCode(97 + oi) }}</span>
+                        <input
+                          class="sb-opt-input"
+                          v-model="opt.label"
+                          :placeholder="`選項 ${oi + 1}`"
+                          @input="opt.value ||= opt.id; store.markDirty()"
+                          @click.stop
+                        />
+                      </span>
+                      <span class="survey-constant-sum-input-wrap">
+                        <input class="survey-input" type="number" :placeholder="String((element.settings as any)?.unit || '0')" disabled />
+                        <span v-if="(element.settings as any)?.unit" class="survey-constant-sum-unit">{{ (element.settings as any).unit }}</span>
+                        <button class="sb-opt-act" type="button" @click.stop="removeOption(element, oi)">✕</button>
+                      </span>
+                    </div>
+                    <div class="survey-constant-sum-summary" data-status="neutral">
+                      <span>目前合計 0</span>
+                      <span v-if="constantSumTotal(element) !== null">目標 {{ formatSurveyNumber(constantSumTotal(element)!) }}</span>
+                      <strong>{{ constantSumTotal(element) === null ? '尚未設定合計目標' : `剩餘 ${formatSurveyNumber(constantSumTotal(element)! || 0)}` }}</strong>
                     </div>
                     <button class="sb-opt-add" type="button" @click.stop="addOption(element)">
                       + 新增選項
