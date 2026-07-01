@@ -98,7 +98,7 @@ use Lalalili\SurveyFilament\Filament\Widgets\ResponsesTrendChart;
 | time | 時間 |
 | linear_scale | 數字滑桿／線性量表 |
 | constant_sum | 總計題 |
-| section_title | 區段標題 |
+| section_title | 標題 |
 | description_block | 說明文字 |
 | quote_block | 引言 |
 | divider | 分隔線 |

@@ -311,14 +311,14 @@ export const questionTypes: QuestionTypeDefinition[] = [
   {
     id: 'section_title',
     type: 'section_title',
-    label: '區段標題',
+    label: '標題',
     icon: 'H',
     supportsOptions: false,
     supportsPlaceholder: false,
     supportsRequired: false,
     createDefault: () => ({
-      ...createBase('section_title', '區段標題'),
-      description: '新的區段',
+      ...createBase('section_title', '標題'),
+      description: '新的標題',
     }),
   },
   {

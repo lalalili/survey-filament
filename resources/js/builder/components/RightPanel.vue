@@ -17,6 +17,9 @@ import type { CascadeDialogState } from '../dialogs/CascadeDialog.vue';
 
 const store = useSurveyBuilderStore();
 const canManageAdvancedFields = computed(() => store.capabilities.can_manage_advanced_fields);
+const optionCapacityTypes = ['single_choice', 'multiple_choice', 'select'];
+const optionRandomizationTypes = ['single_choice', 'multiple_choice', 'select', 'ranking'];
+const contentBlockTypes = ['section_title', 'description_block', 'quote_block', 'divider'];
 
 // ── Dialog state ─────────────────────────────────────────────────────
 const matrixColsDialog = ref<MatrixColsDialogState | null>(null);
@@ -100,6 +103,28 @@ function removeCascadeLevel(element: SurveyElement, levelIndex: number) {
     cascade_levels: levels,
     cascade_data: levels.length === 0 ? [] : removeCascadeDepth(element.cascade_data ?? [], levelIndex),
   });
+}
+
+function supportsOptionCapacity(element: SurveyElement): boolean {
+  return optionCapacityTypes.includes(element.type);
+}
+
+function supportsOptionRandomization(element: SurveyElement): boolean {
+  return optionRandomizationTypes.includes(element.type);
+}
+
+function isContentBlock(element: SurveyElement): boolean {
+  return contentBlockTypes.includes(element.type);
+}
+
+function contentBlockTextLabel(element: SurveyElement): string {
+  if (element.type === 'section_title') return '標題內容';
+  if (element.type === 'quote_block') return '引言內容';
+  return '說明內容';
+}
+
+function showsDescriptionProperty(element: SurveyElement): boolean {
+  return element.type !== 'divider' && element.type !== 'description_block';
 }
 
 // ── Audience personalization ─────────────────────────────────────────
@@ -449,13 +474,13 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
         <!-- Element selected: properties -->
         <template v-else>
           <div class="sb-prop-section">
-            <div class="sb-prop-heading">題目</div>
-            <label class="sb-prop-row col">
+            <div class="sb-prop-heading">{{ isContentBlock(store.selectedElement) ? '內容' : '題目' }}</div>
+            <label v-if="!isContentBlock(store.selectedElement)" class="sb-prop-row col">
               <span class="sb-prop-label">欄位名稱</span>
               <input class="sb-prop-input" v-model="store.selectedElement.label" @input="store.markDirty()" />
             </label>
-            <label class="sb-prop-row col">
-              <span class="sb-prop-label">說明</span>
+            <label v-if="showsDescriptionProperty(store.selectedElement)" class="sb-prop-row col">
+              <span class="sb-prop-label">{{ isContentBlock(store.selectedElement) ? contentBlockTextLabel(store.selectedElement) : '說明' }}</span>
               <textarea class="sb-prop-input" rows="2" v-model="store.selectedElement.description" @input="store.markDirty()" />
             </label>
             <label v-if="selectedDefinition?.supportsPlaceholder" class="sb-prop-row col">
@@ -778,9 +803,9 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
           </div>
 
           <!-- Option capacity / score -->
-          <div v-if="store.selectedElement.options.length > 0" class="sb-prop-section">
+          <div v-if="store.selectedElement.options.length > 0 && (supportsOptionRandomization(store.selectedElement) || supportsOptionCapacity(store.selectedElement))" class="sb-prop-section">
             <div class="sb-prop-heading">選項設定</div>
-            <label class="sb-prop-row">
+            <label v-if="supportsOptionRandomization(store.selectedElement)" class="sb-prop-row">
               <span class="sb-prop-label">隨機排列選項</span>
               <input
                 type="checkbox"
@@ -788,7 +813,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                 @change="store.updateElementSettings(store.selectedElement!.id, { randomize_options: ($event.target as HTMLInputElement).checked })"
               />
             </label>
-            <p class="sb-prop-hint">開啟後，每位填答者看到的選項順序會隨機調整，避免位置偏誤；隱藏選項與名額限制不受影響。</p>
+            <p v-if="supportsOptionRandomization(store.selectedElement)" class="sb-prop-hint">{{ store.selectedElement.type === 'ranking' ? '開啟後，每位填答者看到的初始排序會隨機調整，避免預設順位偏誤。' : '開啟後，每位填答者看到的選項順序會隨機調整，避免位置偏誤；隱藏選項與名額限制不受影響。' }}</p>
             <!-- 選項組（randomize_option_groups）— 暫時隱藏（2026-06-28）：功能保留於後端，UI 先不顯示。
             <label class="sb-prop-row">
               <span class="sb-prop-label">隨機排列選項組順序</span>
@@ -800,11 +825,11 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
             </label>
             <p class="sb-prop-hint">為選項填寫「組別」可將選項分組顯示；開啟此項時，會連同各組的呈現順序一併隨機。</p>
             -->
-            <p class="sb-prop-hint"><strong>名額</strong>：限制每個選項最多可被多少位填答者選取，適合限量、先到先得的情境；達上限時填答頁會顯示「已額滿」並停用該選項，留空代表不限名額（填 0 等同立即額滿）。</p>
+            <p v-if="supportsOptionCapacity(store.selectedElement)" class="sb-prop-hint"><strong>名額</strong>：限制每個選項最多可被多少位填答者選取，適合限量、先到先得的情境；達上限時填答頁會顯示「已額滿」並停用該選項，留空代表不限名額（填 0 等同立即額滿）。</p>
             <div v-for="opt in store.selectedElement.options" :key="opt.id" class="sb-opt-prop">
               <span class="sb-opt-prop-label">{{ opt.label || opt.value }}</span>
               <div class="sb-opt-prop-fields">
-                <label class="sb-opt-field">
+                <label v-if="supportsOptionCapacity(store.selectedElement)" class="sb-opt-field">
                   <span class="sb-opt-field-label">名額</span>
                   <input :value="opt.capacity ?? ''" type="number" min="0" placeholder="不限" class="sb-prop-input-sm" @input="opt.capacity = ($event.target as HTMLInputElement).value === '' ? null : Math.max(0, Number(($event.target as HTMLInputElement).value) || 0); store.markDirty()" />
                 </label>
@@ -822,7 +847,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
           </div>
 
           <!-- Score delta -->
-          <div v-if="store.selectedElement.options.length > 0 && (store.schema?.calculations ?? []).length > 0" class="sb-prop-section">
+          <div v-if="store.selectedElement.options.length > 0 && store.selectedElement.type !== 'constant_sum' && (store.schema?.calculations ?? []).length > 0" class="sb-prop-section">
             <div class="sb-prop-heading">分數設定</div>
             <p class="sb-prop-hint">填答者選到該選項時，對指定計算變數加上或扣除多少分。</p>
             <div v-for="opt in store.selectedElement.options" :key="opt.id" class="sb-score-row">

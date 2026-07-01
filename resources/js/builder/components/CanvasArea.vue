@@ -586,7 +586,7 @@ function previewRatingIsPopping(elementId: string, score: number): boolean {
   return previewRatingPop.value[elementId] === score;
 }
 
-// 題號：只對非內容元件（排除區段標題/說明文字/分隔線/引言）計數，並跨頁累加，與正式填寫頁 $questionNo 邏輯一致
+// 題號：只對非內容元件（排除標題/說明文字/分隔線/引言）計數，並跨頁累加，與正式填寫頁 $questionNo 邏輯一致
 const questionNumberMap = computed<Record<string, number>>(() => {
   const map: Record<string, number> = {};
   let n = 0;
@@ -744,7 +744,8 @@ function resetPreview() {
 }
 
 function previewRankingOrder(element: SurveyElement): SurveyOption[] {
-  const order = previewRankingOrders.value[element.id] ?? element.options.map((option) => option.value);
+  const displayOptions = previewOptions(element);
+  const order = previewRankingOrders.value[element.id] ?? displayOptions.map((option) => option.value);
   const optionMap = new Map(element.options.map((option) => [option.value, option]));
   return order.map((value) => optionMap.get(value)).filter((option): option is SurveyOption => option !== undefined);
 }
@@ -866,7 +867,7 @@ function updateContentBlockText(element: SurveyElement, value: string) {
 }
 
 function contentBlockLabel(element: SurveyElement): string {
-  if (element.type === 'section_title') return '區段標題';
+  if (element.type === 'section_title') return '標題';
   if (element.type === 'quote_block') return '引言';
   if (element.type === 'divider') return '分隔線';
   return '說明文字';
@@ -1613,7 +1614,7 @@ function textInputType(element: SurveyElement) {
                         class="sb-card-title"
                         :class="{ empty: !element.description }"
                         :value="contentBlockText(element)"
-                        placeholder="區段標題…"
+                        placeholder="標題…"
                         @input="updateContentBlockText(element, ($event.target as HTMLInputElement).value)"
                         @click.stop
                       >
