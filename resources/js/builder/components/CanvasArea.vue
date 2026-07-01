@@ -1398,7 +1398,7 @@ function textInputType(element: SurveyElement) {
                     <span class="sb-type-badge" :class="typeCategory(element.type)">
                       {{ getQuestionType(element.type).icon }}
                     </span>
-                    <span v-if="!['section_title', 'description_block', 'divider', 'quote_block'].includes(element.type)" class="sb-card-num">{{ i + 1 }}</span>
+                    <span v-if="store.schema?.settings?.show_question_numbers !== false && !['section_title', 'description_block', 'divider', 'quote_block'].includes(element.type)" class="sb-card-num">{{ i + 1 }}</span>
                     <div class="sb-card-title-wrap">
                       <input
                         v-if="element.type === 'section_title'"
