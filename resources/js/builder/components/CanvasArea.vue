@@ -197,6 +197,7 @@ interface ParsedError {
   elementId: string | null;
   fieldName: string | null;
   pageLabel: string;
+  elementNumber: number | null;
   elementLabel: string;
   fieldLabel: string;
   translatedMessages: string[];
@@ -260,7 +261,7 @@ function parseErrorKey(key: string, messages: string[]): ParsedError {
     raw: key, messages, translatedMessages,
     pageIndex: null, elementIndex: null, questionPageNumber: null,
     pageId: null, elementId: null, fieldName: null,
-    pageLabel: '', elementLabel: '', fieldLabel: '',
+    pageLabel: '', elementNumber: null, elementLabel: '', fieldLabel: '',
   };
 
   const m = key.match(/^pages\.(\d+)(?:\.elements\.(\d+))?(?:\.(.+))?$/);
@@ -291,10 +292,11 @@ function parseErrorKey(key: string, messages: string[]): ParsedError {
   else if (questionPageNumber !== null) pageLabel = `第 ${questionPageNumber} 頁`;
   else pageLabel = `頁面 ${pageIndex + 1}`;
 
-  const elementLabel = element?.label ? `「${element.label}」` : elementIndex !== null ? `第 ${elementIndex + 1} 題` : '';
+  const elementNumber = elementId ? questionNumberMap.value[elementId] ?? null : null;
+  const elementLabel = element?.label ? `「${element.label}」` : elementNumber !== null ? `第 ${elementNumber} 題` : '';
   const fLabel = readableFieldLabel(fieldName);
 
-  return { raw: key, messages, translatedMessages, pageIndex, elementIndex, questionPageNumber, pageId, elementId, fieldName, pageLabel, elementLabel, fieldLabel: fLabel };
+  return { raw: key, messages, translatedMessages, pageIndex, elementIndex, questionPageNumber, pageId, elementId, fieldName, pageLabel, elementNumber, elementLabel, fieldLabel: fLabel };
 }
 
 const parsedErrors = computed<ParsedError[]>(() =>
@@ -1008,7 +1010,6 @@ function textInputType(element: SurveyElement) {
       >
         <span class="sb-errors-location">
           <span v-if="err.pageLabel" class="sb-errors-badge">{{ err.pageLabel }}</span>
-          <span v-if="err.elementIndex !== null" class="sb-errors-badge element">第 {{ err.elementIndex + 1 }} 題</span>
           <span v-if="err.elementLabel" class="sb-errors-element-name">{{ err.elementLabel }}</span>
           <span v-if="err.fieldLabel" class="sb-errors-field">{{ err.fieldLabel }}</span>
         </span>

@@ -18,6 +18,8 @@
         data-endpoint-activities="{{ $builderEndpoints['activities'] }}"
         data-endpoint-restore-published="{{ $builderEndpoints['restore_published'] }}"
         data-endpoint-upload-image="{{ $builderEndpoints['upload_image'] }}"
+        data-endpoint-cascade-template="{{ $builderEndpoints['cascade_template'] }}"
+        data-endpoint-cascade-import="{{ $builderEndpoints['cascade_import'] }}"
         data-endpoint-gd-connect="{{ $builderEndpoints['google_drive_connect'] ?? '' }}"
         data-endpoint-gd-status="{{ $builderEndpoints['google_drive_status'] ?? '' }}"
         data-endpoint-gd-disconnect="{{ $builderEndpoints['google_drive_disconnect'] ?? '' }}"

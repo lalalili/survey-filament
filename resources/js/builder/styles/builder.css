@@ -1834,10 +1834,11 @@
 .sb-cascade-dialog {
   background: var(--c-surface); border-radius: var(--r3);
   box-shadow: 0 24px 64px oklch(0% 0 0 / .18);
-  width: min(680px, 96vw); max-height: min(80vh, 720px);
+  width: min(680px, 96vw); height: min(720px, calc(100dvh - 24px));
+  max-height: calc(100dvh - 24px);
   display: flex; flex-direction: column; overflow: hidden;
 }
-.sb-cascade-dialog-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+.sb-cascade-dialog-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
 .sb-cascade-dialog-levels { display: flex; flex-wrap: wrap; gap: 5px; }
 .sb-cascade-dialog-level-chip {
   display: inline-flex; align-items: center; gap: 5px;
@@ -1874,7 +1875,7 @@
 .sb-cascade-dialog-toolbar { background: var(--c-s2); border-radius: var(--r2); padding: 12px 14px; }
 .sb-cascade-dialog-hint { font-size: 12.5px; color: var(--c-ink3); margin: 0 0 10px; line-height: 1.5; }
 .sb-cascade-dialog-btns { display: flex; gap: 8px; }
-.sb-cascade-tree-wrap { border: 1px solid var(--c-line); border-radius: var(--r2); overflow: hidden; }
+.sb-cascade-tree-wrap { border: 1px solid var(--c-line); border-radius: var(--r2); overflow: hidden; display: flex; flex-direction: column; flex: 1 1 240px; min-height: 220px; }
 .sb-cascade-tree-empty {
   border: 1px dashed var(--c-line2);
   border-radius: var(--r2);
@@ -1889,7 +1890,13 @@
   background: var(--c-s2); border-bottom: 1px solid var(--c-line);
   font-size: 12.5px; font-weight: 600; color: var(--c-ink2);
 }
-.sb-cascade-tree-list { max-height: 320px; overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.sb-cascade-tree-list {
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto;
+  padding: 6px 6px 18px;
+  display: flex; flex-direction: column; gap: 2px;
+  scrollbar-gutter: stable;
+}
 .sb-cascade-tree-row {
   display: flex; align-items: center; gap: 5px;
 }

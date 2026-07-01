@@ -210,9 +210,16 @@ export interface BuilderEndpoints {
   activities: string;
   restorePublished: string;
   uploadImage: string;
+  cascadeTemplate: string;
+  cascadeImport: string;
   googleDriveConnect?: string;
   googleDriveStatus?: string;
   googleDriveDisconnect?: string;
+}
+
+export interface CascadeImportPayload {
+  levels: CascadeLevel[];
+  data: CascadeNode[];
 }
 
 export interface GoogleDriveBinding {

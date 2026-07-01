@@ -93,113 +93,29 @@ function applyTaiwanPreset() {
   while (lvls.length > 2) lvls.pop();
 }
 
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-function cascadeRows(): string[][] | null {
-  if (!model.value) return null;
-  const { levels, data } = model.value;
-  const headers = levels.map((l) => l.label);
-  const rows: string[][] = [];
-
-  function flatten(nodes: CascadeNode[], ancestors: string[]) {
-    for (const node of nodes) {
-      const row = [...ancestors, node.label];
-      if (!node.children || node.children.length === 0 || ancestors.length + 1 >= levels.length) {
-        rows.push(row);
-      } else {
-        flatten(node.children, row);
-      }
-    }
-  }
-
-  flatten(data, []);
-  const maxCols = levels.length;
-  for (const r of rows) { while (r.length < maxCols) r.push(''); }
-
-  return [headers, ...rows];
-}
-
 function downloadTemplate() {
-  const rows = cascadeRows();
-  if (!rows) return;
-
-  const tableRows = rows.map((row) => (
-    `<Row>${row.map((cell) => `<Cell><Data ss:Type="String">${escapeXml(cell)}</Data></Cell>`).join('')}</Row>`
-  )).join('');
-  const workbook = `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:o="urn:schemas-microsoft-com:office:office"
- xmlns:x="urn:schemas-microsoft-com:office:excel"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-  <Worksheet ss:Name="巢狀選擇題資料">
-    <Table>${tableRows}</Table>
-  </Worksheet>
-</Workbook>`;
-
-  const blob = new Blob([workbook], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'cascade-select-template.xls';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function parseCascadeExcel(text: string): CascadeNode[] {
-  const xml = new DOMParser().parseFromString(text, 'application/xml');
-  const parseError = xml.querySelector('parsererror');
-  if (parseError) return [];
-
-  const tableRows = Array.from(xml.getElementsByTagName('Row'));
-  if (tableRows.length < 2) return [];
-
-  const rows = tableRows.slice(1).map((row) => Array.from(row.getElementsByTagName('Cell')).map((cell) => {
-    const data = cell.getElementsByTagName('Data')[0];
-
-    return (data?.textContent ?? '').trim();
-  }));
-  const root: CascadeNode[] = [];
-
-  for (const row of rows) {
-    let level = root;
-
-    for (let d = 0; d < row.length; d++) {
-      const val = row[d];
-      if (!val) break;
-      let node = level.find((n) => n.label === val);
-      if (!node) {
-        node = { id: `nd_${Math.random().toString(36).slice(2, 9)}`, label: val, children: [] };
-        level.push(node);
-      }
-      level = node.children!;
-    }
+  if (!store.api) {
+    return;
   }
-  return root;
+
+  window.location.href = store.api.cascadeTemplateUrl();
 }
 
-function onFileUpload(event: Event) {
+async function onFileUpload(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0];
   if (!file || !model.value) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const text = e.target?.result as string;
-    const parsed = parseCascadeExcel(text);
-    if (parsed.length === 0) { alert('無法解析檔案，請確認格式正確。'); return; }
-    model.value!.data = parsed;
-    const depth = maxDepth(parsed);
-    const lvls = model.value!.levels;
-    while (lvls.length < depth) lvls.push({ id: `lvl_${Math.random().toString(36).slice(2, 9)}`, label: `層級 ${lvls.length + 1}` });
-    while (lvls.length > depth) lvls.pop();
-  };
-  reader.readAsText(file, 'UTF-8');
-  (event.target as HTMLInputElement).value = '';
+
+  try {
+    const payload = await store.api?.importCascadeData(file);
+    if (!payload) return;
+
+    model.value.levels = payload.levels;
+    model.value.data = payload.data;
+  } catch (error) {
+    alert(error instanceof Error ? error.message : '無法解析檔案，請確認格式正確。');
+  } finally {
+    (event.target as HTMLInputElement).value = '';
+  }
 }
 
 function apply() {
@@ -246,13 +162,13 @@ function apply() {
           <!-- Upload / Download -->
           <div class="sb-cascade-dialog-toolbar">
             <p class="sb-cascade-dialog-hint">
-              Excel 格式：每列代表一條完整路徑，各欄依序為各層選項（父層相同的行會合併為同一節點）。
+              XLSX 格式：每列代表一條完整路徑，各欄依序為各層選項（父層相同的行會合併為同一節點）。
             </p>
             <div class="sb-cascade-dialog-btns">
               <button class="sb-btn-sm" type="button" @click="downloadTemplate">下載範例檔</button>
               <label class="sb-btn-sm" style="cursor:pointer">
                 上傳資料
-                <input type="file" accept=".xls,application/vnd.ms-excel" style="display:none" @change="onFileUpload" />
+                <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" @change="onFileUpload" />
               </label>
             </div>
           </div>

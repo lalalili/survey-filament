@@ -11,6 +11,7 @@ interface QuestionTypeGroup {
 }
 
 let autosaveTimer: number | undefined;
+let autosavePromise: Promise<void> | undefined;
 
 function hasMissingPersonalizedKeyError(errors: Record<string, string[]>): boolean {
   return Object.entries(errors).some(([key, messages]) => (
@@ -298,34 +299,43 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       }, 1000);
     },
     async autosave() {
-      if (!this.api || !this.schema || this.isSaving || !this.isDirty) {
+      if (this.isSaving) {
+        await autosavePromise;
+        return;
+      }
+
+      if (!this.api || !this.schema || !this.isDirty) {
         return;
       }
 
       this.isSaving = true;
-
-      try {
-        const payload = await this.api.save(this.schema);
-        this.schema = payload.schema;
-        this.surveyTitle = payload.survey.title;
-        this.status = payload.survey.status;
-        this.version = payload.survey.version;
-        this.publishedAt = payload.survey.published_at ?? this.publishedAt;
-        this.lastSavedAt = payload.saved_at;
-        this.isDirty = false;
-        this.validationErrors = {};
-      } catch (error) {
-        if (error instanceof ValidationError) {
-          this.saveError = error.message;
-          this.validationErrors = error.errors;
-          alertAutosaveValidationError(error.errors);
-        } else {
-          this.saveError = error instanceof Error ? error.message : 'Save failed.';
+      autosavePromise = (async () => {
+        try {
+          const payload = await this.api!.save(this.schema!);
+          this.schema = payload.schema;
+          this.surveyTitle = payload.survey.title;
+          this.status = payload.survey.status;
+          this.version = payload.survey.version;
+          this.publishedAt = payload.survey.published_at ?? this.publishedAt;
+          this.lastSavedAt = payload.saved_at;
+          this.isDirty = false;
           this.validationErrors = {};
+        } catch (error) {
+          if (error instanceof ValidationError) {
+            this.saveError = error.message;
+            this.validationErrors = error.errors;
+            alertAutosaveValidationError(error.errors);
+          } else {
+            this.saveError = error instanceof Error ? error.message : 'Save failed.';
+            this.validationErrors = {};
+          }
+        } finally {
+          this.isSaving = false;
+          autosavePromise = undefined;
         }
-      } finally {
-        this.isSaving = false;
-      }
+      })();
+
+      await autosavePromise;
     },
     async publish() {
       if (!this.api || this.isPublishing) {
@@ -336,11 +346,12 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         return;
       }
 
-      if (this.isDirty) {
+      if (this.isDirty || this.isSaving) {
+        clearAutosaveTimer();
         await this.autosave();
       }
 
-      if (this.saveError) {
+      if (this.saveError || this.isDirty) {
         return;
       }
 

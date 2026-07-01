@@ -10,7 +10,7 @@ function csrfToken(): string {
     ?? '';
 }
 
-type BuilderEndpointPath = 'builder-data' | 'builder-schema' | 'builder-publish' | 'builder-activities' | 'builder-restore-published' | 'builder-image';
+type BuilderEndpointPath = 'builder-data' | 'builder-schema' | 'builder-publish' | 'builder-activities' | 'builder-restore-published' | 'builder-image' | 'builder-cascade-template' | 'builder-cascade-import';
 
 function builderEndpoint(path: BuilderEndpointPath): string {
   return window.location.pathname.replace(/\/builder\/?$/, `/${path}`);
@@ -53,6 +53,8 @@ if (root) {
       activities: normalizeBuilderEndpoint(root.dataset.endpointActivities, 'builder-activities'),
       restorePublished: normalizeBuilderEndpoint(root.dataset.endpointRestorePublished, 'builder-restore-published'),
       uploadImage: normalizeBuilderEndpoint(root.dataset.endpointUploadImage, 'builder-image'),
+      cascadeTemplate: normalizeBuilderEndpoint(root.dataset.endpointCascadeTemplate, 'builder-cascade-template'),
+      cascadeImport: normalizeBuilderEndpoint(root.dataset.endpointCascadeImport, 'builder-cascade-import'),
       googleDriveConnect: root.dataset.endpointGdConnect || undefined,
       googleDriveStatus: root.dataset.endpointGdStatus || undefined,
       googleDriveDisconnect: root.dataset.endpointGdDisconnect || undefined,

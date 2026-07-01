@@ -47,6 +47,12 @@ Route::middleware(['web', 'auth', 'verified'])
 
         Route::post('/{survey}/builder-image', [SurveyBuilderController::class, 'uploadImage'])
             ->name('upload-image');
+
+        Route::get('/{survey}/builder-cascade-template', [SurveyBuilderController::class, 'downloadCascadeTemplate'])
+            ->name('cascade-template');
+
+        Route::post('/{survey}/builder-cascade-import', [SurveyBuilderController::class, 'importCascadeData'])
+            ->name('cascade-import');
     });
 
 Route::bind('survey', fn (string $value): Survey => Survey::query()->findOrFail($value));

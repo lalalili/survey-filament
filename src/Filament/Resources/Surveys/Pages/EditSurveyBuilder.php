@@ -63,6 +63,8 @@ class EditSurveyBuilder extends Page
                 'activities' => route('survey-filament.builder.activities', $survey),
                 'restore_published' => route('survey-filament.builder.restore-published', $survey),
                 'upload_image' => route('survey-filament.builder.upload-image', $survey),
+                'cascade_template' => route('survey-filament.builder.cascade-template', $survey),
+                'cascade_import' => route('survey-filament.builder.cascade-import', $survey),
                 'google_drive_connect' => route('survey-filament.google-drive.connect', $survey),
                 'google_drive_status' => route('survey-filament.google-drive.status', $survey),
                 'google_drive_disconnect' => route('survey-filament.google-drive.disconnect', $survey),
