@@ -1032,7 +1032,6 @@ function textInputType(element: SurveyElement) {
               <div :style="{ width: `${((store.schema.pages.findIndex(p => p.id === store.selectedPageId) + 1) / store.schema.pages.length) * 100}%` }" />
             </div>
             <div class="sb-preview-card">
-              <p v-if="store.selectedPage?.kind !== 'welcome' && store.selectedPage?.kind !== 'thank_you'" class="sb-preview-page-meta">第 {{ store.schema.pages.findIndex(p => p.id === store.selectedPageId) + 1 }} 頁 · 共 {{ store.schema.pages.length }} 頁</p>
               <h2 v-if="store.selectedPage?.kind !== 'welcome' && store.selectedPage?.kind !== 'thank_you' && store.selectedPage?.title" class="sb-preview-page-title">{{ store.selectedPage.title }}</h2>
 
               <!-- Welcome page rich content + CTA -->
