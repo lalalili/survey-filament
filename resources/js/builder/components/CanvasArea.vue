@@ -5,7 +5,7 @@ import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
 import type { BuilderEndpoints, CascadeNode, Condition, SurveyElement, SurveyOption, SurveyOptionAction, SurveyPage } from '../types/schema';
 import SurveyRichEditor from './SurveyRichEditor.vue';
 import RightPanel from './RightPanel.vue';
-import { elementSupportsJump, hasActiveJumpLogic, typeCategory } from '../utils/builderHelpers';
+import { elementSupportsJump, hasActiveJumpLogic, isContentBlockType, typeCategory } from '../utils/builderHelpers';
 
 const props = defineProps<{
   endpoints: BuilderEndpoints;
@@ -497,6 +497,21 @@ function previewRatingIsHovered(elementId: string, score: number): boolean {
 function previewRatingIsPopping(elementId: string, score: number): boolean {
   return previewRatingPop.value[elementId] === score;
 }
+
+// 題號：只對非內容元件（排除區段標題/說明文字/分隔線/引言）計數，並跨頁累加，與正式填寫頁 $questionNo 邏輯一致
+const questionNumberMap = computed<Record<string, number>>(() => {
+  const map: Record<string, number> = {};
+  let n = 0;
+  for (const page of store.schema?.pages ?? []) {
+    if (page.kind === 'welcome' || page.kind === 'thank_you') continue;
+    for (const el of page.elements ?? []) {
+      if (isContentBlockType(el.type)) continue;
+      n += 1;
+      map[el.id] = n;
+    }
+  }
+  return map;
+});
 
 const previewIsLastPage = computed(() => {
   const pages = store.schema?.pages ?? [];
@@ -1053,7 +1068,7 @@ function textInputType(element: SurveyElement) {
                   <blockquote v-else-if="element.type === 'quote_block'" class="sb-preview-quote">{{ contentBlockText(element) }}</blockquote>
                   <hr v-else-if="element.type === 'divider'" class="sb-preview-divider">
                   <div v-else class="sb-preview-q">
-                    <p class="sb-preview-q-title">{{ element.label }}<span v-if="element.required" class="sb-req">*</span></p>
+                    <p class="sb-preview-q-title"><span v-if="store.schema?.settings?.show_question_numbers !== false && questionNumberMap[element.id] !== undefined" class="sb-preview-q-num">{{ questionNumberMap[element.id] }}. </span>{{ element.label }}<span v-if="element.required" class="sb-req">*</span></p>
                     <p v-if="element.description" class="sb-preview-q-desc">{{ element.description }}</p>
                     <div v-if="element.type === 'single_choice'" class="sb-preview-opts">
                       <label v-for="opt in previewOptions(element)" :key="opt.id"
@@ -1417,7 +1432,7 @@ function textInputType(element: SurveyElement) {
                     <span class="sb-type-badge" :class="typeCategory(element.type)">
                       {{ getQuestionType(element.type).icon }}
                     </span>
-                    <span v-if="store.schema?.settings?.show_question_numbers !== false && !['section_title', 'description_block', 'divider', 'quote_block'].includes(element.type)" class="sb-card-num">{{ i + 1 }}</span>
+                    <span v-if="store.schema?.settings?.show_question_numbers !== false && questionNumberMap[element.id] !== undefined" class="sb-card-num">{{ questionNumberMap[element.id] }}</span>
                     <div class="sb-card-title-wrap">
                       <input
                         v-if="element.type === 'section_title'"

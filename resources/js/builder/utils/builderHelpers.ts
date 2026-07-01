@@ -17,3 +17,7 @@ export function typeCategory(type: string): string {
   if (['section_title', 'description_block', 'divider', 'quote_block'].includes(type)) return 'content';
   return 'text';
 }
+
+export function isContentBlockType(type: string): boolean {
+  return typeCategory(type) === 'content';
+}

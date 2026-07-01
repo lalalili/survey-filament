@@ -799,6 +799,7 @@
 .sb-preview-divider { border: 0; border-top: 1px solid var(--c-line2); margin: 18px 0; }
 .sb-preview-q { margin-bottom: 24px; }
 .sb-preview-q-title { font-size: 15px; font-weight: 500; margin: 0 0 10px; }
+.sb-preview-q-num { color: var(--c-ink4); font-weight: 400; }
 .sb-preview-q-desc { font-size: 13px; color: var(--c-ink3); margin: -6px 0 10px; }
 .sb-preview-opts { display: flex; flex-direction: column; gap: 8px; }
 .sb-preview-opt {
