@@ -29,6 +29,7 @@ const previewPageHistory = ref<string[]>([]);
 const previewEnded = ref(false);
 const previewRatings = ref<Record<string, number | null>>({});
 const previewRatingHover = ref<Record<string, number>>({});
+const previewRatingPop = ref<Record<string, number>>({});
 const previewNps = ref<Record<string, number | null>>({});
 
 watch(() => store.isPreviewMode, (entering) => {
@@ -465,11 +466,20 @@ function defaultLinearScaleValue(element: SurveyElement): string | number {
 }
 
 function previewSelectRating(elementId: string, score: number) {
+  const selected = previewRatings.value[elementId] === score ? null : score;
   previewRatings.value = {
     ...previewRatings.value,
-    [elementId]: previewRatings.value[elementId] === score ? null : score,
+    [elementId]: selected,
   };
   previewRatingHover.value = { ...previewRatingHover.value, [elementId]: 0 };
+  if (selected) {
+    previewRatingPop.value = { ...previewRatingPop.value, [elementId]: score };
+    setTimeout(() => {
+      if (previewRatingPop.value[elementId] === score) {
+        previewRatingPop.value = { ...previewRatingPop.value, [elementId]: 0 };
+      }
+    }, 180);
+  }
 }
 
 function previewRatingDisplayValue(elementId: string): number {
@@ -480,6 +490,10 @@ function previewRatingDisplayValue(elementId: string): number {
 function previewRatingIsHovered(elementId: string, score: number): boolean {
   const hover = previewRatingHover.value[elementId] ?? 0;
   return hover > 0 && score <= hover;
+}
+
+function previewRatingIsPopping(elementId: string, score: number): boolean {
+  return previewRatingPop.value[elementId] === score;
 }
 
 function previewGoNext() {
@@ -1080,10 +1094,14 @@ function textInputType(element: SurveyElement) {
                         :key="n"
                         type="button"
                         class="sb-preview-rating-icon"
-                        :class="{
-                          filled: n <= previewRatingDisplayValue(element.id),
-                          hovered: previewRatingIsHovered(element.id, n),
-                        }"
+                        :class="[
+                          `shape-${(element.settings as any)?.shape ?? 'star'}`,
+                          {
+                            filled: n <= previewRatingDisplayValue(element.id),
+                            hovered: previewRatingIsHovered(element.id, n),
+                            popping: previewRatingIsPopping(element.id, n),
+                          },
+                        ]"
                         @mouseenter="previewRatingHover = { ...previewRatingHover, [element.id]: n }"
                         @mouseleave="previewRatingHover = { ...previewRatingHover, [element.id]: 0 }"
                         @click="previewSelectRating(element.id, n)"
@@ -1492,6 +1510,7 @@ function textInputType(element: SurveyElement) {
                         v-for="n in Number((element.settings as any)?.count ?? 5)"
                         :key="n"
                         class="sb-fake-rating-icon"
+                        :class="`shape-${(element.settings as any)?.shape ?? 'star'}`"
                       >
                         <span v-if="(element.settings as any)?.show_numbers" class="sb-rating-number">{{ n }}</span>
                         <span class="sb-rating-symbol">{{ ratingShapeIcon((element.settings as any)?.shape ?? 'star') }}</span>
