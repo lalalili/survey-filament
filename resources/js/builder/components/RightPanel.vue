@@ -824,7 +824,14 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
         <template v-else>
           <!-- Show_if conditions -->
           <div class="sb-prop-section" v-if="!['section_title', 'description_block', 'divider', 'quote_block'].includes(store.selectedElement.type)">
-            <div class="sb-prop-heading">顯示條件</div>
+            <div class="sb-prop-heading-row">
+              <span class="sb-prop-heading" style="margin:0">顯示條件</span>
+              <div v-if="(store.selectedElement.show_if?.conditions ?? []).length > 0 || store.selectedElement.show_if_field_key" class="sb-prop-actions">
+                <button type="button" class="sb-cond-del" title="取消顯示條件" @click="store.updateShowIf(store.selectedElement!.id, null)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
             <p class="sb-prop-hint">當以下條件成立時，才顯示此題目。</p>
 
             <template v-if="(store.selectedElement.show_if?.conditions ?? []).length === 0">
@@ -896,7 +903,12 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
           <div v-if="elementSupportsJump(store.selectedElement) && store.selectedElement.options.length > 0" class="sb-prop-section" :class="hasActiveJumpLogic(store.selectedElement) ? 'has-jump' : ''">
             <div class="sb-prop-heading-row">
               <span class="sb-prop-heading" style="margin:0">跳題邏輯</span>
-              <span v-if="hasActiveJumpLogic(store.selectedElement)" class="sb-badge amber">已設定</span>
+              <div class="sb-prop-actions">
+                <span v-if="hasActiveJumpLogic(store.selectedElement)" class="sb-badge amber">已設定</span>
+                <button v-if="store.jumpLogicOpen" type="button" class="sb-cond-del" title="取消跳題邏輯" @click="store.jumpLogicOpen = false">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
             </div>
             <template v-if="store.jumpLogicOpen">
               <p class="sb-prop-hint">每個選項可指定下一步動作。</p>
@@ -907,16 +919,15 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                   class="sb-prop-input-sm"
                   @change="onJumpChange(store.selectedElement!.id, opt.id, ($event.target as HTMLSelectElement).value)"
                 >
-                  <option value="next_page">前往下一頁</option>
+                  <option value="next_page">無（依序前往下一頁）</option>
                   <option value="end_survey">結束問卷</option>
-                  <optgroup v-if="jumpTargetPages.length > 0" label="前往區段">
+                  <optgroup v-if="jumpTargetPages.length > 0" label="前往頁面">
                     <option v-for="page in jumpTargetPages" :key="page.id" :value="`page:${page.id}`">
-                      {{ page.title || '未命名區段' }}
+                      {{ page.kind === 'thank_you' ? '感謝頁' : (page.title || '未命名頁面') }}
                     </option>
                   </optgroup>
                 </select>
               </div>
-              <button class="sb-prop-action" type="button" style="margin-top:6px" @click="store.jumpLogicOpen = false">收合</button>
             </template>
             <template v-else>
               <div class="sb-logic-empty">
