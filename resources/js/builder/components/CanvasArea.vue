@@ -31,6 +31,7 @@ const previewRatings = ref<Record<string, number | null>>({});
 const previewRatingHover = ref<Record<string, number>>({});
 const previewRatingPop = ref<Record<string, number>>({});
 const previewNps = ref<Record<string, number | null>>({});
+const previewTermsAccepted = ref(false);
 
 watch(() => store.isPreviewMode, (entering) => {
   if (entering) {
@@ -48,6 +49,7 @@ watch(() => store.isPreviewMode, (entering) => {
     previewRatings.value = {};
     previewRatingHover.value = {};
     previewNps.value = {};
+    previewTermsAccepted.value = false;
     previewPageHistory.value = [];
     // 每次進入預覽重新取種子，讓題組／選項隨機的效果可被觀察（再次進入會換順序）。
     previewSeed.value = Math.floor(Math.random() * 0xffffffff);
@@ -496,7 +498,20 @@ function previewRatingIsPopping(elementId: string, score: number): boolean {
   return previewRatingPop.value[elementId] === score;
 }
 
+const previewIsLastPage = computed(() => {
+  const pages = store.schema?.pages ?? [];
+  const idx = pages.findIndex((p) => p.id === store.selectedPageId);
+  if (idx === -1) return false;
+  const current = pages[idx];
+  if (current.kind === 'welcome' || current.kind === 'thank_you') return false;
+  const next = pages[idx + 1];
+  return !next || next.kind === 'thank_you';
+});
+const previewHasTerms = computed(() => !!store.schema?.settings?.terms_text);
+const previewSubmitDisabled = computed(() => previewIsLastPage.value && previewHasTerms.value && !previewTermsAccepted.value);
+
 function previewGoNext() {
+  if (previewIsLastPage.value && previewSubmitDisabled.value) return;
   const action = previewSelectedPageAction();
   if (action && previewApplyAction(action)) return;
   const pages = store.schema?.pages ?? [];
@@ -1290,6 +1305,10 @@ function textInputType(element: SurveyElement) {
                   </div>
                 </template>
               </template>
+              <label v-if="previewIsLastPage && previewHasTerms" class="sb-preview-terms">
+                <input type="checkbox" v-model="previewTermsAccepted" />
+                <span>{{ store.schema.settings?.terms_text }}</span>
+              </label>
               <div v-if="store.selectedPage?.kind !== 'welcome' && store.selectedPage?.kind !== 'thank_you'" class="sb-preview-footer">
                 <button
                   v-if="store.schema.pages.findIndex(p => p.id === store.selectedPageId) > 0"
@@ -1298,8 +1317,8 @@ function textInputType(element: SurveyElement) {
                   @click="previewGoPrev()"
                 >← 上一頁</button>
                 <div style="flex:1" />
-                <button type="button" class="sb-btn accent" @click="previewGoNext()">
-                  {{ store.schema.pages.findIndex(p => p.id === store.selectedPageId) === store.schema.pages.length - 1 ? '提交' : '下一頁 →' }}
+                <button type="button" class="sb-btn accent" :disabled="previewSubmitDisabled" @click="previewGoNext()">
+                  {{ previewIsLastPage ? '提交' : '下一頁 →' }}
                 </button>
               </div>
             </div>
