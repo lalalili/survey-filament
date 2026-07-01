@@ -16,10 +16,23 @@ function addLevel() {
   model.value.levels.push({ id: `lvl_${Math.random().toString(36).slice(2, 9)}`, label: `層級 ${model.value.levels.length + 1}` });
 }
 
-function removeLevel() {
-  if (!model.value || model.value.levels.length <= 1) return;
-  model.value.levels.pop();
-  model.value.data = pruneDepth(model.value.data, model.value.levels.length);
+function removeLevel(levelIndex: number) {
+  if (!model.value || levelIndex < 0 || levelIndex >= model.value.levels.length) return;
+  model.value.levels.splice(levelIndex, 1);
+  model.value.data = model.value.levels.length === 0
+    ? []
+    : removeDepth(model.value.data, levelIndex);
+}
+
+function removeDepth(nodes: CascadeNode[], targetDepth: number, currentDepth = 0): CascadeNode[] {
+  if (currentDepth === targetDepth) {
+    return nodes.flatMap((node) => node.children ?? []);
+  }
+
+  return nodes.map((node) => ({
+    ...node,
+    children: node.children ? removeDepth(node.children, targetDepth, currentDepth + 1) : [],
+  }));
 }
 
 function pruneDepth(nodes: CascadeNode[], maxDepth: number, currentDepth = 1): CascadeNode[] {
@@ -80,11 +93,21 @@ function applyTaiwanPreset() {
   while (lvls.length > 2) lvls.pop();
 }
 
-function downloadTemplate() {
-  if (!model.value) return;
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function cascadeRows(): string[][] | null {
+  if (!model.value) return null;
   const { levels, data } = model.value;
   const headers = levels.map((l) => l.label);
   const rows: string[][] = [];
+
   function flatten(nodes: CascadeNode[], ancestors: string[]) {
     for (const node of nodes) {
       const row = [...ancestors, node.label];
@@ -95,29 +118,58 @@ function downloadTemplate() {
       }
     }
   }
+
   flatten(data, []);
   const maxCols = levels.length;
   for (const r of rows) { while (r.length < maxCols) r.push(''); }
-  const csv = [headers, ...rows]
-    .map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(','))
-    .join('\r\n');
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+
+  return [headers, ...rows];
+}
+
+function downloadTemplate() {
+  const rows = cascadeRows();
+  if (!rows) return;
+
+  const tableRows = rows.map((row) => (
+    `<Row>${row.map((cell) => `<Cell><Data ss:Type="String">${escapeXml(cell)}</Data></Cell>`).join('')}</Row>`
+  )).join('');
+  const workbook = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Worksheet ss:Name="巢狀選擇題資料">
+    <Table>${tableRows}</Table>
+  </Worksheet>
+</Workbook>`;
+
+  const blob = new Blob([workbook], { type: 'application/vnd.ms-excel;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = '巢狀選擇題資料.csv';
+  a.download = 'cascade-select-template.xls';
   a.click();
   URL.revokeObjectURL(a.href);
 }
 
-function parseCascadeCSV(text: string): CascadeNode[] {
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length < 2) return [];
-  const rows = lines.slice(1).map((l) =>
-    l.split(',').map((c) => c.trim().replace(/^"|"$/g, '').replace(/""/g, '"')),
-  );
+function parseCascadeExcel(text: string): CascadeNode[] {
+  const xml = new DOMParser().parseFromString(text, 'application/xml');
+  const parseError = xml.querySelector('parsererror');
+  if (parseError) return [];
+
+  const tableRows = Array.from(xml.getElementsByTagName('Row'));
+  if (tableRows.length < 2) return [];
+
+  const rows = tableRows.slice(1).map((row) => Array.from(row.getElementsByTagName('Cell')).map((cell) => {
+    const data = cell.getElementsByTagName('Data')[0];
+
+    return (data?.textContent ?? '').trim();
+  }));
   const root: CascadeNode[] = [];
+
   for (const row of rows) {
     let level = root;
+
     for (let d = 0; d < row.length; d++) {
       const val = row[d];
       if (!val) break;
@@ -138,13 +190,13 @@ function onFileUpload(event: Event) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const text = e.target?.result as string;
-    const parsed = parseCascadeCSV(text);
+    const parsed = parseCascadeExcel(text);
     if (parsed.length === 0) { alert('無法解析檔案，請確認格式正確。'); return; }
     model.value!.data = parsed;
     const depth = maxDepth(parsed);
     const lvls = model.value!.levels;
     while (lvls.length < depth) lvls.push({ id: `lvl_${Math.random().toString(36).slice(2, 9)}`, label: `層級 ${lvls.length + 1}` });
-    while (lvls.length > depth && lvls.length > 1) lvls.pop();
+    while (lvls.length > depth) lvls.pop();
   };
   reader.readAsText(file, 'UTF-8');
   (event.target as HTMLInputElement).value = '';
@@ -173,35 +225,40 @@ function apply() {
           <div class="sb-cascade-dialog-levels">
             <span v-for="(lvl, li) in model.levels" :key="lvl.id" class="sb-cascade-dialog-level-chip">
               <span class="sb-cascade-level-num">{{ li + 1 }}</span>{{ lvl.label }}
+              <button
+                class="sb-cascade-dialog-level-remove"
+                type="button"
+                :title="`移除第 ${li + 1} 層`"
+                @click="removeLevel(li)"
+              >×</button>
             </span>
             <button class="sb-btn-sm" type="button" @click="addLevel" :disabled="model.levels.length >= 5">+ 層級</button>
-            <button class="sb-btn-sm" type="button" @click="removeLevel" :disabled="model.levels.length <= 1">− 層級</button>
           </div>
 
           <!-- Quick preset -->
           <div class="sb-cascade-dialog-preset-bar">
             <span class="sb-cascade-preset-label">快速套用：</span>
             <button class="sb-cascade-preset-btn" type="button" @click="applyTaiwanPreset">
-              🗺 臺灣縣市鄉鎮區
+              臺灣縣市鄉鎮區
             </button>
           </div>
 
           <!-- Upload / Download -->
           <div class="sb-cascade-dialog-toolbar">
             <p class="sb-cascade-dialog-hint">
-              CSV 格式：每列代表一條完整路徑，各欄依序為各層選項（父層相同的行會合併為同一節點）。
+              Excel 格式：每列代表一條完整路徑，各欄依序為各層選項（父層相同的行會合併為同一節點）。
             </p>
             <div class="sb-cascade-dialog-btns">
-              <button class="sb-btn-sm" type="button" @click="downloadTemplate">⬇ 下載 CSV 範本</button>
+              <button class="sb-btn-sm" type="button" @click="downloadTemplate">下載範例檔</button>
               <label class="sb-btn-sm" style="cursor:pointer">
-                ⬆ 上傳 CSV
-                <input type="file" accept=".csv,text/csv" style="display:none" @change="onFileUpload" />
+                上傳資料
+                <input type="file" accept=".xls,application/vnd.ms-excel" style="display:none" @change="onFileUpload" />
               </label>
             </div>
           </div>
 
           <!-- Tree editor -->
-          <div class="sb-cascade-tree-wrap">
+          <div v-if="model.levels.length > 0" class="sb-cascade-tree-wrap">
             <div class="sb-cascade-tree-header">
               <span>第 1 層：{{ model.levels[0]?.label ?? '選項' }}</span>
               <button
@@ -259,6 +316,9 @@ function apply() {
                 </template>
               </div>
             </div>
+          </div>
+          <div v-else class="sb-cascade-tree-empty">
+            請先新增至少一個層級，再編輯巢狀選項資料。
           </div>
         </div>
         <div class="sb-settings-footer">

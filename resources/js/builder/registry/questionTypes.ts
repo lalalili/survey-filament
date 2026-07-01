@@ -1,4 +1,4 @@
-import type { CascadeLevel, CascadeNode, SurveyElement, SurveyElementType } from '../types/schema';
+import type { SurveyElement, SurveyElementType } from '../types/schema';
 
 export interface QuestionTypeDefinition {
   id: string;
@@ -9,36 +9,6 @@ export interface QuestionTypeDefinition {
   supportsPlaceholder: boolean;
   supportsRequired: boolean;
   createDefault: () => SurveyElement;
-}
-
-function defaultCascadeLevels(): CascadeLevel[] {
-  return [
-    { id: randomId('lvl'), label: '縣市' },
-    { id: randomId('lvl'), label: '鄉鎮區' },
-  ];
-}
-
-function defaultCascadeData(): CascadeNode[] {
-  return [
-    {
-      id: randomId('nd'),
-      label: '台北市',
-      children: [
-        { id: randomId('nd'), label: '中正區' },
-        { id: randomId('nd'), label: '大安區' },
-        { id: randomId('nd'), label: '信義區' },
-      ],
-    },
-    {
-      id: randomId('nd'),
-      label: '新北市',
-      children: [
-        { id: randomId('nd'), label: '板橋區' },
-        { id: randomId('nd'), label: '新莊區' },
-        { id: randomId('nd'), label: '三重區' },
-      ],
-    },
-  ];
 }
 
 function randomId(prefix: string): string {
@@ -128,8 +98,8 @@ export const questionTypes: QuestionTypeDefinition[] = [
     supportsRequired: true,
     createDefault: () => ({
       ...createBase('cascade_select', '未命名巢狀選擇題'),
-      cascade_levels: defaultCascadeLevels(),
-      cascade_data: defaultCascadeData(),
+      cascade_levels: [],
+      cascade_data: [],
     }),
   },
   {

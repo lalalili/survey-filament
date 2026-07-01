@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { getQuestionType, questionTypes } from '../registry/questionTypes';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
-import type { AudienceListColumn, Condition, SurveyElement, SurveyOptionAction } from '../types/schema';
+import type { AudienceListColumn, CascadeNode, Condition, SurveyElement, SurveyOptionAction } from '../types/schema';
 import { elementSupportsJump, hasActiveJumpLogic, typeCategory } from '../utils/builderHelpers';
 import MatrixColsDialog from '../dialogs/MatrixColsDialog.vue';
 import type { MatrixColsDialogState } from '../dialogs/MatrixColsDialog.vue';
@@ -77,6 +77,29 @@ function openCascadeDialog(elementId: string) {
     levels: JSON.parse(JSON.stringify(el.cascade_levels ?? [])),
     data: JSON.parse(JSON.stringify(el.cascade_data ?? [])),
   };
+}
+
+function removeCascadeDepth(nodes: CascadeNode[], targetDepth: number, currentDepth = 0): CascadeNode[] {
+  if (currentDepth === targetDepth) {
+    return nodes.flatMap((node) => node.children ?? []);
+  }
+
+  return nodes.map((node) => ({
+    ...node,
+    children: node.children ? removeCascadeDepth(node.children, targetDepth, currentDepth + 1) : [],
+  }));
+}
+
+function removeCascadeLevel(element: SurveyElement, levelIndex: number) {
+  const levels = [...(element.cascade_levels ?? [])];
+  if (levelIndex < 0 || levelIndex >= levels.length) return;
+
+  levels.splice(levelIndex, 1);
+
+  store.updateQuestion(element.id, {
+    cascade_levels: levels,
+    cascade_data: levels.length === 0 ? [] : removeCascadeDepth(element.cascade_data ?? [], levelIndex),
+  });
 }
 
 // ── Audience personalization ─────────────────────────────────────────
@@ -601,6 +624,12 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                   placeholder="層級名稱"
                   @input="lvl.label = ($event.target as HTMLInputElement).value; store.markDirty()"
                 />
+                <button
+                  class="sb-btn-sm danger"
+                  type="button"
+                  :title="`移除第 ${li + 1} 層`"
+                  @click="removeCascadeLevel(store.selectedElement!, li)"
+                >－</button>
               </div>
             </div>
             <div class="sb-cascade-prop-actions">
@@ -610,12 +639,6 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                 :disabled="(store.selectedElement.cascade_levels?.length ?? 0) >= 5"
                 @click="store.selectedElement!.cascade_levels!.push({ id: `lvl_${Math.random().toString(36).slice(2,9)}`, label: `層級 ${(store.selectedElement!.cascade_levels!.length ?? 0) + 1}` }); store.markDirty()"
               >+ 增加層級</button>
-              <button
-                class="sb-btn-sm danger"
-                type="button"
-                :disabled="(store.selectedElement.cascade_levels?.length ?? 0) <= 1"
-                @click="store.selectedElement!.cascade_levels!.pop(); store.markDirty()"
-              >－ 移除層級</button>
             </div>
             <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
               <button class="sb-btn" style="width:100%;justify-content:center" type="button" @click="openCascadeDialog(store.selectedElement!.id)">📋 編輯選項資料</button>

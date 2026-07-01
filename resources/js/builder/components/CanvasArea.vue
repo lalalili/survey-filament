@@ -121,6 +121,42 @@ function previewOptions(element: SurveyElement): SurveyOption[] {
   return element.options;
 }
 
+function selectionBasedSourceElement(element: SurveyElement): SurveyElement | null {
+  const sourceFieldKey = (element.settings as Record<string, unknown> | undefined)?.source_field_key;
+  if (typeof sourceFieldKey !== 'string' || sourceFieldKey === '') return null;
+
+  return store.allElements.find((candidate) => candidate.field_key === sourceFieldKey) ?? null;
+}
+
+function selectionBasedSourceOptions(element: SurveyElement): SurveyOption[] {
+  const source = selectionBasedSourceElement(element);
+  if (!source || !['single_choice', 'multiple_choice', 'select'].includes(source.type)) return [];
+
+  return previewOptions(source);
+}
+
+function selectionBasedSourceLabel(element: SurveyElement): string {
+  return selectionBasedSourceElement(element)?.label || '未命名題目';
+}
+
+function previewSelectionBasedOptions(element: SurveyElement): SurveyOption[] {
+  const source = selectionBasedSourceElement(element);
+  if (!source) return [];
+
+  const sourceOptions = selectionBasedSourceOptions(element);
+  const selected = previewSelections.value[source.id];
+
+  if (selected instanceof Set) {
+    return sourceOptions.filter((option) => selected.has(option.value));
+  }
+
+  if (typeof selected === 'string' && selected !== '') {
+    return sourceOptions.filter((option) => option.value === selected);
+  }
+
+  return [];
+}
+
 function ratingShapeIcon(shape: string): string {
   const map: Record<string, string> = { star: '★', heart: '♥', check: '✔', thumb: '👍' };
   return map[shape] ?? '★';
@@ -521,6 +557,57 @@ const previewIsLastPage = computed(() => {
   if (current.kind === 'welcome' || current.kind === 'thank_you') return false;
   const next = pages[idx + 1];
   return !next || next.kind === 'thank_you';
+});
+const previewQuestionPages = computed(() =>
+  (store.schema?.pages ?? []).filter((page) => (page.kind ?? 'question') === 'question'),
+);
+const previewCurrentQuestionPageIndex = computed(() =>
+  previewQuestionPages.value.findIndex((page) => page.id === store.selectedPageId),
+);
+const previewShowsProgress = computed(() =>
+  (store.schema?.settings?.progress?.mode ?? 'bar') !== 'none'
+    && previewQuestionPages.value.length > 0
+    && previewCurrentQuestionPageIndex.value >= 0,
+);
+const previewProgressWidth = computed(() =>
+  `${((previewCurrentQuestionPageIndex.value + 1) / previewQuestionPages.value.length) * 100}%`,
+);
+const previewPrimaryColor = computed(() => {
+  const overridePrimary = store.schema?.theme_overrides?.primary;
+  if (typeof overridePrimary === 'string' && overridePrimary !== '') {
+    return overridePrimary;
+  }
+
+  const theme = store.themes.find((candidate) => String(candidate.id) === String(store.schema?.theme_id));
+  const themePrimary = theme?.tokens?.primary;
+
+  return typeof themePrimary === 'string' && themePrimary !== '' ? themePrimary : '#6366f1';
+});
+const previewThemeVars = computed(() => {
+  const theme = store.themes.find((candidate) => String(candidate.id) === String(store.schema?.theme_id));
+  const value = (key: string, fallback: string): string => {
+    const override = store.schema?.theme_overrides?.[key];
+    if (typeof override === 'string' && override !== '') {
+      return override;
+    }
+
+    const token = theme?.tokens?.[key];
+
+    return typeof token === 'string' && token !== '' ? token : fallback;
+  };
+
+  return {
+    '--survey-primary': previewPrimaryColor.value,
+    '--survey-accent': value('accent', '#f59e0b'),
+    '--survey-background': value('background', '#ffffff'),
+    '--survey-surface': value('surface', '#f9fafb'),
+    '--survey-text': value('text', '#111827'),
+    '--survey-text-muted': value('text_muted', '#6b7280'),
+    '--survey-border': value('border', '#e5e7eb'),
+    '--survey-font': value('font_family', 'system-ui, sans-serif'),
+    '--survey-radius': value('radius', '0.5rem'),
+    '--sb-preview-progress-primary': previewPrimaryColor.value,
+  };
 });
 const previewHasTerms = computed(() => !!store.schema?.settings?.terms_text);
 const previewSubmitDisabled = computed(() => previewIsLastPage.value && previewHasTerms.value && !previewTermsAccepted.value);
@@ -1017,7 +1104,7 @@ function textInputType(element: SurveyElement) {
         </div>
 
         <!-- ── Preview mode ── -->
-        <div v-if="store.isPreviewMode" class="sb-preview" :class="store.isMobilePreview ? 'mobile' : ''">
+        <div v-if="store.isPreviewMode" class="sb-preview survey-preview-surface" :class="store.isMobilePreview ? 'mobile' : ''" :style="previewThemeVars">
           <div class="sb-preview-survey-header">
             <h1 class="sb-preview-survey-title">{{ store.surveyTitle }}</h1>
             <p v-if="store.schema?.settings?.description" class="sb-preview-survey-desc">{{ store.schema.settings.description }}</p>
@@ -1028,12 +1115,13 @@ function textInputType(element: SurveyElement) {
             <button type="button" class="sb-btn" @click="resetPreview()">重置預覽</button>
           </div>
           <template v-else>
-            <div class="sb-preview-progress">
-              <div :style="{ width: `${((store.schema.pages.findIndex(p => p.id === store.selectedPageId) + 1) / store.schema.pages.length) * 100}%` }" />
+            <div
+              v-if="previewShowsProgress"
+              class="sb-preview-progress"
+            >
+              <div :style="{ width: previewProgressWidth }" />
             </div>
             <div class="sb-preview-card">
-              <h2 v-if="store.selectedPage?.kind !== 'welcome' && store.selectedPage?.kind !== 'thank_you' && store.selectedPage?.title" class="sb-preview-page-title">{{ store.selectedPage.title }}</h2>
-
               <!-- Welcome page rich content + CTA -->
               <template v-if="store.selectedPage?.kind === 'welcome'">
                 <div
@@ -1068,38 +1156,42 @@ function textInputType(element: SurveyElement) {
               <template v-else v-for="element in previewPageElements" :key="element.id">
                 <template v-if="previewElementVisible(element)">
                   <div v-if="element.is_hidden" class="sb-preview-hidden">🔒 {{ element.label }}</div>
-                  <section v-else-if="element.type === 'section_title'" class="sb-preview-section">
-                    <h3>{{ contentBlockText(element) }}</h3>
+                  <section v-else-if="element.type === 'section_title'" class="survey-field">
+                    <h3 class="survey-section-title">{{ contentBlockText(element) }}</h3>
                   </section>
-                  <div v-else-if="element.type === 'description_block'" class="sb-preview-desc-block survey-rich-content" v-html="contentBlockText(element)"></div>
-                  <blockquote v-else-if="element.type === 'quote_block'" class="sb-preview-quote">{{ contentBlockText(element) }}</blockquote>
-                  <hr v-else-if="element.type === 'divider'" class="sb-preview-divider">
-                  <div v-else class="sb-preview-q">
-                    <p class="sb-preview-q-title"><span v-if="store.schema?.settings?.show_question_numbers !== false && questionNumberMap[element.id] !== undefined" class="sb-preview-q-num">{{ questionNumberMap[element.id] }}. </span>{{ element.label }}<span v-if="element.required" class="sb-req">*</span></p>
-                    <p v-if="element.description" class="sb-preview-q-desc">{{ element.description }}</p>
-                    <div v-if="element.type === 'single_choice'" class="sb-preview-opts">
+                  <div v-else-if="element.type === 'description_block'" class="survey-field">
+                    <div class="survey-description-block survey-rich-content" v-html="contentBlockText(element)"></div>
+                  </div>
+                  <div v-else-if="element.type === 'quote_block'" class="survey-field survey-quote-block">
+                    <blockquote>{{ contentBlockText(element) }}</blockquote>
+                  </div>
+                  <div v-else-if="element.type === 'divider'" class="survey-field survey-divider"><hr></div>
+                  <div v-else class="survey-field survey-field-card">
+                    <p class="survey-field-label"><span v-if="store.schema?.settings?.show_question_numbers !== false && questionNumberMap[element.id] !== undefined" class="sb-preview-q-num">{{ questionNumberMap[element.id] }}. </span>{{ element.label }}<span v-if="element.required" class="survey-field-required">*</span></p>
+                    <p v-if="element.description" class="survey-field-description">{{ element.description }}</p>
+                    <div v-if="element.type === 'single_choice'" class="survey-choices">
                       <label v-for="opt in previewOptions(element)" :key="opt.id"
-                        class="sb-preview-opt"
-                        :class="previewSelections[element.id] === opt.value ? 'selected' : ''"
+                        class="survey-choice-label"
+                        :class="{ selected: previewSelections[element.id] === opt.value }"
                       >
-                        <input type="radio" :name="element.id" :value="opt.value" :checked="previewSelections[element.id] === opt.value" @change="previewSelectOption(element, opt.value)" />
+                        <input class="survey-choice-input" type="radio" :name="element.id" :value="opt.value" :checked="previewSelections[element.id] === opt.value" @change="previewSelectOption(element, opt.value)" />
                         <span>{{ opt.label }}</span>
                       </label>
                     </div>
-                    <div v-else-if="element.type === 'multiple_choice'" class="sb-preview-opts">
+                    <div v-else-if="element.type === 'multiple_choice'" class="survey-choices">
                       <label v-for="opt in previewOptions(element)" :key="opt.id"
-                        class="sb-preview-opt"
-                        :class="(previewSelections[element.id] instanceof Set && (previewSelections[element.id] as Set<string>).has(opt.value)) ? 'selected' : ''"
+                        class="survey-choice-label"
+                        :class="{ selected: previewSelections[element.id] instanceof Set && (previewSelections[element.id] as Set<string>).has(opt.value) }"
                         @click.prevent="previewToggleCheckbox(element.id, opt.value)"
                       >
-                        <input type="checkbox" :name="element.id" :checked="previewSelections[element.id] instanceof Set && (previewSelections[element.id] as Set<string>).has(opt.value)" @change.prevent />
+                        <input class="survey-choice-input" type="checkbox" :name="element.id" :checked="previewSelections[element.id] instanceof Set && (previewSelections[element.id] as Set<string>).has(opt.value)" @change.prevent />
                         <span>{{ opt.label }}</span>
                       </label>
                     </div>
                     <select
                       v-else-if="element.type === 'select'"
                       :value="previewSelections[element.id] ?? ''"
-                      class="sb-preview-input"
+                      class="survey-select"
                       @change="previewSelectOption(element, ($event.target as HTMLSelectElement).value)"
                     >
                       <option value="">請選擇</option>
@@ -1114,7 +1206,7 @@ function textInputType(element: SurveyElement) {
                       :pattern="(element.settings as any)?.input_format === 'mobile_tw' || element.type === 'phone' ? '09[0-9]{8}' : undefined"
                       :placeholder="element.placeholder ?? ''"
                       :value="previewTextValues[element.id] ?? ''"
-                      class="sb-preview-input"
+                      class="survey-input"
                       @input="previewUpdateTextValue(element.id, ($event.target as HTMLInputElement).value)"
                     />
                     <textarea
@@ -1122,15 +1214,15 @@ function textInputType(element: SurveyElement) {
                       :placeholder="element.placeholder ?? ''"
                       :value="previewTextValues[element.id] ?? ''"
                       rows="4"
-                      class="sb-preview-input"
+                      class="survey-textarea"
                       @input="previewUpdateTextValue(element.id, ($event.target as HTMLTextAreaElement).value)"
                     />
-                    <div v-else-if="element.type === 'rating'" class="sb-preview-rating">
+                    <div v-else-if="element.type === 'rating'" class="survey-rating-stars">
                       <button
                         v-for="n in Number((element.settings as any)?.count ?? 5)"
                         :key="n"
                         type="button"
-                        class="sb-preview-rating-icon"
+                        class="survey-rating-star-label"
                         :class="[
                           `shape-${(element.settings as any)?.shape ?? 'star'}`,
                           {
@@ -1143,14 +1235,14 @@ function textInputType(element: SurveyElement) {
                         @mouseleave="previewRatingHover = { ...previewRatingHover, [element.id]: 0 }"
                         @click="previewSelectRating(element.id, n)"
                       >
-                        <span v-if="(element.settings as any)?.show_numbers" class="sb-rating-number">{{ n }}</span>
-                        <span class="sb-rating-symbol">{{ ratingShapeIcon((element.settings as any)?.shape ?? 'star') }}</span>
+                        <span v-if="(element.settings as any)?.show_numbers" class="survey-rating-star-number">{{ n }}</span>
+                        <span class="survey-rating-star-icon">{{ ratingShapeIcon((element.settings as any)?.shape ?? 'star') }}</span>
                       </button>
                     </div>
                     <div v-else-if="element.type === 'number'" class="sb-preview-number-row">
                       <input
                         type="number"
-                        class="sb-preview-input sb-preview-number-input"
+                        class="survey-input sb-preview-number-input"
                         :min="(element.settings as any)?.min ?? undefined"
                         :max="(element.settings as any)?.max ?? undefined"
                         :step="(element.settings as any)?.decimal_places ? Math.pow(10, -Number((element.settings as any).decimal_places)) : 1"
@@ -1160,31 +1252,47 @@ function textInputType(element: SurveyElement) {
                       />
                       <span v-if="(element.settings as any)?.unit" class="sb-preview-number-unit">{{ (element.settings as any).unit }}</span>
                     </div>
-                    <div v-else-if="element.type === 'linear_scale'" class="sb-preview-number-row sb-preview-range-row">
-                      <span class="sb-preview-range-value">{{ previewLinearScaleValue(element) }}</span>
+                    <div v-else-if="element.type === 'linear_scale'" class="survey-linear-scale">
+                      <span class="survey-linear-scale-value">{{ previewLinearScaleValue(element) }}</span>
                       <input
                         type="range"
-                        class="sb-preview-range-input"
+                        class="survey-linear-scale-input"
                         :min="(element.settings as any)?.min ?? 1"
                         :max="(element.settings as any)?.max ?? 5"
                         :step="(element.settings as any)?.step ?? 1"
                         :value="previewLinearScaleValue(element)"
-                        :style="{ '--range-fill': linearScaleFillPercent(element) }"
+                        :style="{ '--survey-range-fill': linearScaleFillPercent(element) }"
                         @input="previewUpdateTextValue(element.id, ($event.target as HTMLInputElement).value)"
                       />
                       <span v-if="(element.settings as any)?.unit" class="sb-preview-number-unit">{{ (element.settings as any).unit }}</span>
                     </div>
-                    <div v-else-if="element.type === 'constant_sum'" class="sb-preview-opts">
-                      <label v-for="opt in previewOptions(element)" :key="opt.id" class="sb-preview-opt">
+                    <div v-else-if="element.type === 'constant_sum'" class="survey-choices">
+                      <label v-for="opt in previewOptions(element)" :key="opt.id" class="survey-choice-label survey-preview-inline-input">
                         <span>{{ opt.label }}</span>
                         <input
                           type="number"
-                          class="sb-preview-input"
+                          class="survey-input"
                           :placeholder="String((element.settings as any)?.unit ?? '')"
                           :value="previewConstantSumValues[element.id]?.[opt.id] ?? ''"
                           @input="previewUpdateConstantSumValue(element.id, opt.id, ($event.target as HTMLInputElement).value)"
                         />
                       </label>
+                    </div>
+                    <div v-else-if="element.type === 'selection_based'" class="survey-choices">
+                      <p v-if="!selectionBasedSourceElement(element)" class="survey-help">請先在右側選擇來源題目。</p>
+                      <p v-else-if="previewSelectionBasedOptions(element).length === 0" class="survey-help">請先回答來源題目，這裡會顯示可複選的選項。</p>
+                      <template v-else>
+                        <label
+                          v-for="opt in previewSelectionBasedOptions(element)"
+                          :key="opt.id"
+                          class="survey-choice-label"
+                          :class="{ selected: previewSelections[element.id] instanceof Set && (previewSelections[element.id] as Set<string>).has(opt.value) }"
+                          @click.prevent="previewToggleCheckbox(element.id, opt.value)"
+                        >
+                          <input class="survey-choice-input" type="checkbox" :name="element.id" :checked="previewSelections[element.id] instanceof Set && (previewSelections[element.id] as Set<string>).has(opt.value)" @change.prevent />
+                          <span>{{ opt.label }}</span>
+                        </label>
+                      </template>
                     </div>
                     <div v-else-if="element.type === 'ranking'" class="sb-preview-ranking">
                       <div
@@ -1198,35 +1306,35 @@ function textInputType(element: SurveyElement) {
                         <button type="button" class="sb-preview-ranking-move" :disabled="index === element.options.length - 1" @click="previewMoveRanking(element, opt.value, 1)">↓</button>
                       </div>
                     </div>
-                    <div v-else-if="element.type === 'file_upload'" class="sb-preview-file">
+                    <div v-else-if="element.type === 'file_upload'" class="survey-choices">
                       <input
                         type="file"
-                        class="sb-preview-file-input"
+                        class="survey-file-input"
                         :data-preview-file-input="element.id"
                         :accept="previewFileAccept(element)"
                         @change="previewFileSelected(element.id, $event)"
                       />
                       <button
                         type="button"
-                        class="sb-preview-file-dropzone"
-                        :class="{ dragging: previewFileDragOver[element.id], uploaded: previewFileNames[element.id] }"
+                        class="survey-file-dropzone"
+                        :class="{ 'is-dragging': previewFileDragOver[element.id], 'is-uploaded': previewFileNames[element.id] }"
                         @click="previewChooseFile(element.id)"
                         @dragenter.prevent="previewFileDragOver = { ...previewFileDragOver, [element.id]: true }"
                         @dragover.prevent="previewFileDragOver = { ...previewFileDragOver, [element.id]: true }"
                         @dragleave.prevent="previewFileDragOver = { ...previewFileDragOver, [element.id]: false }"
                         @drop.prevent="previewFileDropped(element.id, $event)"
                       >
-                        <span class="sb-preview-file-icon" aria-hidden="true">☁</span>
-                        <span class="sb-preview-file-title">選擇檔案或將檔案拖曳至此</span>
-                        <span class="sb-preview-file-limit">{{ previewFileSizeLabel(element) }}</span>
-                        <span class="sb-preview-file-format">檔案格式：{{ previewFileFormatLabel(element) }}</span>
+                        <span class="survey-file-icon" aria-hidden="true">☁</span>
+                        <span class="survey-file-title">選擇檔案或將檔案拖曳至此</span>
+                        <span class="survey-file-limit">{{ previewFileSizeLabel(element) }}</span>
+                        <span class="survey-file-format">檔案格式：{{ previewFileFormatLabel(element) }}</span>
                       </button>
                       <p v-if="previewFileNames[element.id]" class="sb-preview-help">已選擇：{{ previewFileNames[element.id] }}</p>
                     </div>
-                    <div v-else-if="element.type === 'signature'" class="sb-preview-signature">
+                    <div v-else-if="element.type === 'signature'" class="survey-choices">
                       <button
                         type="button"
-                        class="sb-preview-signature-pad"
+                        class="survey-input sb-preview-signature-pad"
                         :class="{ signed: previewSignatures[element.id] }"
                         @click="previewSignatures = { ...previewSignatures, [element.id]: true }"
                       >
@@ -1244,29 +1352,29 @@ function textInputType(element: SurveyElement) {
                         v-for="addressKey in ((element.settings as any)?.fields_enabled ?? ['country', 'city', 'district', 'address', 'postal_code'])"
                         :key="addressKey"
                         type="text"
-                        class="sb-preview-input"
+                        class="survey-input"
                         :placeholder="String(addressKey)"
                         :value="previewAddressValues[element.id]?.[String(addressKey)] ?? ((String(addressKey) === 'country' && (element.settings as any)?.country_locked) ? String((element.settings as any).country_locked) : '')"
                         :disabled="String(addressKey) === 'country' && !!(element.settings as any)?.country_locked"
                         @input="previewUpdateAddress(element.id, String(addressKey), ($event.target as HTMLInputElement).value)"
                       />
                     </div>
-                    <div v-else-if="element.type === 'matrix_single' || element.type === 'matrix_multi'" class="sb-preview-matrix-wrap">
-                      <div class="sb-preview-matrix-scroll">
-                        <table class="sb-preview-matrix">
+                    <div v-else-if="element.type === 'matrix_single' || element.type === 'matrix_multi'" class="survey-preview-matrix-wrap">
+                      <div class="survey-preview-matrix-scroll">
+                        <table class="survey-matrix">
                           <thead>
                             <tr>
-                              <th class="sb-preview-matrix-corner"></th>
-                              <th v-for="col in element.matrix_cols" :key="col.id" class="sb-preview-matrix-col-head">{{ col.label }}</th>
+                              <th></th>
+                              <th v-for="col in element.matrix_cols" :key="col.id">{{ col.label }}</th>
                             </tr>
                           </thead>
                           <tbody>
-                            <tr v-for="row in element.matrix_rows" :key="row.id" class="sb-preview-matrix-row">
-                              <td class="sb-preview-matrix-row-label">{{ row.label }}</td>
+                            <tr v-for="row in element.matrix_rows" :key="row.id">
+                              <td>{{ row.label }}</td>
                               <td
                                 v-for="col in element.matrix_cols"
                                 :key="col.id"
-                                class="sb-preview-matrix-cell"
+                                class="survey-preview-matrix-cell"
                                 :class="{
                                   selected: element.type === 'matrix_single'
                                     ? previewMatrixSingleSelected(element.id, row.id, col.id)
@@ -1276,18 +1384,18 @@ function textInputType(element: SurveyElement) {
                                   ? previewSelectMatrixSingle(element.id, row.id, col.id)
                                   : previewToggleMatrixMulti(element.id, row.id, col.id)"
                               >
-                                <span class="sb-preview-matrix-pip" :class="element.type === 'matrix_multi' ? 'square' : ''"></span>
+                                <span class="survey-preview-matrix-pip" :class="element.type === 'matrix_multi' ? 'square' : ''"></span>
                               </td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
                     </div>
-                    <div v-else-if="element.type === 'nps'" class="sb-preview-nps-wrap">
-                      <div class="sb-preview-nps-row">
+                    <div v-else-if="element.type === 'nps'" class="survey-nps-wrap">
+                      <div class="survey-nps-row">
                         <span
                           v-for="n in 11" :key="n"
-                          class="sb-preview-nps-pip"
+                          class="survey-nps-pip"
                           :class="{
                             selected: previewNps[element.id] === n - 1,
                             red:    (element.settings as any)?.color_bands && n - 1 <= 6,
@@ -1297,25 +1405,25 @@ function textInputType(element: SurveyElement) {
                           @click="previewSelectNps(element.id, n - 1)"
                         >{{ n - 1 }}</span>
                       </div>
-                      <div class="sb-preview-nps-labels">
+                      <div class="survey-nps-labels">
                         <span>{{ (element.settings as any)?.low_label || '非常不推薦' }}</span>
                         <span>{{ (element.settings as any)?.high_label || '非常推薦' }}</span>
                       </div>
                     </div>
-                    <div v-else-if="element.type === 'cascade_select'" class="sb-preview-cascade">
+                    <div v-else-if="element.type === 'cascade_select'" class="survey-cascade-grid">
+                      <p v-if="(element.cascade_levels ?? []).length === 0" class="survey-help">請先設定層級與選項資料。</p>
                       <div
                         v-for="(lvl, li) in (element.cascade_levels ?? [])"
                         :key="lvl.id"
-                        class="sb-preview-cascade-row"
+                        class="survey-preview-cascade-row"
                       >
-                        <label class="sb-preview-cascade-label">{{ lvl.label }}</label>
                         <select
-                          class="sb-preview-cascade-select"
+                          class="survey-select"
                           :disabled="li > 0 && !(previewCascade[element.id]?.[li - 1])"
                           :value="previewCascade[element.id]?.[li] ?? ''"
                           @change="cascadePreviewSelect(element.id, li, ($event.target as HTMLSelectElement).value)"
                         >
-                          <option value="">── 請選擇 ──</option>
+                          <option value="">{{ lvl.label || '請選擇' }}</option>
                           <option
                             v-for="opt in cascadePreviewLevelOptions(element, li)"
                             :key="opt.id"
@@ -1348,7 +1456,7 @@ function textInputType(element: SurveyElement) {
         </div>
 
         <!-- ── Edit mode ── -->
-        <div v-else>
+        <div v-else class="sb-edit-surface survey-preview-surface" :style="previewThemeVars">
           <!-- Page header (question pages only) -->
           <div v-if="store.selectedPage?.kind !== 'welcome' && store.selectedPage?.kind !== 'thank_you'" class="sb-page-header">
             <span class="sb-page-header-num">
@@ -1498,10 +1606,10 @@ function textInputType(element: SurveyElement) {
                   </div>
 
                   <!-- Options preview -->
-                  <div v-if="getQuestionType(element.type).supportsOptions" class="sb-card-body">
-                    <div v-for="(opt, oi) in element.options" :key="opt.id" class="sb-opt-row">
+                  <div v-if="getQuestionType(element.type).supportsOptions && element.type !== 'select'" class="sb-card-body survey-choices sb-edit-options">
+                    <div v-for="(opt, oi) in element.options" :key="opt.id" class="survey-choice-label sb-opt-row">
                       <span class="sb-opt-letter">{{ String.fromCharCode(97 + oi) }}</span>
-                      <span class="sb-opt-marker" :class="element.type === 'multiple_choice' ? 'square' : ''" />
+                      <span class="survey-choice-input sb-opt-marker" :class="element.type === 'multiple_choice' ? 'square' : ''" />
                       <input
                         class="sb-opt-input"
                         v-model="opt.label"
@@ -1516,14 +1624,29 @@ function textInputType(element: SurveyElement) {
                     </button>
                   </div>
 
+                  <!-- Select preview -->
+                  <div v-else-if="element.type === 'select'" class="sb-card-body">
+                    <select class="survey-select" disabled>
+                      <option>請選擇</option>
+                      <option v-for="opt in previewOptions(element)" :key="opt.id">{{ opt.label }}</option>
+                    </select>
+                  </div>
+
                   <!-- Text preview -->
-                  <div v-else-if="element.type === 'short_text' || element.type === 'long_text'" class="sb-card-body">
-                    <div class="sb-fake-input" :class="element.type === 'long_text' ? 'tall' : ''">{{ element.placeholder || (element.type === 'long_text' ? '多行文字回應…' : '單行文字回應…') }}</div>
+                  <div v-else-if="element.type === 'short_text' || element.type === 'long_text' || element.type === 'email' || element.type === 'phone' || element.type === 'date' || element.type === 'time'" class="sb-card-body">
+                    <input
+                      v-if="element.type !== 'long_text'"
+                      :type="textInputType(element)"
+                      class="survey-input"
+                      :placeholder="element.placeholder || (element.type === 'date' ? 'yyyy-mm-dd' : element.type === 'time' ? '--:--' : element.type === 'email' ? 'email@example.com' : element.type === 'phone' ? '0912345678' : '單行文字回應…')"
+                      disabled
+                    />
+                    <div v-else class="survey-textarea sb-fake-input tall">{{ element.placeholder || '多行文字回應…' }}</div>
                   </div>
 
                   <!-- Number preview -->
                   <div v-else-if="element.type === 'number'" class="sb-card-body">
-                    <div class="sb-fake-input sb-fake-number">
+                    <div class="survey-input sb-fake-input sb-fake-number">
                       <span style="font-family:var(--mono); color:var(--c-ink3)">0</span>
                       <span v-if="element.settings?.unit" class="sb-fake-number-unit">{{ element.settings.unit }}</span>
                     </div>
@@ -1531,12 +1654,18 @@ function textInputType(element: SurveyElement) {
 
                   <!-- Linear scale preview -->
                   <div v-else-if="element.type === 'linear_scale'" class="sb-card-body">
-                    <div class="sb-fake-slider">
-                      <div class="sb-fake-slider-value">{{ defaultLinearScaleValue(element) }}</div>
-                      <div class="sb-fake-slider-track">
-                        <span class="sb-fake-slider-fill" :style="{ width: linearScaleFillPercent(element, defaultLinearScaleValue(element)) }"></span>
-                        <span class="sb-fake-slider-thumb" :style="{ left: linearScaleFillPercent(element, defaultLinearScaleValue(element)) }"></span>
-                      </div>
+                    <div class="survey-linear-scale sb-fake-slider">
+                      <div class="survey-linear-scale-value">{{ defaultLinearScaleValue(element) }}</div>
+                      <input
+                        type="range"
+                        class="survey-linear-scale-input"
+                        disabled
+                        :min="(element.settings as any)?.min ?? 1"
+                        :max="(element.settings as any)?.max ?? 5"
+                        :step="(element.settings as any)?.step ?? 1"
+                        :value="defaultLinearScaleValue(element)"
+                        :style="{ '--survey-range-fill': linearScaleFillPercent(element, defaultLinearScaleValue(element)) }"
+                      />
                       <div class="sb-fake-slider-labels">
                         <span>{{ (element.settings as any)?.low_label || (element.settings as any)?.min || 1 }}</span>
                         <span>{{ (element.settings as any)?.high_label || (element.settings as any)?.max || 5 }}{{ element.settings?.unit ? ` ${element.settings.unit}` : '' }}</span>
@@ -1546,34 +1675,34 @@ function textInputType(element: SurveyElement) {
 
                   <!-- Rating preview -->
                   <div v-else-if="element.type === 'rating'" class="sb-card-body">
-                    <div class="sb-fake-rating">
+                    <div class="survey-rating-stars sb-fake-rating">
                       <span
                         v-for="n in Number((element.settings as any)?.count ?? 5)"
                         :key="n"
-                        class="sb-fake-rating-icon"
+                        class="survey-rating-star-label sb-fake-rating-icon"
                         :class="`shape-${(element.settings as any)?.shape ?? 'star'}`"
                       >
-                        <span v-if="(element.settings as any)?.show_numbers" class="sb-rating-number">{{ n }}</span>
-                        <span class="sb-rating-symbol">{{ ratingShapeIcon((element.settings as any)?.shape ?? 'star') }}</span>
+                        <span v-if="(element.settings as any)?.show_numbers" class="survey-rating-star-number sb-rating-number">{{ n }}</span>
+                        <span class="survey-rating-star-icon sb-rating-symbol">{{ ratingShapeIcon((element.settings as any)?.shape ?? 'star') }}</span>
                       </span>
                     </div>
                   </div>
 
                   <!-- Matrix card preview -->
                   <div v-else-if="element.type === 'matrix_single' || element.type === 'matrix_multi'" class="sb-card-body" @click.stop>
-                    <div class="sb-matrix-scroll">
-                      <table class="sb-matrix-table">
+                    <div class="survey-preview-matrix-scroll">
+                      <table class="survey-matrix">
                         <thead>
                           <tr>
-                            <th class="sb-matrix-corner"></th>
-                            <th v-for="col in element.matrix_cols" :key="col.id" class="sb-matrix-col-head">{{ col.label }}</th>
+                            <th></th>
+                            <th v-for="col in element.matrix_cols" :key="col.id">{{ col.label }}</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr v-for="row in element.matrix_rows" :key="row.id">
-                            <td class="sb-matrix-row-label">{{ row.label }}</td>
-                            <td v-for="col in element.matrix_cols" :key="col.id" class="sb-matrix-cell">
-                              <span :class="element.type === 'matrix_multi' ? 'sb-matrix-cb' : 'sb-matrix-rb'"></span>
+                            <td>{{ row.label }}</td>
+                            <td v-for="col in element.matrix_cols" :key="col.id" class="survey-preview-matrix-cell">
+                              <span class="survey-preview-matrix-pip" :class="element.type === 'matrix_multi' ? 'square' : ''"></span>
                             </td>
                           </tr>
                         </tbody>
@@ -1583,29 +1712,45 @@ function textInputType(element: SurveyElement) {
 
                   <!-- NPS preview -->
                   <div v-else-if="element.type === 'nps'" class="sb-card-body">
-                    <div class="sb-fake-nps">
+                    <div class="survey-nps-row sb-fake-nps">
                       <span
                         v-for="n in 11" :key="n"
-                        class="sb-nps-pip"
+                        class="survey-nps-pip"
                         :class="(element.settings as any)?.color_bands ? (n-1 <= 6 ? 'red' : n-1 <= 8 ? 'yellow' : 'green') : ''"
                       >{{ n - 1 }}</span>
                     </div>
-                    <div class="sb-fake-nps-labels">
+                    <div class="survey-nps-labels sb-fake-nps-labels">
                       <span>{{ (element.settings as any)?.low_label || '非常不推薦' }}</span>
                       <span>{{ (element.settings as any)?.high_label || '非常推薦' }}</span>
                     </div>
                   </div>
 
                   <!-- Cascade select preview -->
-                  <div v-else-if="element.type === 'cascade_select'" class="sb-card-body sb-cascade-card-body">
-                    <div class="sb-cascade-level-pills">
-                      <span v-for="(lvl, li) in (element.cascade_levels ?? [])" :key="lvl.id" class="sb-cascade-level-pill">
-                        <span class="sb-cascade-level-num">{{ li + 1 }}</span>{{ lvl.label }}
-                      </span>
+                  <div v-else-if="element.type === 'cascade_select'" class="sb-card-body survey-cascade-grid sb-cascade-card-body">
+                    <p v-if="(element.cascade_levels ?? []).length === 0" class="survey-help">請先設定層級與選項資料。</p>
+                    <div
+                      v-for="(lvl, li) in (element.cascade_levels ?? [])"
+                      :key="lvl.id"
+                      class="survey-preview-cascade-row"
+                    >
+                      <select class="survey-select" disabled>
+                        <option>{{ lvl.label || (li === 0 ? '請選擇' : '請先選擇上一層') }}</option>
+                      </select>
                     </div>
-                    <div class="sb-cascade-stats">
-                      {{ (element.cascade_data ?? []).length }} 個第一層選項
-                      <span v-if="(element.cascade_levels ?? []).length > 1"> · {{ (element.cascade_levels ?? []).length }} 層</span>
+                  </div>
+
+                  <!-- Selection-based preview -->
+                  <div v-else-if="element.type === 'selection_based'" class="sb-card-body">
+                    <div class="survey-selection-source-card">
+                      <div class="survey-selection-source-heading">
+                        <span aria-hidden="true">☑</span>
+                        <span>選項來源清單：根據選項來源，帶入選擇的選項</span>
+                      </div>
+                      <div v-if="selectionBasedSourceElement(element)" class="survey-selection-source-row">
+                        <span class="survey-selection-source-index">1.</span>
+                        <span class="survey-selection-source-label">{{ selectionBasedSourceLabel(element) }}</span>
+                      </div>
+                      <p v-else class="survey-help">請在右側選擇來源題目。</p>
                     </div>
                   </div>
 
