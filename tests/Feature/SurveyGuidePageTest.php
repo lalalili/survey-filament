@@ -17,7 +17,9 @@ function surveyGuideText(): string
             ...collect($section['blocks'])
                 ->flatMap(fn (array $block): array => array_merge(
                     [$block['heading']],
+                    filled($block['body'] ?? null) ? [$block['body']] : [],
                     $block['items'] ?? [],
+                    $block['steps'] ?? [],
                     $block['headers'] ?? [],
                     collect($block['rows'] ?? [])->flatten()->all(),
                 ))
@@ -74,6 +76,11 @@ it('exposes well-formed guide sections', function () {
                 expect($block)->toHaveKeys(['headers', 'rows'])
                     ->and($block['headers'])->not->toBeEmpty()
                     ->and($block['rows'])->not->toBeEmpty();
+            } elseif (($block['type'] ?? 'list') === 'screenshot') {
+                expect($block)->toHaveKeys(['body', 'variant', 'steps'])
+                    ->and($block['body'])->not->toBeEmpty()
+                    ->and($block['variant'])->not->toBeEmpty()
+                    ->and($block['steps'])->not->toBeEmpty();
             } else {
                 expect($block)->toHaveKey('items')
                     ->and($block['items'])->not->toBeEmpty();
@@ -120,6 +127,22 @@ it('documents supported advanced builder settings', function () {
         '顯示條件',
         '跳題邏輯',
         '發佈失敗',
+    ] as $keyword) {
+        expect($text)->toContain($keyword);
+    }
+});
+
+it('documents focused operation screenshot blocks', function () {
+    $text = surveyGuideText();
+
+    foreach ([
+        '操作截圖：巢狀選擇題資料',
+        '操作截圖：問卷計算變數',
+        '操作截圖：顯示條件與跳題',
+        '操作截圖：發佈錯誤提示',
+        '下載範例檔後填好 XLSX 再上傳',
+        '在分數設定中為各選項填入加分或扣分',
+        '依頁面、題號與分類回到對應設定',
     ] as $keyword) {
         expect($text)->toContain($keyword);
     }
