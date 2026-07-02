@@ -456,6 +456,7 @@
 .sb-right {
   background: var(--c-surface);
   border-left: 1px solid var(--c-line);
+  container-type: inline-size;
   display: flex; flex-direction: column; overflow: hidden;
 }
 .sb-rp-tabs {
@@ -508,13 +509,26 @@
   letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500;
   padding: 8px 4px 6px;
 }
-.sb-qlib-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.sb-qlib-grid { display: grid; grid-template-columns: 1fr; gap: 4px; }
+@container (min-width: 340px) {
+  .sb-qlib-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 1365px) {
+  .sb-qlib-grid { grid-template-columns: 1fr; }
+}
 .sb-qlib-item {
   display: flex; align-items: center; gap: 8px;
+  min-width: 0;
   padding: 7px 10px; border-radius: var(--r2);
   background: var(--c-surface); border: 1px solid var(--c-line);
   cursor: pointer; font-size: 12.5px; color: var(--c-ink); font-family: var(--font);
   transition: all 120ms; text-align: left;
+}
+.sb-qlib-item span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sb-qlib-item:hover {
   background: var(--c-s2); border-color: var(--c-line2);
@@ -530,6 +544,8 @@
 .sb-qlib-item.text   .sb-qlib-icon { background: oklch(96% 0.02 250); color: oklch(45% 0.12 250); border-color: oklch(90% 0.04 250); }
 .sb-qlib-item.scale  .sb-qlib-icon { background: oklch(96% 0.03 70);  color: oklch(48% 0.13 70);  border-color: oklch(90% 0.05 70); }
 .sb-qlib-item.matrix .sb-qlib-icon { background: oklch(96% 0.03 300); color: oklch(48% 0.12 300); border-color: oklch(90% 0.05 300); }
+.sb-qlib-item.content .sb-qlib-icon { background: oklch(96% 0.004 95); color: var(--c-ink2); border-color: var(--c-line2); }
+.sb-qlib-item.upload .sb-qlib-icon { background: oklch(96% 0.03 205); color: oklch(45% 0.12 205); border-color: oklch(90% 0.05 205); }
 
 /* Properties */
 .sb-prop-section {
