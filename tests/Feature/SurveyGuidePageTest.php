@@ -111,8 +111,19 @@ it('documents cascade select xlsx import instead of paused csv import', function
         ->toContain('下載範例檔')
         ->toContain('上傳資料')
         ->toContain('XLSX')
+        ->not->toContain('問卷 JSON 匯出與匯入')
         ->not->toContain('匯入題目 CSV')
         ->not->toContain('暫停提供');
+});
+
+it('only documents builder json import and export when enabled', function () {
+    config()->set('survey-filament.builder_json_actions_enabled', true);
+
+    expect(surveyGuideText())
+        ->toContain('需要備份或複製整份問卷時')
+        ->toContain('問卷 JSON 匯出與匯入')
+        ->toContain('保留題目、頁面與設定內容')
+        ->not->toContain('若系統設定開啟 Builder JSON 功能');
 });
 
 it('documents supported advanced builder settings', function () {

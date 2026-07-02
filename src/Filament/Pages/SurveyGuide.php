@@ -92,6 +92,15 @@ class SurveyGuide extends Page
      */
     public function guideSections(): array
     {
+        $importItems = [
+            '一般題目請在 Builder 內新增，或使用「從範本建立」後再調整題目內容。',
+            '巢狀選擇題可在資料編輯視窗使用「下載範例檔」與「上傳資料」，範例檔與上傳資料格式為 XLSX。',
+        ];
+
+        if ((bool) config('survey-filament.builder_json_actions_enabled', false)) {
+            $importItems[] = '需要備份或複製整份問卷時，可使用問卷 JSON 匯出與匯入功能，保留題目、頁面與設定內容。';
+        }
+
         return [
             [
                 'title' => 'Builder 介面導覽',
@@ -140,11 +149,7 @@ class SurveyGuide extends Page
                     [
                         'type' => 'callout',
                         'heading' => '匯入與範例檔',
-                        'items' => [
-                            '一般題目請在 Builder 內新增，或使用「從範本建立」後再調整題目內容。',
-                            '巢狀選擇題可在資料編輯視窗使用「下載範例檔」與「上傳資料」，範例檔與上傳資料格式為 XLSX。',
-                            '若系統設定開啟 Builder JSON 功能，可匯出問卷 JSON 備份，或用「匯入問卷 JSON」還原完整問卷結構。',
-                        ],
+                        'items' => $importItems,
                     ],
                 ],
             ],
