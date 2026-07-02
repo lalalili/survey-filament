@@ -3,19 +3,18 @@
 use Lalalili\SurveyCore\Actions\CreateSurveyFromBuilderTemplateAction;
 use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Support\SurveyBuilderTemplateRegistry;
-use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\ListSurveys;
+use Lalalili\SurveyFilament\Filament\Resources\Surveys\Actions\CreateSurveyFromTemplateHeaderAction;
 
 /**
  * @return array<string, string>
  */
 function listSurveysTemplateOptions(): array
 {
-    $page = new ListSurveys;
-    $method = (new ReflectionClass($page))->getMethod('templateOptions');
+    $method = (new ReflectionClass(CreateSurveyFromTemplateHeaderAction::class))->getMethod('templateOptions');
     $method->setAccessible(true);
 
     /** @var array<string, string> $options */
-    $options = $method->invoke($page);
+    $options = $method->invoke(null);
 
     return $options;
 }

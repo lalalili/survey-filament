@@ -37,6 +37,7 @@ use Lalalili\SurveyCore\Models\SurveyResponse;
 use Lalalili\SurveyCore\Models\SurveyTag;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\Pages\ListResponses;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\Pages\ViewResponse;
+use Lalalili\SurveyFilament\Support\SurveyQueryScopes;
 
 /**
  * @extends resource<SurveyResponse>
@@ -206,15 +207,7 @@ class ResponseResource extends Resource
                     }),
                 SelectFilter::make('survey_id')
                     ->label('問卷')
-                    ->options(function (): array {
-                        $query = Survey::query()->orderBy('title');
-                        $scope = config('survey-filament.query_scope');
-                        if (is_callable($scope)) {
-                            $query = $scope($query, auth()->user());
-                        }
-
-                        return $query->pluck('title', 'id')->toArray();
-                    })
+                    ->options(fn (): array => SurveyQueryScopes::surveys(Survey::query()->orderBy('title'))->pluck('title', 'id')->toArray())
                     ->searchable(),
                 SelectFilter::make('completion_status')
                     ->label('完成狀態')
@@ -340,23 +333,7 @@ class ResponseResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
-
-        $scope = config('survey-filament.query_scope');
-
-        if (is_callable($scope)) {
-            // Scope through the survey relationship so tenant isolation propagates.
-            $query->whereHas('survey', fn (Builder $q) => $scope($q, auth()->user()));
-        }
-
-        $responseScope = config('survey-filament.response_query_scope');
-
-        if (is_callable($responseScope)) {
-            // Applied directly to the response query so it can filter by recipient payload.
-            $query = $responseScope($query, auth()->user());
-        }
-
-        return $query;
+        return SurveyQueryScopes::responses(parent::getEloquentQuery());
     }
 
     public static function getPages(): array

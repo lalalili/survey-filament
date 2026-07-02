@@ -5,6 +5,7 @@ namespace Lalalili\SurveyFilament\Filament\Widgets;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Lalalili\SurveyCore\Models\Survey;
+use Lalalili\SurveyFilament\Support\SurveyQueryScopes;
 
 class TotalSurveysWidget extends BaseWidget
 {
@@ -13,7 +14,7 @@ class TotalSurveysWidget extends BaseWidget
     protected function getStats(): array
     {
         return [
-            Stat::make('Total Surveys', Survey::count())
+            Stat::make('Total Surveys', SurveyQueryScopes::surveys(Survey::query())->count())
                 ->icon('heroicon-o-clipboard-document-list'),
         ];
     }

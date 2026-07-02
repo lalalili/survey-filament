@@ -78,18 +78,15 @@ class RecipientsRelationManager extends RelationManager
                     ->sortable()
                     ->toggleable(),
 
+                // MIN 聚合會略過 NULL，等同「最早的 viewed_at」；用 withMin 避免逐列子查詢
                 TextColumn::make('invitation_viewed_at')
                     ->label('連結開啟時間')
-                    ->state(
-                        fn (SurveyRecipient $record): ?string => $record->tokens()
-                            ->whereNotNull('viewed_at')
-                            ->orderBy('viewed_at')
-                            ->value('viewed_at')
-                    )
+                    ->state(fn (SurveyRecipient $record): ?string => $record->getAttribute('tokens_min_viewed_at'))
                     ->dateTime('Y/m/d H:i')
                     ->placeholder('未開啟')
                     ->toggleable(),
             ])
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->withMin('tokens', 'viewed_at'))
             ->headerActions([CreateAction::make()->label('新增收件人')])
             ->actions([
                 ActionGroup::make([

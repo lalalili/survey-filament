@@ -3,38 +3,11 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\Surveys;
 
 use BackedEnum;
-use Filament\Actions\Action;
-use Filament\Actions\ActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\RestoreAction;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\KeyValue;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
-use Filament\Support\Enums\IconPosition;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Lalalili\AudienceCore\Models\AudienceList;
-use Lalalili\SurveyCore\Actions\CloseSurveyAction;
-use Lalalili\SurveyCore\Actions\DuplicateSurveyAction;
-use Filament\Notifications\Notification;
-use Illuminate\Support\Facades\Storage;
-use Lalalili\SurveyCore\Actions\ExportSurveyBuilderSchemaAction;
-use Lalalili\SurveyCore\Actions\PublishSurveyAction;
-use Lalalili\SurveyCore\Enums\SurveyStatus;
-use Lalalili\SurveyCore\Enums\SurveyUniquenessMode;
 use Lalalili\SurveyCore\Models\Survey;
-use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\CreateSurvey;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\EditSurvey;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\EditSurveyBuilder;
@@ -46,7 +19,9 @@ use Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers\FieldsRe
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers\RecipientsRelationManager;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers\ResponsesRelationManager;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\RelationManagers\TagsRelationManager;
-use Lalalili\SurveyFilament\Support\PanelLabel;
+use Lalalili\SurveyFilament\Filament\Resources\Surveys\Schemas\SurveyForm;
+use Lalalili\SurveyFilament\Filament\Resources\Surveys\Tables\SurveysTable;
+use Lalalili\SurveyFilament\Support\SurveyQueryScopes;
 
 class SurveyResource extends Resource
 {
@@ -75,326 +50,17 @@ class SurveyResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->components([
-            TextInput::make('title')
-                ->label('標題')
-                ->required()
-                ->maxLength(255)
-                ->columnSpanFull(),
-
-            Textarea::make('description')
-                ->label('描述')
-                ->rows(3)
-                ->columnSpanFull(),
-
-            Select::make('status')
-                ->label('狀態')
-                ->options(collect(SurveyStatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->label()]))
-                ->required()
-                ->default(SurveyStatus::Draft->value),
-
-            TextInput::make('category')
-                ->label('分類')
-                ->maxLength(10)
-                ->helperText('用於分組與篩選問卷的短代碼，例如 CSI、SSI。')
-                ->datalist(fn (): array => static::existingCategories()),
-
-            TextInput::make('public_key')
-                ->label('公開金鑰')
-                ->disabled()
-                ->dehydrated(false)
-                ->visibleOn('edit'),
-
-            Toggle::make('allow_anonymous')
-                ->label('允許匿名填寫')
-                ->default(false),
-
-            Toggle::make('allow_multiple_submissions')
-                ->label('允許多次提交')
-                ->default(false),
-
-            TextInput::make('max_responses')
-                ->label('回收上限')
-                ->numeric()
-                ->minValue(1)
-                ->placeholder('不限制'),
-
-            DateTimePicker::make('starts_at')
-                ->label('開始時間'),
-
-            DateTimePicker::make('ends_at')
-                ->label('結束時間'),
-
-            Textarea::make('submit_success_message')
-                ->label('提交成功訊息')
-                ->rows(2)
-                ->columnSpanFull(),
-
-            Textarea::make('quota_message')
-                ->label('額滿訊息')
-                ->rows(2)
-                ->columnSpanFull(),
-
-            Select::make('uniqueness_mode')
-                ->label('防重填模式')
-                ->options(collect(SurveyUniquenessMode::cases())->mapWithKeys(fn ($mode) => [$mode->value => $mode->label()]))
-                ->default(SurveyUniquenessMode::None->value)
-                ->required(),
-
-            TextInput::make('uniqueness_message')
-                ->label('重複填寫提示')
-                ->maxLength(255),
-
-            Select::make('settings_json.personalization.audience_list_id')
-                ->label('個性化名單')
-                ->options(fn (): array => class_exists(AudienceList::class)
-                    ? AudienceList::query()->orderBy('name')->pluck('name', 'id')->toArray()
-                    : [])
-                ->searchable()
-                ->nullable()
-                ->live()
-                ->afterStateUpdated(fn (Set $set, mixed $state): mixed => $set(
-                    'settings_json.personalization.required',
-                    filled($state) ? true : null,
-                ))
-                ->helperText('選擇名單後，可用名單欄位自動填入個性化題目，且必須使用個性化網址填寫。'),
-
-            Select::make('settings_json.personalization.name_column')
-                ->label('姓名欄位')
-                ->options(fn ($get): array => self::audienceColumnOptions($get('settings_json.personalization.audience_list_id')))
-                ->searchable()
-                ->nullable()
-                ->helperText('同步名單時寫入收件人姓名，方便後台辨識、匯出與後續訊息個人化。'),
-
-            Select::make('settings_json.personalization.email_column')
-                ->label('Email 欄位')
-                ->options(fn ($get): array => self::audienceColumnOptions($get('settings_json.personalization.audience_list_id')))
-                ->searchable()
-                ->nullable()
-                ->helperText('同步為收件人 Email，Email 活動選擇此問卷時可沿用此欄位作為收件地址來源。'),
-
-            Select::make('settings_json.personalization.external_id_column')
-                ->label('外部 ID 欄位')
-                ->options(fn ($get): array => self::audienceColumnOptions($get('settings_json.personalization.audience_list_id')))
-                ->searchable()
-                ->nullable()
-                ->helperText('同步 CRM、DMS 或會員系統 ID，便於對帳、去重與跨系統追蹤；未指定時使用名單資料列 ID。'),
-
-            KeyValue::make('settings_json.personalization.field_mappings')
-                ->label('個性化題目欄位對應')
-                ->helperText('左側填問卷 field_key，右側填名單欄位名稱；題目本身也可在「題目」頁籤設定個性化鍵值。')
-                ->nullable()
-                ->columnSpanFull(),
-        ]);
+        return SurveyForm::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('title')
-                    ->label('標題')
-                    ->searchable()
-                    ->sortable()
-                    ->url(fn (Survey $record) => route('survey.show', $record->public_key))
-                    ->openUrlInNewTab()
-                    ->icon('heroicon-o-arrow-top-right-on-square')
-                    ->iconPosition(IconPosition::After)
-                    ->iconColor('primary'),
-
-                TextColumn::make('status')
-                    ->label('狀態')
-                    ->badge()
-                    ->color(fn ($state) => match ($state) {
-                        SurveyStatus::Published => 'success',
-                        SurveyStatus::Closed => 'warning',
-                        SurveyStatus::Archived => 'danger',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn ($state) => $state instanceof SurveyStatus ? $state->label() : $state),
-
-                TextColumn::make('category')
-                    ->label('分類')
-                    ->badge()
-                    ->placeholder('—')
-                    ->toggleable(),
-
-                TextColumn::make('fields_count')
-                    ->counts('fields')
-                    ->label('題目數')
-                    ->hidden(fn (): bool => self::isSurveyTableColumnHidden('fields_count')),
-
-                TextColumn::make('recipients_count')
-                    ->counts('recipients')
-                    ->label('個性化連結數')
-                    ->hidden(fn (): bool => self::isSurveyTableColumnHidden('recipients_count'))
-                    // edit 頁會轉走 builder，收件人關聯只在 view 頁呈現（見 ViewSurvey::getRelationManagers）。
-                    // 導向 view 頁的「收件人」分頁，並僅在有檢視權時才給連結，避免角色看得到列卻無權點出 404。
-                    ->url(fn (Survey $record): ?string => static::canView($record)
-                        ? SurveyResource::getUrl('view', ['record' => $record])
-                            .'?relation='.ViewSurvey::recipientsRelationKey()
-                        : null)
-                    ->color('primary'),
-
-                TextColumn::make('responses_count')
-                    ->counts('responses')
-                    ->label(PanelLabel::get('response_count') ?? '回應數')
-                    // Filament v5 將 table filters 的 query string 別名為 'filters'（#[Url(as: 'filters')]）；
-                    // 舊的 'tableFilters' key 不會被還原，會導致連結帶入後過濾失效（顯示全部回應）。
-                    ->url(fn (Survey $record) => ResponseResource::getUrl('index').'?'.http_build_query(['filters' => ['survey_id' => ['value' => $record->getKey()]]]))
-                    ->color('primary'),
-
-                TextColumn::make('starts_at')
-                    ->label('開始時間')
-                    ->dateTime('Y/m/d H:i')
-                    ->sortable()
-                    ->toggleable(),
-
-                TextColumn::make('ends_at')
-                    ->label('結束時間')
-                    ->dateTime('Y/m/d H:i')
-                    ->sortable()
-                    ->toggleable(),
-
-                TextColumn::make('created_at')
-                    ->label('建立時間')
-                    ->dateTime('Y/m/d H:i')
-                    ->sortable()
-                    ->toggleable(),
-            ])
-            ->defaultSort('created_at', direction: 'desc')
-            ->filters([
-                SelectFilter::make('status')
-                    ->label('狀態')
-                    ->options(collect(SurveyStatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->label()])),
-                SelectFilter::make('category')
-                    ->label('分類')
-                    ->options(fn (): array => static::existingCategories()),
-                TrashedFilter::make(),
-            ])
-            ->filtersFormColumns(2)
-            ->columnToggleFormColumns(2)
-            ->actions([
-                ActionGroup::make([
-                    Action::make('edit')
-                        ->label('編輯')
-                        ->icon('heroicon-o-pencil-square')
-                        ->url(fn (Survey $record): string => SurveyResource::getUrl('builder', ['record' => $record])),
-                    Action::make('analytics')
-                        ->label('分析')
-                        ->icon('heroicon-o-chart-bar-square')
-                        ->url(fn (Survey $record): string => SurveyResource::getUrl('analytics', ['record' => $record])),
-
-                    // Google Drive 綁定改於 Builder 的「上傳設定」內完成（檔案上傳題設定區）。
-                    Action::make('export_builder_json')
-                        ->label('匯出問卷 JSON')
-                        ->icon('heroicon-o-arrow-down-tray')
-                        ->visible(fn (Survey $record) => self::builderJsonActionsEnabled() && static::canView($record))
-                        ->action(function (Survey $record) {
-                            $exportSchema = app(ExportSurveyBuilderSchemaAction::class);
-
-                            return response()->streamDownload(
-                                function () use ($exportSchema, $record): void {
-                                    echo $exportSchema->toJson($record);
-                                },
-                                $exportSchema->filename($record),
-                                ['Content-Type' => 'application/json; charset=UTF-8'],
-                            );
-                        }),
-
-                    /*
-                    Action::make('import_questions_csv')
-                        ->label('匯入題目 CSV')
-                        ->icon('heroicon-o-table-cells')
-                        ->visible(fn (Survey $record): bool => static::canEdit($record))
-                        ->schema([
-                            FileUpload::make('csv_file')
-                                ->label('CSV 檔案')
-                                ->helperText('欄位：type, label, required, options（以 | 分隔）, description。')
-                                ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel', 'application/octet-stream'])
-                                ->disk('local')
-                                ->directory('survey-imports')
-                                ->required(),
-                        ])
-                        ->action(function (array $data, Survey $record) {
-                            $path = is_array($data['csv_file'] ?? null)
-                                ? (string) reset($data['csv_file'])
-                                : (string) ($data['csv_file'] ?? '');
-
-                            if ($path === '' || ! Storage::disk('local')->exists($path)) {
-                                Notification::make()->danger()->title('找不到匯入檔案')->send();
-
-                                return null;
-                            }
-
-                            $csv = (string) Storage::disk('local')->get($path);
-                            $count = app(ImportSurveyQuestionsFromCsvAction::class)->execute($record, $csv);
-                            Storage::disk('local')->delete($path);
-
-                            if ($count === 0) {
-                                Notification::make()->warning()->title('沒有可匯入的題目')->body('請確認 CSV 欄位與題型是否正確。')->send();
-
-                                return null;
-                            }
-
-                            Notification::make()->success()->title("已匯入 {$count} 題")->send();
-
-                            return redirect(SurveyResource::getUrl('builder', ['record' => $record]));
-                        }),
-                    */
-
-                    Action::make('publish')
-                        ->label('發佈')
-                        ->icon('heroicon-o-rocket-launch')
-                        ->color('success')
-                        ->visible(fn (Survey $record) => static::canEdit($record) && in_array($record->status, [SurveyStatus::Draft, SurveyStatus::Closed]))
-                        ->action(fn (Survey $record) => app(PublishSurveyAction::class)->execute($record))
-                        ->requiresConfirmation(),
-
-                    Action::make('close')
-                        ->label('關閉')
-                        ->icon('heroicon-o-x-circle')
-                        ->color('warning')
-                        ->visible(fn (Survey $record) => static::canEdit($record) && $record->status === SurveyStatus::Published)
-                        ->action(fn (Survey $record) => app(CloseSurveyAction::class)->execute($record))
-                        ->requiresConfirmation(),
-
-                    Action::make('duplicate')
-                        ->label('複製')
-                        ->icon('heroicon-o-document-duplicate')
-                        ->visible(fn () => static::canCreate())
-                        ->action(fn (Survey $record) => app(DuplicateSurveyAction::class)->execute($record)),
-
-                    Action::make('clear_responses')
-                        ->label(PanelLabel::get('clear_responses') ?? '清除全部回應')
-                        ->icon('heroicon-o-trash')
-                        ->color('danger')
-                        ->visible(fn (Survey $record) => static::canDelete($record))
-                        ->requiresConfirmation()
-                        ->modalHeading(PanelLabel::get('clear_responses') ?? '清除全部回應')
-                        ->modalDescription(fn (Survey $record): string => '確定要刪除「'.$record->title.'」的所有'.(PanelLabel::get('responses_word') ?? '回應').'嗎？此操作無法復原。')
-                        ->modalSubmitActionLabel('確認清除')
-                        ->action(fn (Survey $record) => $record->responses()->forceDelete()),
-
-                    DeleteAction::make()->label('刪除'),
-                    RestoreAction::make()->label('還原'),
-                    ForceDeleteAction::make()->label('永久刪除'),
-                ]),
-            ])
-            ->bulkActions([]);
+        return SurveysTable::configure($table);
     }
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
-
-        $scope = config('survey-filament.query_scope');
-
-        if (is_callable($scope)) {
-            $query = $scope($query, auth()->user());
-        }
-
-        return $query;
+        return SurveyQueryScopes::surveys(parent::getEloquentQuery());
     }
 
     public static function isSurveyTableColumnHidden(string $column): bool
@@ -444,23 +110,5 @@ class SurveyResource extends Resource
             'analytics' => SurveyAnalytics::route('/{record}/analytics'),
             'view' => ViewSurvey::route('/{record}'),
         ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private static function audienceColumnOptions(mixed $audienceListId): array
-    {
-        if (! $audienceListId) {
-            return [];
-        }
-
-        if (! class_exists(AudienceList::class)) {
-            return [];
-        }
-
-        $audienceList = AudienceList::query()->find((int) $audienceListId);
-
-        return $audienceList?->columnOptions() ?? [];
     }
 }

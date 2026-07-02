@@ -5,6 +5,7 @@ namespace Lalalili\SurveyFilament\Filament\Widgets;
 use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
 use Lalalili\SurveyCore\Models\SurveyResponse;
+use Lalalili\SurveyFilament\Support\SurveyQueryScopes;
 
 class ResponsesTrendChart extends ChartWidget
 {
@@ -21,7 +22,7 @@ class ResponsesTrendChart extends ChartWidget
     {
         $days = collect(range(6, 0))->map(fn ($d) => now()->subDays($d)->format('Y-m-d'));
 
-        $counts = SurveyResponse::query()
+        $counts = SurveyQueryScopes::responses(SurveyResponse::query())
             ->whereDate('submitted_at', '>=', now()->subDays(6)->startOfDay())
             ->selectRaw('DATE(submitted_at) as day, COUNT(*) as total')
             ->groupBy('day')
