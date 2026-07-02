@@ -15,10 +15,12 @@ function surveyGuideText(): string
             $section['title'],
             $section['intro'] ?? '',
             ...collect($section['blocks'])
-                ->flatMap(fn (array $block): array => [
-                    $block['heading'],
-                    ...$block['items'],
-                ])
+                ->flatMap(fn (array $block): array => array_merge(
+                    [$block['heading']],
+                    $block['items'] ?? [],
+                    $block['headers'] ?? [],
+                    collect($block['rows'] ?? [])->flatten()->all(),
+                ))
                 ->all(),
         ]);
 
@@ -59,15 +61,23 @@ it('exposes well-formed guide sections', function () {
     expect($sections)->not->toBeEmpty();
 
     $titles = array_column($sections, 'title');
-    expect($titles)->toContain('基本操作', '問卷設定', '題型總覽');
+    expect($titles)->toContain('Builder 介面導覽', '問卷設定與填答體驗', '題型總覽', '題型功能對照', '進階功能操作', '發佈與問題排除');
 
     foreach ($sections as $section) {
         expect($section)->toHaveKeys(['title', 'blocks'])
             ->and($section['blocks'])->not->toBeEmpty();
 
         foreach ($section['blocks'] as $block) {
-            expect($block)->toHaveKeys(['heading', 'items'])
-                ->and($block['items'])->not->toBeEmpty();
+            expect($block)->toHaveKey('heading');
+
+            if (($block['type'] ?? 'list') === 'table') {
+                expect($block)->toHaveKeys(['headers', 'rows'])
+                    ->and($block['headers'])->not->toBeEmpty()
+                    ->and($block['rows'])->not->toBeEmpty();
+            } else {
+                expect($block)->toHaveKey('items')
+                    ->and($block['items'])->not->toBeEmpty();
+            }
         }
     }
 });
@@ -89,10 +99,30 @@ it('documents the core builder workflow in the guide', function () {
     }
 });
 
-it('documents that question CSV import is paused', function () {
+it('documents cascade select xlsx import instead of paused csv import', function () {
     expect(surveyGuideText())
-        ->toContain('匯入題目 CSV')
-        ->toContain('暫停提供');
+        ->toContain('下載範例檔')
+        ->toContain('上傳資料')
+        ->toContain('XLSX')
+        ->not->toContain('匯入題目 CSV')
+        ->not->toContain('暫停提供');
+});
+
+it('documents supported advanced builder settings', function () {
+    $text = surveyGuideText();
+
+    foreach ([
+        '問卷計算變數',
+        '{{ calc.total_score }}',
+        '選項名額',
+        '隨機排列選項',
+        '分數設定',
+        '顯示條件',
+        '跳題邏輯',
+        '發佈失敗',
+    ] as $keyword) {
+        expect($text)->toContain($keyword);
+    }
 });
 
 it('adds a guide action to the survey list header', function () {

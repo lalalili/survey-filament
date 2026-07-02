@@ -33,14 +33,51 @@
 
                     <div class="grid gap-5 md:grid-cols-2">
                         @foreach ($section['blocks'] as $block)
-                            <div class="space-y-2">
-                                <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $block['heading'] }}</h3>
-                                <ul class="list-disc space-y-1 ps-5 text-sm text-gray-600 dark:text-gray-300">
-                                    @foreach ($block['items'] as $item)
-                                        <li>{{ $item }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
+                            @php($type = $block['type'] ?? 'list')
+
+                            @if ($type === 'table')
+                                <div class="space-y-3 md:col-span-2">
+                                    <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $block['heading'] }}</h3>
+                                    <div class="overflow-hidden rounded-lg ring-1 ring-gray-950/10 dark:ring-white/10">
+                                        <table class="min-w-full divide-y divide-gray-200 text-left text-sm dark:divide-white/10">
+                                            <thead class="bg-gray-50 dark:bg-white/5">
+                                                <tr>
+                                                    @foreach ($block['headers'] ?? [] as $header)
+                                                        <th scope="col" class="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">{{ $header }}</th>
+                                                    @endforeach
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100 bg-white dark:divide-white/10 dark:bg-gray-900">
+                                                @foreach ($block['rows'] ?? [] as $row)
+                                                    <tr>
+                                                        @foreach ($row as $cell)
+                                                            <td class="px-4 py-3 align-top text-gray-600 dark:text-gray-300">{{ $cell }}</td>
+                                                        @endforeach
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            @elseif ($type === 'callout')
+                                <div class="space-y-2 rounded-lg bg-primary-50 p-4 ring-1 ring-primary-500/20 dark:bg-primary-500/10 dark:ring-primary-400/20 md:col-span-2">
+                                    <h3 class="text-sm font-semibold text-primary-900 dark:text-primary-100">{{ $block['heading'] }}</h3>
+                                    <ul class="list-disc space-y-1 ps-5 text-sm leading-6 text-primary-800 dark:text-primary-200">
+                                        @foreach ($block['items'] ?? [] as $item)
+                                            <li>{{ $item }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @else
+                                <div class="space-y-2">
+                                    <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $block['heading'] }}</h3>
+                                    <ul class="list-disc space-y-1 ps-5 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                                        @foreach ($block['items'] ?? [] as $item)
+                                            <li>{{ $item }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
                         @endforeach
                     </div>
                 </div>
