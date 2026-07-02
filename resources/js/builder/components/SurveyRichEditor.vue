@@ -44,7 +44,11 @@ const imageError = ref('');
 const editor = useEditor({
   content: props.modelValue,
   extensions: [
-    StarterKit.configure({ heading: { levels: [2, 3] } }),
+    StarterKit.configure({
+      heading: { levels: [2, 3] },
+      link: false,
+      underline: false,
+    }),
     TextStyle,
     Color,
     Underline,
@@ -176,7 +180,7 @@ function insertVideo() {
 
 <template>
   <div class="sre-wrap">
-    <div class="sre-toolbar">
+    <div v-if="editor" class="sre-toolbar">
       <!-- Text format -->
       <button type="button" class="sre-btn" :class="{ active: editor.isActive('bold') }" title="粗體" @click="editor.chain().focus().toggleBold().run()"><strong>B</strong></button>
       <button type="button" class="sre-btn" :class="{ active: editor.isActive('italic') }" title="斜體" @click="editor.chain().focus().toggleItalic().run()"><em>I</em></button>
@@ -283,7 +287,7 @@ function insertVideo() {
       @change="onImageFileSelected"
     />
 
-    <EditorContent class="sre-editor" :editor="editor" />
+    <EditorContent v-if="editor" class="sre-editor" :editor="editor" />
   </div>
 </template>
 
