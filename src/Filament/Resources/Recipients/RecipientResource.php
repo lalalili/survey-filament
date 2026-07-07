@@ -49,7 +49,7 @@ class RecipientResource extends Resource
             return true;
         }
 
-        return (bool) auth()->user()?->is_super_admin;
+        return (bool) data_get(auth()->user(), 'is_super_admin', false);
     }
 
     public static function getNavigationGroup(): ?string

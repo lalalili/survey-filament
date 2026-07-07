@@ -80,6 +80,9 @@
         }
     },
     "autoload-dev": {
+        "files": [
+            "tests/Support/google-client-stub.php"
+        ],
         "psr-4": {
             "Lalalili\\SurveyFilament\\Tests\\": "tests/"
         }
