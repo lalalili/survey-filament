@@ -21,7 +21,10 @@ return [
     'navigation_sort' => 50,
 
     // Keep the standalone survey package recipient list visible by default.
-    'recipient_navigation_enabled' => true,
+    'recipient_navigation_enabled'          => true,
+    'recipient_navigation_super_admin_only' => false,
+
+    'trigger_action_preset_navigation_enabled' => true,
 
     // How to handle marketing automation dispatch references when deleting a list.
     // Supported values: restrict, detach.

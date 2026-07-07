@@ -40,6 +40,11 @@ class SurveyTriggerActionPresetResource extends Resource
 
     protected static ?string $pluralModelLabel = 'DMS動作設定';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return (bool) config('survey-filament.trigger_action_preset_navigation_enabled', true);
+    }
+
     public static function getNavigationGroup(): ?string
     {
         return '系統';
@@ -168,9 +173,9 @@ class SurveyTriggerActionPresetResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListSurveyTriggerActionPresets::route('/'),
+            'index'  => ListSurveyTriggerActionPresets::route('/'),
             'create' => CreateSurveyTriggerActionPreset::route('/create'),
-            'edit' => EditSurveyTriggerActionPreset::route('/{record}/edit'),
+            'edit'   => EditSurveyTriggerActionPreset::route('/{record}/edit'),
         ];
     }
 }

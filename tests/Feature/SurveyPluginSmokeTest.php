@@ -4,6 +4,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema as FilamentSchema;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -30,7 +31,7 @@ it('can instantiate the plugin', function () {
 
 it('can create and retrieve a survey model', function () {
     $survey = Survey::create([
-        'title' => 'Smoke Test Survey',
+        'title'  => 'Smoke Test Survey',
         'status' => SurveyStatus::Draft,
     ]);
 
@@ -60,8 +61,7 @@ it('can hide optional survey table columns through config', function () {
 });
 
 it('does not expose a separate personalization required toggle', function () {
-    $livewire = new class extends Component implements HasSchemas
-    {
+    $livewire = new class () extends Component implements HasSchemas {
         use InteractsWithSchemas;
     };
 
@@ -78,14 +78,39 @@ it('defaults resource overrides to null', function () {
 
 it('shows recipient navigation by default', function () {
     config()->set('survey-filament.recipient_navigation_enabled', true);
+    config()->set('survey-filament.recipient_navigation_super_admin_only', false);
 
     expect(RecipientResource::shouldRegisterNavigation())->toBeTrue();
+});
+
+it('can limit recipient navigation to super admins through config', function () {
+    config()->set('survey-filament.recipient_navigation_enabled', true);
+    config()->set('survey-filament.recipient_navigation_super_admin_only', true);
+    auth()->setUser(packageNavigationTestUser(isSuperAdmin: true));
+
+    expect(RecipientResource::shouldRegisterNavigation())->toBeTrue();
+
+    auth()->setUser(packageNavigationTestUser(isSuperAdmin: false));
+
+    expect(RecipientResource::shouldRegisterNavigation())->toBeFalse();
+
+    auth()->forgetGuards();
 });
 
 it('can hide recipient navigation through config', function () {
     config()->set('survey-filament.recipient_navigation_enabled', false);
 
     expect(RecipientResource::shouldRegisterNavigation())->toBeFalse();
+});
+
+it('can hide trigger action preset navigation through config', function () {
+    config()->set('survey-filament.trigger_action_preset_navigation_enabled', true);
+
+    expect(SurveyTriggerActionPresetResource::shouldRegisterNavigation())->toBeTrue();
+
+    config()->set('survey-filament.trigger_action_preset_navigation_enabled', false);
+
+    expect(SurveyTriggerActionPresetResource::shouldRegisterNavigation())->toBeFalse();
 });
 
 it('restricts audience list deletion when activity dispatches reference its rows', function () {
@@ -98,20 +123,20 @@ it('restricts audience list deletion when activity dispatches reference its rows
     $audienceList = AudienceList::create(['name' => 'Referenced List']);
     $referencedRow = AudienceListRow::create([
         'audience_list_id' => $audienceList->id,
-        'data_json' => ['email' => 'referenced@example.com'],
-        'status' => 'active',
+        'data_json'        => ['email' => 'referenced@example.com'],
+        'status'           => 'active',
     ]);
 
     DB::table('activity_dispatches')->insert([
         [
             'audience_list_row_id' => $referencedRow->id,
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at'           => now(),
+            'updated_at'           => now(),
         ],
         [
             'audience_list_row_id' => $referencedRow->id,
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at'           => now(),
+            'updated_at'           => now(),
         ],
     ]);
 
@@ -136,3 +161,46 @@ it('registers the survey analytics resource page', function () {
 it('registers the collectors relation manager', function () {
     expect(SurveyResource::getRelations())->toContain(CollectorsRelationManager::class);
 });
+
+function packageNavigationTestUser(bool $isSuperAdmin): Authenticatable
+{
+    return new class ($isSuperAdmin) implements Authenticatable {
+        public function __construct(public bool $is_super_admin)
+        {
+        }
+
+        public function getAuthIdentifierName(): string
+        {
+            return 'id';
+        }
+
+        public function getAuthIdentifier(): int
+        {
+            return 1;
+        }
+
+        public function getAuthPasswordName(): string
+        {
+            return 'password';
+        }
+
+        public function getAuthPassword(): string
+        {
+            return '';
+        }
+
+        public function getRememberToken(): ?string
+        {
+            return null;
+        }
+
+        public function setRememberToken($value): void
+        {
+        }
+
+        public function getRememberTokenName(): string
+        {
+            return 'remember_token';
+        }
+    };
+}

@@ -41,7 +41,15 @@ class RecipientResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return (bool) config('survey-filament.recipient_navigation_enabled', true);
+        if (! (bool) config('survey-filament.recipient_navigation_enabled', true)) {
+            return false;
+        }
+
+        if (! (bool) config('survey-filament.recipient_navigation_super_admin_only', false)) {
+            return true;
+        }
+
+        return (bool) auth()->user()?->is_super_admin;
     }
 
     public static function getNavigationGroup(): ?string
@@ -195,9 +203,9 @@ class RecipientResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListRecipients::route('/'),
+            'index'  => ListRecipients::route('/'),
             'create' => CreateRecipient::route('/create'),
-            'edit' => EditRecipient::route('/{record}/edit'),
+            'edit'   => EditRecipient::route('/{record}/edit'),
             'import' => ImportRecipients::route('/import'),
         ];
     }
