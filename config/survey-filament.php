@@ -26,6 +26,12 @@ return [
 
     'trigger_action_preset_navigation_enabled' => true,
 
+    'trigger_rule_navigation_enabled' => true,
+
+    'response_navigation_group' => '報表',
+
+    'response_navigation_label' => '回覆紀錄',
+
     // How to handle marketing automation dispatch references when deleting a list.
     // Supported values: restrict, detach.
     'recipient_activity_dispatch_delete_strategy' => 'restrict',

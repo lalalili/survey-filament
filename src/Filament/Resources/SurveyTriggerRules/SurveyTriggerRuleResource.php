@@ -45,6 +45,11 @@ class SurveyTriggerRuleResource extends Resource
 
     protected static ?string $pluralModelLabel = 'DMS立案規則';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return (bool) config('survey-filament.trigger_rule_navigation_enabled', true);
+    }
+
     public static function getNavigationGroup(): ?string
     {
         return '系統';

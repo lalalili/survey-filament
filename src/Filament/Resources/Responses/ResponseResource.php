@@ -59,7 +59,8 @@ class ResponseResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return static::panelLabel('response') ?? parent::getNavigationLabel();
+        return static::panelLabel('response')
+            ?? config('survey-filament.response_navigation_label', parent::getNavigationLabel());
     }
 
     public static function getModelLabel(): string
@@ -108,7 +109,7 @@ class ResponseResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return '報表';
+        return config('survey-filament.response_navigation_group', '報表');
     }
 
     public static function getNavigationSort(): ?int
