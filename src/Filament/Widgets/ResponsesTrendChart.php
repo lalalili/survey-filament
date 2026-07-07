@@ -4,6 +4,7 @@ namespace Lalalili\SurveyFilament\Filament\Widgets;
 
 use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\DB;
 use Lalalili\SurveyCore\Models\SurveyResponse;
 use Lalalili\SurveyFilament\Support\SurveyQueryScopes;
 
@@ -22,10 +23,17 @@ class ResponsesTrendChart extends ChartWidget
     {
         $days = collect(range(6, 0))->map(fn ($d) => now()->subDays($d)->format('Y-m-d'));
 
+        // SQL Server 無 DATE() 函式且 GROUP BY 不吃 select 別名，需以完整表達式分組。
+        $dateExpr = match (DB::getDriverName()) {
+            'sqlite' => 'DATE(submitted_at)',
+            'sqlsrv' => 'CAST(submitted_at AS date)',
+            default => throw new \RuntimeException('Unsupported database driver ['.DB::getDriverName().'].'),
+        };
+
         $counts = SurveyQueryScopes::responses(SurveyResponse::query())
             ->whereDate('submitted_at', '>=', now()->subDays(6)->startOfDay())
-            ->selectRaw('DATE(submitted_at) as day, COUNT(*) as total')
-            ->groupBy('day')
+            ->selectRaw("{$dateExpr} as day, COUNT(*) as total")
+            ->groupByRaw($dateExpr)
             ->pluck('total', 'day');
 
         $data = $days->map(fn ($day) => $counts->get($day, 0))->values()->all();
