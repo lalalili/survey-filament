@@ -203,9 +203,9 @@ class RecipientResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => ListRecipients::route('/'),
+            'index' => ListRecipients::route('/'),
             'create' => CreateRecipient::route('/create'),
-            'edit'   => EditRecipient::route('/{record}/edit'),
+            'edit' => EditRecipient::route('/{record}/edit'),
             'import' => ImportRecipients::route('/import'),
         ];
     }
