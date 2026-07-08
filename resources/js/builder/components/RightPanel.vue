@@ -14,6 +14,7 @@ import NpsDialog from '../dialogs/NpsDialog.vue';
 import type { NpsDialogState } from '../dialogs/NpsDialog.vue';
 import CascadeDialog from '../dialogs/CascadeDialog.vue';
 import type { CascadeDialogState } from '../dialogs/CascadeDialog.vue';
+import { calculationToken, calculationVariableToken, variableTokenChipHtml } from '../utils/variableTokens';
 
 const store = useSurveyBuilderStore();
 const canManageAdvancedFields = computed(() => store.capabilities.can_manage_advanced_fields);
@@ -28,6 +29,7 @@ const numberDialog = ref<NumberDialogState | null>(null);
 const ratingDialog = ref<RatingDialogState | null>(null);
 const npsDialog = ref<NpsDialogState | null>(null);
 const cascadeDialog = ref<CascadeDialogState | null>(null);
+const copiedCalculationId = ref<string | null>(null);
 
 function openMatrixColsDialog(elementId: string) {
   const el = store.schema?.pages.flatMap((p) => p.elements).find((e) => e.id === elementId);
@@ -132,10 +134,6 @@ function showsDescriptionProperty(element: SurveyElement): boolean {
   return element.type !== 'divider' && element.type !== 'description_block';
 }
 
-function calculationToken(calculation: SurveyCalculation): string {
-  return `{{ calc.${calculation.key || 'total_score'} }}`;
-}
-
 // ── Audience personalization ─────────────────────────────────────────
 const selectedAudienceList = computed(() => {
   const listId = store.schema?.settings?.personalization?.audience_list_id;
@@ -171,6 +169,41 @@ function normalizeAudienceColumnOption(column: string | AudienceListColumn): Aud
     value: normalizedValue,
     label: label === normalizedValue ? label : `${label} (${normalizedValue})`,
   };
+}
+
+function insertCalculationIntoThankYou(calculation: SurveyCalculation) {
+  const page = store.thankYouPage;
+  if (!page) return;
+
+  const chip = variableTokenChipHtml(calculationVariableToken(calculation));
+  const currentMessage = page.thank_you_settings?.message ?? '';
+  const nextMessage = currentMessage.trim() === ''
+    ? `<p>${chip}</p>`
+    : `${currentMessage} ${chip}`;
+
+  store.updatePage(page.id, {
+    thank_you_settings: {
+      ...(page.thank_you_settings ?? {}),
+      message: nextMessage,
+    },
+  });
+  store.selectedPageId = page.id;
+  store.selectedElementId = null;
+}
+
+async function copyCalculationToken(calculation: SurveyCalculation) {
+  const token = calculationToken(calculation);
+
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(token);
+  }
+
+  copiedCalculationId.value = calculation.id ?? null;
+  window.setTimeout(() => {
+    if (copiedCalculationId.value === calculation.id) {
+      copiedCalculationId.value = null;
+    }
+  }, 1400);
 }
 
 const audienceColumnOptions = computed(() => (selectedAudienceList.value?.columns ?? [])
@@ -464,6 +497,21 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                 <input :value="calc.key" class="sb-prop-input" placeholder="例如 total_score" @input="store.updateCalculation(calc.id!, { key: ($event.target as HTMLInputElement).value })" />
                 <span class="sb-prop-help">系統與感謝頁引用用的代碼，例如感謝頁可用 {{ calculationToken(calc) }} 顯示結果。建議使用英文、數字或底線。</span>
               </label>
+              <div class="sb-calc-token-actions">
+                <button
+                  class="sb-btn-sm"
+                  type="button"
+                  :disabled="!store.thankYouPage"
+                  title="將此計算變數插入到感謝頁訊息"
+                  @click="insertCalculationIntoThankYou(calc)"
+                >插入到感謝頁</button>
+                <button
+                  class="sb-btn-sm"
+                  type="button"
+                  title="複製可貼到感謝頁的變數代碼"
+                  @click="copyCalculationToken(calc)"
+                >{{ copiedCalculationId === calc.id ? '已複製' : '複製變數' }}</button>
+              </div>
               <label class="sb-prop-row col">
                 <span class="sb-prop-label">顯示名稱</span>
                 <input :value="calc.label" class="sb-prop-input" placeholder="例如 總分" @input="store.updateCalculation(calc.id!, { label: ($event.target as HTMLInputElement).value })" />

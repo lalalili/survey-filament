@@ -2,10 +2,11 @@
 import { computed, ref, watch } from 'vue';
 import { getQuestionType } from '../registry/questionTypes';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
-import type { BuilderEndpoints, CascadeNode, Condition, SurveyElement, SurveyOption, SurveyOptionAction, SurveyPage } from '../types/schema';
+import type { BuilderEndpoints, CascadeNode, Condition, SurveyCalculation, SurveyElement, SurveyOption, SurveyOptionAction, SurveyPage } from '../types/schema';
 import SurveyRichEditor from './SurveyRichEditor.vue';
 import RightPanel from './RightPanel.vue';
 import { elementSupportsJump, elementSupportsLogic, hasActiveJumpLogic, isContentBlockType, typeCategory } from '../utils/builderHelpers';
+import { normalizeVariableTokenChips } from '../utils/variableTokens';
 
 const props = defineProps<{
   endpoints: BuilderEndpoints;
@@ -385,6 +386,88 @@ function previewElementVisible(element: SurveyElement): boolean {
   return (element.show_if?.logic ?? 'and') === 'or'
     ? conditions.some(previewConditionPasses)
     : conditions.every(previewConditionPasses);
+}
+
+function decodeHtmlEntities(value: string): string {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = value;
+  return textarea.value;
+}
+
+function resolveGradeLabel(score: number, gradeMap: Array<Record<string, unknown>> = []): string | number {
+  for (const grade of gradeMap) {
+    const min = Object.prototype.hasOwnProperty.call(grade, 'min') ? Number(grade.min) : Number.NEGATIVE_INFINITY;
+    const max = Object.prototype.hasOwnProperty.call(grade, 'max') ? Number(grade.max) : Number.POSITIVE_INFINITY;
+
+    if (score >= min && score <= max) {
+      return typeof grade.label === 'string' && grade.label !== '' ? grade.label : score;
+    }
+  }
+
+  return score;
+}
+
+function calculationValuesFromPreviewAnswers(useAnswers: boolean): Record<string, string | number> {
+  const calculations = store.schema?.calculations ?? [];
+  const values = calculations.reduce<Record<string, number>>((carry, calculation) => {
+    carry[calculation.key] = Number(calculation.initial_value ?? 0);
+    return carry;
+  }, {});
+
+  if (useAnswers) {
+    for (const element of store.allElements) {
+      if (!element.field_key || !previewElementVisible(element) || element.options.length === 0) continue;
+
+      const answer = previewAnswerValue(element.field_key);
+      const submittedValues = Array.isArray(answer)
+        ? answer.map(String)
+        : answer === null || answer === undefined || answer === ''
+          ? []
+          : [String(answer)];
+
+      for (const option of element.options) {
+        if (!submittedValues.includes(String(option.value))) continue;
+
+        const scoreDeltaEntries = Object.entries(option.score_delta_json ?? {});
+
+        for (const [rawCalculationKey, delta] of scoreDeltaEntries) {
+          const calculationKey = Object.prototype.hasOwnProperty.call(values, rawCalculationKey)
+            ? rawCalculationKey
+            : calculations.length === 1 && scoreDeltaEntries.length === 1
+              ? calculations[0].key
+              : rawCalculationKey;
+
+          if (!Object.prototype.hasOwnProperty.call(values, calculationKey)) continue;
+          values[calculationKey] += Number.isFinite(Number(delta)) ? Number(delta) : 0;
+        }
+      }
+    }
+  }
+
+  return calculations.reduce<Record<string, string | number>>((carry, calculation: SurveyCalculation) => {
+    const score = values[calculation.key] ?? Number(calculation.initial_value ?? 0);
+    carry[calculation.key] = calculation.output_format === 'grade'
+      ? resolveGradeLabel(score, calculation.grade_map_json ?? [])
+      : score;
+    return carry;
+  }, {});
+}
+
+function renderCalculationTokens(message: string | null | undefined, usePreviewAnswers: boolean): string {
+  if (!message) return '';
+
+  const values = calculationValuesFromPreviewAnswers(usePreviewAnswers);
+
+  return normalizeVariableTokenChips(message).replace(/\{\{(.*?)\}\}/gs, (fullMatch, inner: string) => {
+    const normalized = decodeHtmlEntities(String(inner).replace(/<[^>]*>/g, ''))
+      .replace(/\s+/g, ' ')
+      .trim();
+    const match = normalized.match(/^calc\.([A-Za-z0-9_-]+)$/);
+
+    if (!match) return fullMatch;
+
+    return String(values[match[1]] ?? '');
+  });
 }
 
 function clearPreviewAnswersForPage(page: SurveyPage) {
@@ -1199,7 +1282,7 @@ function textInputType(element: SurveyElement) {
                   <div
                     v-if="store.selectedPage.thank_you_settings?.message"
                     class="sb-preview-rich survey-rich-content"
-                    v-html="store.selectedPage.thank_you_settings.message"
+                    v-html="renderCalculationTokens(store.selectedPage.thank_you_settings.message, true)"
                   ></div>
                   <p v-else class="sb-preview-q-desc">感謝您的填寫！</p>
                 </div>
@@ -1549,7 +1632,7 @@ function textInputType(element: SurveyElement) {
               <div
                 v-if="store.selectedPage.thank_you_settings?.message"
                 class="sb-special-rich-preview survey-rich-content"
-                v-html="store.selectedPage.thank_you_settings.message"
+                v-html="renderCalculationTokens(store.selectedPage.thank_you_settings.message, false)"
               ></div>
               <div v-else class="sb-special-title">感謝您的填寫！</div>
             </div>

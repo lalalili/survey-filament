@@ -3,6 +3,7 @@ import { computed, inject, ref } from 'vue';
 import type { AudienceListColumn, SurveySettings } from '../types/schema';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
 import SurveyRichEditor from '../components/SurveyRichEditor.vue';
+import { calculationVariableToken } from '../utils/variableTokens';
 
 // 伺服器是否已設定 Turnstile 金鑰（由 app.ts provide）。未設定時停用「我不是機器人」開關。
 const turnstileConfigured = inject<boolean>('turnstileConfigured', false);
@@ -28,6 +29,7 @@ const props = defineProps<{
 const show = defineModel<boolean>({ default: false });
 const store = useSurveyBuilderStore();
 const categoryOptionEntries = computed(() => Object.entries(props.categoryOptions));
+const thankYouVariableTokens = computed(() => (store.schema?.calculations ?? []).map(calculationVariableToken));
 
 type SettingsTab = 'basic' | 'welcome' | 'thank_you' | 'display' | 'result' | 'access' | 'personalization' | 'anomaly';
 const settingsTab = ref<SettingsTab>('basic');
@@ -256,6 +258,7 @@ function updatePersonalizationAudience(audienceListId: string) {
                       placeholder="感謝您的填寫！"
                       :upload-url="props.uploadImageUrl"
                       :csrf-token="props.csrfToken"
+                      :variable-tokens="thankYouVariableTokens"
                       @update:model-value="store.updatePage(store.thankYouPage!.id, { thank_you_settings: { ...(store.thankYouPage!.thank_you_settings ?? {}), message: $event || null } })"
                     />
                   </div>

@@ -8,19 +8,66 @@ import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
 import Image from '@tiptap/extension-image';
+import { mergeAttributes, Node } from '@tiptap/core';
 import { ref, watch, onBeforeUnmount } from 'vue';
 import { SurveyVideoNode } from './SurveyVideoNode';
 import { parseVideoUrl } from '../utils/videoUrl';
+
+export interface RichEditorVariableToken {
+  label: string;
+  token: string;
+  description?: string;
+}
+
+const VariableTokenNode = Node.create({
+  name: 'variableToken',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  selectable: false,
+
+  addAttributes() {
+    return {
+      token: {
+        default: '',
+        parseHTML: (element) => element.getAttribute('data-variable-token') ?? '',
+        renderHTML: (attributes) => ({ 'data-variable-token': attributes.token }),
+      },
+      label: {
+        default: '',
+        parseHTML: (element) => element.getAttribute('data-variable-label') ?? '',
+        renderHTML: (attributes) => ({ 'data-variable-label': attributes.label }),
+      },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: 'span[data-variable-token]' }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    const token = String(HTMLAttributes['data-variable-token'] ?? '');
+    const label = String(HTMLAttributes['data-variable-label'] ?? token);
+    const code = token.replace(/^\{\{\s*/, '').replace(/\s*\}\}$/, '');
+
+    return ['span', mergeAttributes(HTMLAttributes, {
+      class: 'survey-variable-token',
+      contenteditable: 'false',
+    }), label, ['code', {}, code]];
+  },
+});
 
 const props = withDefaults(defineProps<{
   modelValue: string;
   placeholder?: string;
   uploadUrl?: string;
   csrfToken?: string;
+  variableTokens?: RichEditorVariableToken[];
 }>(), {
   placeholder: '請輸入內容…',
   uploadUrl: '',
   csrfToken: '',
+  variableTokens: () => [],
 });
 
 const emit = defineEmits<{
@@ -40,6 +87,7 @@ const videoError = ref('');
 const imageFileInput = ref<HTMLInputElement | null>(null);
 const imageUploading = ref(false);
 const imageError = ref('');
+const variableMenuOpen = ref(false);
 
 const editor = useEditor({
   content: props.modelValue,
@@ -52,10 +100,11 @@ const editor = useEditor({
     TextStyle,
     Color,
     Underline,
-    Link.configure({ openOnClick: false }),
+    Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false }),
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
     Placeholder.configure({ placeholder: props.placeholder }),
     Image.configure({ inline: false, allowBase64: false }),
+    VariableTokenNode,
     SurveyVideoNode,
   ],
   onUpdate({ editor }) {
@@ -94,6 +143,19 @@ function setLink() {
   } else {
     editor.value?.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   }
+}
+
+function insertVariableToken(variable: RichEditorVariableToken) {
+  editor.value
+    ?.chain()
+    .focus()
+    .insertContent({
+      type: 'variableToken',
+      attrs: { token: variable.token, label: variable.label },
+    })
+    .insertContent(' ')
+    .run();
+  variableMenuOpen.value = false;
 }
 
 const currentColor = () => editor.value?.getAttributes('textStyle').color ?? null;
@@ -234,6 +296,34 @@ function insertVideo() {
       <button type="button" class="sre-btn" :class="{ active: editor.isActive('link') }" title="連結" @click="setLink()">🔗</button>
 
       <div class="sre-divider"></div>
+
+      <!-- Variables -->
+      <div v-if="variableTokens.length > 0" class="sre-color-wrap">
+        <button
+          type="button"
+          class="sre-btn sre-variable-btn"
+          title="插入變數"
+          @click="variableMenuOpen = !variableMenuOpen"
+        >
+          <span>&#123;&#123;&#125;&#125;</span>
+        </button>
+        <div v-if="variableMenuOpen" class="sre-variable-popup">
+          <div class="sre-variable-title">插入變數</div>
+          <button
+            v-for="variable in variableTokens"
+            :key="variable.token"
+            type="button"
+            class="sre-variable-option"
+            :title="variable.description ?? variable.token"
+            @click="insertVariableToken(variable)"
+          >
+            <span class="sre-variable-label">{{ variable.label }}</span>
+            <code>{{ variable.token }}</code>
+          </button>
+        </div>
+      </div>
+
+      <div v-if="variableTokens.length > 0" class="sre-divider"></div>
 
       <!-- Image upload -->
       <button
@@ -445,6 +535,62 @@ function insertVideo() {
 .sre-video-btn-cancel { background: #fff; color: #374151; }
 .sre-video-btn-ok { background: #6366f1; color: #fff; border-color: #6366f1; }
 
+.sre-variable-btn {
+  min-width: 36px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+}
+
+.sre-variable-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 220;
+  width: 260px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.12);
+}
+
+.sre-variable-title {
+  margin: 0 0 6px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sre-variable-option {
+  display: grid;
+  width: 100%;
+  gap: 2px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #111827;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sre-variable-option:hover {
+  background: #eef2ff;
+}
+
+.sre-variable-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sre-variable-option code {
+  color: #4338ca;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 @keyframes sre-spin { to { transform: rotate(360deg); } }
 .sre-spin { animation: sre-spin 0.8s linear infinite; }
 
@@ -483,6 +629,29 @@ function insertVideo() {
 :deep(.ProseMirror h2) { font-size: 18px; font-weight: 700; margin: 8px 0 4px; }
 :deep(.ProseMirror h3) { font-size: 15px; font-weight: 600; margin: 6px 0 4px; }
 :deep(.ProseMirror a) { color: #2563eb; text-decoration: underline; }
+
+:deep(.survey-variable-token) {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 6px;
+  margin: 0 2px;
+  padding: 2px 6px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+:deep(.survey-variable-token code) {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 500;
+}
 
 :deep(.ProseMirror .is-editor-empty:first-child::before) {
   content: attr(data-placeholder);

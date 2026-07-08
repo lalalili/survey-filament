@@ -690,7 +690,19 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         return;
       }
 
+      const previousKey = calculation.key;
       Object.assign(calculation, updates);
+
+      if (typeof updates.key === 'string' && updates.key !== '' && updates.key !== previousKey) {
+        this.allElements.forEach((element) => {
+          element.options.forEach((option) => {
+            if (!option.score_delta_json || !Object.prototype.hasOwnProperty.call(option.score_delta_json, previousKey)) return;
+            option.score_delta_json[updates.key as string] = option.score_delta_json[previousKey];
+            delete option.score_delta_json[previousKey];
+          });
+        });
+      }
+
       this.markDirty();
     },
     removeCalculation(id: string) {

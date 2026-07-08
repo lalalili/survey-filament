@@ -613,6 +613,26 @@
   padding: 8px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px;
 }
 .sb-calc-row { display: flex; gap: 4px; }
+.sb-calc-token-actions {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px;
+}
+.sb-calc-token-actions .sb-btn-sm {
+  min-width: 0; justify-content: center; white-space: normal; line-height: 1.2;
+}
+
+.survey-variable-token {
+  display: inline-flex; align-items: center; max-width: 100%; gap: 6px;
+  margin: 0 2px; padding: 2px 6px;
+  border: 1px solid oklch(84% 0.08 250);
+  border-radius: 999px;
+  background: oklch(97% 0.02 250);
+  color: oklch(36% 0.12 250);
+  font-size: 12px; font-weight: 600;
+  vertical-align: baseline; white-space: nowrap;
+}
+.survey-variable-token code {
+  color: var(--c-ink3); font-size: 11px; font-weight: 500;
+}
 
 /* Option props */
 .sb-opt-prop {
