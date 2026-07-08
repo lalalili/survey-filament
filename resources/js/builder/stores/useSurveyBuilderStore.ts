@@ -560,7 +560,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         kind,
         title: '',
         elements: [],
-        welcome_settings: kind === 'welcome' ? { cta_label: '開始填寫', estimated_time_minutes: 5 } : null,
+        welcome_settings: kind === 'welcome' ? { enabled: true, cta_label: '開始填寫', estimated_time_minutes: 5 } : null,
         thank_you_settings: kind === 'thank_you' ? { message: '', redirect_url: null } : null,
       };
 

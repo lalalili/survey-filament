@@ -30,9 +30,27 @@ const show = defineModel<boolean>({ default: false });
 const store = useSurveyBuilderStore();
 const categoryOptionEntries = computed(() => Object.entries(props.categoryOptions));
 const thankYouVariableTokens = computed(() => (store.schema?.calculations ?? []).map(calculationVariableToken));
+const welcomePageEnabled = computed(() => store.welcomePage != null && store.welcomePage.welcome_settings?.enabled !== false);
 
 type SettingsTab = 'basic' | 'welcome' | 'thank_you' | 'display' | 'result' | 'access' | 'personalization' | 'anomaly';
 const settingsTab = ref<SettingsTab>('basic');
+
+function toggleWelcomePage(): void {
+  const page = store.welcomePage;
+
+  if (!page) {
+    store.addSpecialPage('welcome');
+
+    return;
+  }
+
+  store.updatePage(page.id, {
+    welcome_settings: {
+      ...(page.welcome_settings ?? {}),
+      enabled: !welcomePageEnabled.value,
+    },
+  });
+}
 
 const selectedAudienceList = computed(() => {
   const audienceListId = store.schema?.settings?.personalization?.audience_list_id;
@@ -182,14 +200,12 @@ function updatePersonalizationAudience(audienceListId: string) {
                   <div class="sb-set-field-label">啟用歡迎頁</div>
                   <button
                     class="sb-set-toggle"
-                    :class="{ on: store.welcomePage?.welcome_settings?.enabled !== false }"
+                    :class="{ on: welcomePageEnabled }"
                     type="button"
-                    @click="store.welcomePage
-                      ? store.updatePage(store.welcomePage.id, { welcome_settings: { ...(store.welcomePage.welcome_settings ?? {}), enabled: !(store.welcomePage.welcome_settings?.enabled !== false) } })
-                      : store.addSpecialPage('welcome')"
+                    @click="toggleWelcomePage"
                   ></button>
                 </div>
-                <template v-if="store.welcomePage && store.welcomePage.welcome_settings?.enabled !== false">
+                <template v-if="welcomePageEnabled && store.welcomePage">
                   <div class="sb-set-field">
                     <div class="sb-set-field-label">開始按鈕文字</div>
                     <input
