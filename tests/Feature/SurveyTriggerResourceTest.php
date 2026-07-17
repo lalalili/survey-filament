@@ -52,6 +52,15 @@ it('exposes key form fields for SurveyTriggerRuleResource', function (): void {
         ->toContain('survey_id', 'name', 'is_active', 'schedule_enabled');
 });
 
+it('lays out trigger rule form fields in a single column', function (): void {
+    $resource = file_get_contents(__DIR__.'/../../src/Filament/Resources/SurveyTriggerRules/SurveyTriggerRuleResource.php');
+
+    expect($resource)
+        ->not->toBeFalse()
+        ->not->toContain('Grid::make(2)')
+        ->toContain('Grid::make(1)');
+});
+
 it('preserves the rule tree builder across Livewire validation updates', function (): void {
     $view = file_get_contents(__DIR__.'/../../resources/views/forms/components/rule-tree-field.blade.php');
 

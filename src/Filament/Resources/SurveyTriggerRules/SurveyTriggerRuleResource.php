@@ -64,7 +64,7 @@ class SurveyTriggerRuleResource extends Resource
     {
         return $schema->components([
             Section::make('基本設定')->schema([
-                Grid::make(2)->schema([
+                Grid::make(1)->schema([
                     Select::make('survey_id')
                         ->label('所屬問卷')
                         ->options(Survey::query()->pluck('title', 'id'))
@@ -91,7 +91,7 @@ class SurveyTriggerRuleResource extends Resource
                         ->default(false)
                         ->live(),
 
-                    Grid::make(2)
+                    Grid::make(1)
                         ->schema([
                             TimePicker::make('schedule_time')
                                 ->label('每日執行時間')
