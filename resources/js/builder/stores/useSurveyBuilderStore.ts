@@ -12,6 +12,7 @@ interface QuestionTypeGroup {
 
 let autosaveTimer: number | undefined;
 let autosavePromise: Promise<void> | undefined;
+let schemaRevision = 0;
 
 function hasMissingPersonalizedKeyError(errors: Record<string, string[]>): boolean {
   return Object.entries(errors).some(([key, messages]) => (
@@ -188,6 +189,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       };
       this.selectedPageId = payload.schema.pages[0]?.id ?? null;
       this.selectedElementId = null;
+      schemaRevision = 0;
       this.isDirty = false;
       this.hasUnpublishedChanges = false;
       this.saveError = '';
@@ -285,6 +287,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       this.selectedElementId = null;
     },
     markDirty() {
+      schemaRevision += 1;
       this.isDirty = true;
       this.hasUnpublishedChanges = true;
       this.saveError = '';
@@ -309,17 +312,27 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       }
 
       this.isSaving = true;
+      const savingRevision = schemaRevision;
       autosavePromise = (async () => {
         try {
           const payload = await this.api!.save(this.schema!);
-          this.schema = payload.schema;
+          const hasNewerChanges = schemaRevision !== savingRevision;
+
+          if (!hasNewerChanges) {
+            this.schema = payload.schema;
+          }
+
           this.surveyTitle = payload.survey.title;
           this.status = payload.survey.status;
           this.version = payload.survey.version;
           this.publishedAt = payload.survey.published_at ?? this.publishedAt;
           this.lastSavedAt = payload.saved_at;
-          this.isDirty = false;
+          this.isDirty = hasNewerChanges;
           this.validationErrors = {};
+
+          if (hasNewerChanges) {
+            this.scheduleAutosave();
+          }
         } catch (error) {
           if (error instanceof ValidationError) {
             this.saveError = error.message;
