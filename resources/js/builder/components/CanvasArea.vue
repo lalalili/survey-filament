@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { getQuestionType } from '../registry/questionTypes';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
 import type { BuilderEndpoints, CascadeNode, Condition, SurveyCalculation, SurveyElement, SurveyOption, SurveyOptionAction, SurveyPage } from '../types/schema';
@@ -7,6 +7,7 @@ import SurveyRichEditor from './SurveyRichEditor.vue';
 import RightPanel from './RightPanel.vue';
 import { elementSupportsJump, elementSupportsLogic, hasActiveJumpLogic, isContentBlockType, typeCategory } from '../utils/builderHelpers';
 import { useQuestionCollapse } from '../utils/questionCollapse';
+import { findPreviewThankYouPageId } from '../utils/previewSubmission';
 import { normalizeVariableTokenChips } from '../utils/variableTokens';
 
 const props = defineProps<{
@@ -35,13 +36,32 @@ const previewFileDragOver = ref<Record<string, boolean>>({});
 const previewSignatures = ref<Record<string, boolean>>({});
 const previewPageHistory = ref<string[]>([]);
 const previewEnded = ref(false);
+const previewSubmitNoticeVisible = ref(false);
 const previewRatings = ref<Record<string, number | null>>({});
 const previewRatingHover = ref<Record<string, number>>({});
 const previewRatingPop = ref<Record<string, number>>({});
 const previewNps = ref<Record<string, number | null>>({});
 const previewTermsAccepted = ref(false);
+let previewSubmitNoticeTimer: ReturnType<typeof setTimeout> | null = null;
+
+function dismissPreviewSubmitNotice() {
+  previewSubmitNoticeVisible.value = false;
+  if (previewSubmitNoticeTimer) {
+    clearTimeout(previewSubmitNoticeTimer);
+    previewSubmitNoticeTimer = null;
+  }
+}
+
+function showPreviewSubmitNotice() {
+  dismissPreviewSubmitNotice();
+  previewSubmitNoticeVisible.value = true;
+  previewSubmitNoticeTimer = setTimeout(dismissPreviewSubmitNotice, 5000);
+}
+
+onBeforeUnmount(dismissPreviewSubmitNotice);
 
 watch(() => store.isPreviewMode, (entering) => {
+  dismissPreviewSubmitNotice();
   if (entering) {
     previewSelections.value = {};
     previewTextValues.value = {};
@@ -251,6 +271,10 @@ function translateMessage(msg: string): string {
 
 function readableFieldLabel(fieldName: string | null): string {
   if (!fieldName) return '';
+
+  if (fieldName === 'settings.source_field_key') {
+    return '來源題目';
+  }
 
   const showIfCondition = fieldName.match(/^show_if\.conditions\.(\d+)\.(field_key|value)$/);
   if (showIfCondition) {
@@ -760,6 +784,13 @@ function previewGoNext() {
   if (action && previewApplyAction(action)) return;
   const pages = store.schema?.pages ?? [];
   const idx = pages.findIndex((p) => p.id === store.selectedPageId);
+  if (previewIsLastPage.value) {
+    showPreviewSubmitNotice();
+    const thankYouPageId = findPreviewThankYouPageId(pages, store.selectedPageId);
+    if (thankYouPageId) { previewNavigateTo(thankYouPageId); }
+    else { previewEnded.value = true; }
+    return;
+  }
   if (idx < pages.length - 1) { previewNavigateTo(pages[idx + 1].id); }
   else { previewEnded.value = true; }
 }
@@ -816,6 +847,7 @@ function previewGoPrev() {
 }
 
 function resetPreview() {
+  dismissPreviewSubmitNotice();
   previewEnded.value = false;
   previewSelections.value = {};
   previewTextValues.value = {};
@@ -1247,6 +1279,13 @@ function textInputType(element: SurveyElement) {
 
         <!-- ── Preview mode ── -->
         <div v-if="store.isPreviewMode" class="sb-preview survey-preview-surface" :class="store.isMobilePreview ? 'mobile' : ''" :style="previewThemeVars">
+          <Transition name="sb-preview-submit-notice">
+            <div v-if="previewSubmitNoticeVisible" class="sb-preview-submit-notice" role="status" aria-live="polite">
+              <span class="sb-preview-submit-notice-icon" aria-hidden="true">i</span>
+              <span>預覽模式下不會真的送出填答，直接跳轉至感謝頁。</span>
+              <button type="button" class="sb-preview-submit-notice-close" aria-label="關閉提示" @click="dismissPreviewSubmitNotice()">×</button>
+            </div>
+          </Transition>
           <div class="sb-preview-survey-header">
             <h1 class="sb-preview-survey-title">{{ store.surveyTitle }}</h1>
             <p v-if="store.schema?.settings?.description" class="sb-preview-survey-desc">{{ store.schema.settings.description }}</p>

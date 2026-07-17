@@ -64,59 +64,74 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
       <div class="sb-topbar-spacer" />
 
       <div class="sb-topbar-right">
-        <span
-          class="sb-save-status"
-          :class="{ saving: store.isSaving || store.isPublishing, error: !!store.saveError || !!store.publishError }"
-          :title="statusTooltip"
-        >
-          <span class="sb-save-dot" />
-          {{ saveStatus }}
+        <span class="sb-action-tooltip" :data-tooltip="statusTooltip" tabindex="0">
+          <span
+            class="sb-save-status"
+            :class="{ saving: store.isSaving || store.isPublishing, error: !!store.saveError || !!store.publishError }"
+          >
+            <span class="sb-save-dot" />
+            {{ saveStatus }}
+          </span>
         </span>
 
-        <button
-          type="button"
-          class="sb-icon-btn"
-          :class="{ active: showActivityPanel }"
-          title="編輯紀錄"
-          aria-label="編輯紀錄"
-          @click="showActivityPanel = true"
-        >↺</button>
+        <span class="sb-action-tooltip" data-tooltip="編輯紀錄" tabindex="0">
+          <button
+            type="button"
+            class="sb-icon-btn"
+            :class="{ active: showActivityPanel }"
+            aria-label="編輯紀錄"
+            @click="showActivityPanel = true"
+          >↺</button>
+        </span>
 
-        <a
-          v-if="props.guideUrl"
-          class="sb-icon-btn"
-          :href="props.guideUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="問卷使用說明"
-          aria-label="問卷使用說明"
-        >?</a>
+        <span v-if="props.guideUrl" class="sb-action-tooltip" data-tooltip="問卷使用說明" tabindex="0">
+          <a
+            class="sb-icon-btn"
+            :href="props.guideUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="問卷使用說明"
+          >?</a>
+        </span>
 
-        <button
-          v-if="store.isPreviewMode"
-          type="button"
-          class="sb-icon-btn"
-          :class="store.isMobilePreview ? 'active' : ''"
-          @click="store.isMobilePreview = !store.isMobilePreview"
-          title="切換行動版"
-        >📱</button>
+        <span v-if="store.isPreviewMode" class="sb-action-tooltip" data-tooltip="切換行動版" tabindex="0">
+          <button
+            type="button"
+            class="sb-icon-btn"
+            :class="store.isMobilePreview ? 'active' : ''"
+            aria-label="切換行動版"
+            @click="store.isMobilePreview = !store.isMobilePreview"
+          >📱</button>
+        </span>
 
-        <button
-          type="button"
-          class="sb-btn"
-          :class="store.isPreviewMode ? 'primary' : ''"
-          @click="store.togglePreview()"
+        <span
+          class="sb-action-tooltip"
+          :data-tooltip="store.isPreviewMode ? '返回問卷編輯' : '預覽模式下不會真的送出填答'"
+          tabindex="0"
         >
-          {{ store.isPreviewMode ? '返回編輯' : '預覽' }}
-        </button>
-        <button
-          type="button"
-          class="sb-btn accent"
-          :disabled="store.isSaving || store.isPublishing || (store.status === 'published' && !store.isDirty && !store.hasUnpublishedChanges && !store.hasPendingShowIfDrafts)"
-          @click="store.publish()"
+          <button
+            type="button"
+            class="sb-btn"
+            :class="store.isPreviewMode ? 'primary' : ''"
+            @click="store.togglePreview()"
+          >
+            {{ store.isPreviewMode ? '返回編輯' : '預覽' }}
+          </button>
+        </span>
+        <span
+          class="sb-action-tooltip align-end"
+          data-tooltip="發佈後，您編輯的內容才會更新"
+          tabindex="0"
         >
-          {{ (store.status === 'published' && !store.isDirty && !store.hasUnpublishedChanges && !store.hasPendingShowIfDrafts) ? '已發佈' : '發佈問卷' }}
-        </button>
+          <button
+            type="button"
+            class="sb-btn accent"
+            :disabled="store.isSaving || store.isPublishing || (store.status === 'published' && !store.isDirty && !store.hasUnpublishedChanges && !store.hasPendingShowIfDrafts)"
+            @click="store.publish()"
+          >
+            {{ (store.status === 'published' && !store.isDirty && !store.hasUnpublishedChanges && !store.hasPendingShowIfDrafts) ? '已發佈' : '發佈問卷' }}
+          </button>
+        </span>
       </div>
     </template>
 

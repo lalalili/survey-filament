@@ -744,16 +744,20 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
             <div class="sb-prop-heading">重複核選設定</div>
             <p class="sb-prop-hint">此題的選項會帶入填答者在「來源題目」中所選的答案，讓填答者進一步從中複選。</p>
             <label class="sb-prop-row col">
-              <span class="sb-prop-label">來源題目</span>
+              <span class="sb-prop-label">來源題目 <span class="sb-required-mark" aria-hidden="true">*</span></span>
               <select
                 class="sb-prop-input"
+                :class="{ 'is-invalid': !((store.selectedElement.settings as any)?.source_field_key) }"
                 :value="(store.selectedElement.settings as any)?.source_field_key ?? ''"
+                required
+                aria-required="true"
                 @change="store.updateElementSettings(store.selectedElement!.id, { source_field_key: ($event.target as HTMLSelectElement).value || null })"
               >
                 <option value="">— 請選擇 —</option>
                 <option v-for="opt in selectionSourceOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
               <span v-if="selectionSourceOptions.length === 0" class="sb-prop-help">請先在此題之前加入單選、複選或下拉題作為來源。</span>
+              <span v-else-if="!((store.selectedElement.settings as any)?.source_field_key)" class="sb-prop-help sb-prop-required-help">來源題目為必選，請選擇一題。</span>
             </label>
           </div>
 
