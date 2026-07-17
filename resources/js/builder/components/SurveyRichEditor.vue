@@ -387,6 +387,7 @@ function insertVideo() {
   border-radius: 6px;
   overflow: hidden;
   background: #fff;
+  color-scheme: light;
 }
 
 .sre-toolbar {

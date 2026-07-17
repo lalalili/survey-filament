@@ -50,7 +50,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
 </script>
 
 <template>
-  <BuilderShell :is-preview-mode="store.isPreviewMode">
+  <BuilderShell class="sb-auto-dark" :is-preview-mode="store.isPreviewMode">
     <template #topbar>
       <div class="sb-topbar-left">
         <div class="sb-logo-spacer"></div>

@@ -974,7 +974,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                 <option value="and">所有條件成立</option>
                 <option value="or">任一條件成立</option>
               </select>
-              <p v-if="store.showIfDrafts[store.selectedElement.id]" class="sb-prop-hint" style="color:#b45309">規則設定中，完成所有欄位後會自動儲存。</p>
+              <p v-if="store.showIfDrafts[store.selectedElement.id]" class="sb-prop-hint" style="color:var(--c-warn)">規則設定中，完成所有欄位後會自動儲存。</p>
               <div v-for="(condition, ci) in selectedShowIf?.conditions" :key="ci" class="sb-cond-block">
                 <div class="sb-cond-block-header">
                   <span class="sb-cond-index">條件 {{ ci + 1 }}</span>

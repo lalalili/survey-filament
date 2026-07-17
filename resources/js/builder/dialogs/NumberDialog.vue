@@ -28,7 +28,7 @@ function apply() {
 
 <template>
   <Teleport to="body">
-    <div v-if="model" class="sb-settings-overlay" @click.self="model = null">
+    <div v-if="model" class="sb-settings-overlay sb-theme sb-auto-dark" @click.self="model = null">
       <div class="sb-number-dialog">
         <div class="sb-settings-header">
           <h2>數字範圍設定</h2>

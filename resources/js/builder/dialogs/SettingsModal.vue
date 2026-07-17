@@ -112,7 +112,7 @@ function updatePersonalizationAudience(audienceListId: string) {
 
 <template>
   <Teleport to="body">
-    <div v-if="show" class="sb-settings-overlay" @click.self="show = false">
+    <div v-if="show" class="sb-settings-overlay sb-theme sb-auto-dark" @click.self="show = false">
       <div class="sb-settings-modal">
         <div class="sb-settings-header">
           <h2>問卷設定</h2>
@@ -705,7 +705,7 @@ function updatePersonalizationAudience(audienceListId: string) {
                     @click="toggleTurnstile"
                   ></button>
                 </div>
-                <div v-if="!turnstileConfigured" class="sb-set-hint" style="color:#b45309">
+                <div v-if="!turnstileConfigured" class="sb-set-hint" style="color:var(--c-warn)">
                   ⚠️ 伺服器尚未設定 Turnstile 金鑰（<code>TURNSTILE_SECRET_KEY</code>），無法啟用人機驗證。請先請系統管理員設定後再開啟。
                 </div>
                 <div v-else-if="store.schema?.settings?.anomaly?.turnstile" class="sb-set-hint">

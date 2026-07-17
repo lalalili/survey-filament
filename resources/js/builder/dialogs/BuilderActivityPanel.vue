@@ -45,7 +45,7 @@ function formatDateTime(value: string | null): string {
 
 <template>
   <Teleport to="body">
-    <div v-if="model" class="sb-activity-layer" role="dialog" aria-modal="true" aria-label="編輯紀錄">
+    <div v-if="model" class="sb-activity-layer sb-theme sb-auto-dark" role="dialog" aria-modal="true" aria-label="編輯紀錄">
       <button type="button" class="sb-activity-backdrop" aria-label="關閉編輯紀錄" @click="closePanel" />
 
       <aside class="sb-activity-panel">

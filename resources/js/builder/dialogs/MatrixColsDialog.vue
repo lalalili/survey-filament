@@ -49,7 +49,7 @@ function apply() {
 
 <template>
   <Teleport to="body">
-    <div v-if="model" class="sb-settings-overlay" @click.self="model = null">
+    <div v-if="model" class="sb-settings-overlay sb-theme sb-auto-dark" @click.self="model = null">
       <div class="sb-matrix-dialog">
         <div class="sb-settings-header">
           <h2>矩陣答案設定</h2>
