@@ -1380,29 +1380,32 @@
   width: 100%;
 }
 :is(.sb-preview, .sb-edit-surface) .survey-matrix th {
-  border-bottom: 2px solid var(--survey-border);
-  color: var(--survey-text);
   font-weight: 500;
   padding: 0.5rem 0.875rem;
   text-align: center;
   white-space: nowrap;
 }
 :is(.sb-preview, .sb-edit-surface) .survey-matrix td {
-  border-bottom: 1px solid var(--survey-border);
-  color: var(--survey-text);
   min-height: 44px;
   min-width: 44px;
   padding: 0.625rem 0.875rem;
   text-align: center;
 }
 :is(.sb-preview, .sb-edit-surface) .survey-matrix td:first-child {
-  color: var(--survey-text);
   max-width: 180px;
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* .sb-preview 內有 .survey-field-card 白紙包裝，維持問卷主題色；
+   .sb-edit-surface(畫布內的假預覽)沒有白紙包裝，直接疊在 chrome 卡片背景上，須改用 chrome ink token 才能在暗色模式下維持可讀。 */
+.sb-preview .survey-matrix th { border-bottom: 2px solid var(--survey-border); color: var(--survey-text); }
+.sb-edit-surface .survey-matrix th { border-bottom: 2px solid var(--c-line); color: var(--c-ink); }
+.sb-preview .survey-matrix td { border-bottom: 1px solid var(--survey-border); color: var(--survey-text); }
+.sb-edit-surface .survey-matrix td { border-bottom: 1px solid var(--c-line); color: var(--c-ink2); }
+.sb-preview .survey-matrix td:first-child { color: var(--survey-text); }
+.sb-edit-surface .survey-matrix td:first-child { color: var(--c-ink); }
 :is(.sb-preview, .sb-edit-surface) .survey-preview-matrix-cell {
   cursor: pointer;
   transition: background 120ms;
