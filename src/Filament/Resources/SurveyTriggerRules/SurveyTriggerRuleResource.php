@@ -153,6 +153,9 @@ class SurveyTriggerRuleResource extends Resource
                     ->label('觸發動作')
                     ->multiple()
                     ->required()
+                    ->validationMessages([
+                        'required' => '請選擇至少一個觸發動作。',
+                    ])
                     ->options(fn (): array => SurveyTriggerActionPreset::query()
                         ->where('is_active', true)
                         ->orderBy('name')

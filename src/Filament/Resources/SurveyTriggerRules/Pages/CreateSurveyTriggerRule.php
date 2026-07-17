@@ -9,11 +9,6 @@ class CreateSurveyTriggerRule extends CreateRecord
 {
     protected static string $resource = SurveyTriggerRuleResource::class;
 
-    protected function getRedirectUrl(): string
-    {
-        return $this->getResource()::getUrl('edit', ['record' => $this->getRecord()]);
-    }
-
     /**
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>

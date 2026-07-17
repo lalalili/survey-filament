@@ -21,7 +21,8 @@ use Livewire\Component;
  */
 function triggerFormFieldKeys(string $resource): array
 {
-    $host = new class () extends Component implements HasSchemas {
+    $host = new class extends Component implements HasSchemas
+    {
         use InteractsWithSchemas;
     };
 
@@ -51,6 +52,29 @@ it('exposes key form fields for SurveyTriggerRuleResource', function (): void {
         ->toContain('survey_id', 'name', 'is_active', 'schedule_enabled');
 });
 
+it('preserves the rule tree builder across Livewire validation updates', function (): void {
+    $view = file_get_contents(__DIR__.'/../../resources/views/forms/components/rule-tree-field.blade.php');
+
+    expect($view)
+        ->not->toBeFalse()
+        ->toContain('wire:ignore')
+        ->toContain('wire:key="rule-tree-builder-')
+        ->toContain('<rule-tree-builder');
+});
+
+it('uses a translated required message for trigger actions', function (): void {
+    $host = new class extends Component implements HasSchemas
+    {
+        use InteractsWithSchemas;
+    };
+
+    $presetField = SurveyTriggerRuleResource::form(Schema::make($host))
+        ->getFlatFields()['preset_ids'];
+
+    expect($presetField->getValidationMessages())
+        ->toMatchArray(['required' => '請選擇至少一個觸發動作。']);
+});
+
 it('exposes key form fields for SurveyTriggerAllowedHostResource', function (): void {
     expect(triggerFormFieldKeys(SurveyTriggerAllowedHostResource::class))
         ->toContain('host', 'description');
@@ -63,16 +87,16 @@ it('exposes key form fields for SurveyTriggerActionPresetResource', function ():
 
 it('persists json and boolean casts for SurveyTriggerRule', function (): void {
     $survey = Survey::create([
-        'title'  => '觸發規則測試問卷',
+        'title' => '觸發規則測試問卷',
         'status' => SurveyStatus::Draft,
     ]);
 
     $rule = SurveyTriggerRule::create([
-        'survey_id'      => $survey->id,
-        'name'           => '測試規則',
-        'is_active'      => true,
+        'survey_id' => $survey->id,
+        'name' => '測試規則',
+        'is_active' => true,
         'rule_tree_json' => ['op' => 'and', 'children' => []],
-        'actions_json'   => [['type' => 'http']],
+        'actions_json' => [['type' => 'http']],
     ]);
 
     $fresh = $rule->fresh();
@@ -84,10 +108,10 @@ it('persists json and boolean casts for SurveyTriggerRule', function (): void {
 
 it('persists json and boolean casts for SurveyTriggerActionPreset', function (): void {
     $preset = SurveyTriggerActionPreset::create([
-        'key'         => 'preset-key',
-        'name'        => '測試動作預設',
+        'key' => 'preset-key',
+        'name' => '測試動作預設',
         'action_json' => ['endpoint' => 'https://example.test/webhook'],
-        'is_active'   => true,
+        'is_active' => true,
     ]);
 
     $fresh = $preset->fresh();
@@ -98,7 +122,7 @@ it('persists json and boolean casts for SurveyTriggerActionPreset', function ():
 
 it('creates a SurveyTriggerAllowedHost with host and description', function (): void {
     $host = SurveyTriggerAllowedHost::create([
-        'host'        => 'example.com',
+        'host' => 'example.com',
         'description' => '測試允許來源',
     ]);
 

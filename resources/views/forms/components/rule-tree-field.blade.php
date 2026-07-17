@@ -24,9 +24,14 @@
             });
         "
     >
-        <rule-tree-builder
-            available-fields="{{ $field->getAvailableFieldsJson() }}"
-            x-bind:value="valueJson"
-        ></rule-tree-builder>
+        <div
+            wire:ignore
+            wire:key="rule-tree-builder-{{ md5($field->getAvailableFieldsJson()) }}"
+        >
+            <rule-tree-builder
+                available-fields="{{ $field->getAvailableFieldsJson() }}"
+                x-bind:value="valueJson"
+            ></rule-tree-builder>
+        </div>
     </div>
 </x-dynamic-component>
