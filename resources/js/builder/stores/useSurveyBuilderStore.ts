@@ -10,33 +10,27 @@ interface QuestionTypeGroup {
   types: string[];
 }
 
+interface EditableShowIf {
+  logic: 'and' | 'or';
+  conditions: Condition[];
+}
+
 let autosaveTimer: number | undefined;
 let autosavePromise: Promise<void> | undefined;
 let schemaRevision = 0;
 
-function hasMissingPersonalizedKeyError(errors: Record<string, string[]>): boolean {
-  return Object.entries(errors).some(([key, messages]) => (
-    key.endsWith('.personalized_key')
-    && messages.some((message) => message.includes('個性化欄位') || message.includes('對應名單欄位'))
-  ));
-}
+function isShowIfComplete(showIf: EditableShowIf): boolean {
+  return showIf.conditions.length > 0 && showIf.conditions.every((condition) => {
+    if (condition.field_key.trim() === '') {
+      return false;
+    }
 
-function hasIncompleteShowIfConditionError(errors: Record<string, string[]>): boolean {
-  return Object.entries(errors).some(([key, messages]) => (
-    key.includes('.show_if.conditions.')
-    && messages.some((message) => message.includes('顯示條件'))
-  ));
-}
+    if (condition.op === 'is_empty' || condition.op === 'is_not_empty') {
+      return true;
+    }
 
-function alertAutosaveValidationError(errors: Record<string, string[]>): void {
-  if (hasMissingPersonalizedKeyError(errors)) {
-    window.alert('已勾選「個性化欄位」，請設定「對應名單欄位」後再儲存。');
-    return;
-  }
-
-  if (hasIncompleteShowIfConditionError(errors)) {
-    window.alert('顯示條件尚未填寫完整，請填寫輸入值後再儲存。');
-  }
+    return String(condition.value ?? '').trim() !== '';
+  });
 }
 
 function clearAutosaveTimer(): void {
@@ -113,6 +107,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
     jumpLogicOpen: false,
     showSettingsModal: false,
     isMobilePreview: false,
+    showIfDrafts: {} as Record<string, EditableShowIf>,
   }),
   getters: {
     selectedPage(state): SurveyPage | null {
@@ -135,7 +130,10 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       return state.schema?.pages.find((page) => page.kind === 'thank_you') ?? null;
     },
     hasUnsavedChanges(state): boolean {
-      return state.isDirty;
+      return state.isDirty || Object.keys(state.showIfDrafts).length > 0;
+    },
+    hasPendingShowIfDrafts(state): boolean {
+      return Object.keys(state.showIfDrafts).length > 0;
     },
   },
   actions: {
@@ -189,6 +187,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       };
       this.selectedPageId = payload.schema.pages[0]?.id ?? null;
       this.selectedElementId = null;
+      this.showIfDrafts = {};
       schemaRevision = 0;
       this.isDirty = false;
       this.hasUnpublishedChanges = false;
@@ -275,6 +274,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         return;
       }
 
+      delete this.showIfDrafts[questionId];
       page.elements.splice(index, 1);
       this.selectedElementId = null;
       this.markDirty();
@@ -299,7 +299,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       window.clearTimeout(autosaveTimer);
       autosaveTimer = window.setTimeout(() => {
         void this.autosave();
-      }, 1000);
+      }, 2000);
     },
     async autosave() {
       if (this.isSaving) {
@@ -337,7 +337,6 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
           if (error instanceof ValidationError) {
             this.saveError = error.message;
             this.validationErrors = error.errors;
-            alertAutosaveValidationError(error.errors);
           } else {
             this.saveError = error instanceof Error ? error.message : 'Save failed.';
             this.validationErrors = {};
@@ -352,6 +351,18 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
     },
     async publish() {
       if (!this.api || this.isPublishing) {
+        return;
+      }
+
+      if (this.hasPendingShowIfDrafts) {
+        const elementId = Object.keys(this.showIfDrafts)[0];
+        const page = this.schema?.pages.find((candidate) => candidate.elements.some((element) => element.id === elementId));
+
+        this.selectedPageId = page?.id ?? this.selectedPageId;
+        this.selectedElementId = elementId ?? this.selectedElementId;
+        this.rightPanelTab = 'logic';
+        this.publishError = '尚有未完成的顯示條件，請完成或刪除後再發布。';
+
         return;
       }
 
@@ -434,6 +445,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         this.publishedAt = payload.survey.published_at ?? this.publishedAt;
         this.selectedPageId = payload.schema.pages[0]?.id ?? null;
         this.selectedElementId = null;
+        this.showIfDrafts = {};
         this.isDirty = false;
         this.hasUnpublishedChanges = false;
         await this.loadActivities();
@@ -757,6 +769,51 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       element.show_if_field_key = null;
       element.show_if_value = null;
       this.markDirty();
+    },
+    showIfEditorValue(elementId: string): EditableShowIf | null {
+      const draft = this.showIfDrafts[elementId];
+
+      if (draft) {
+        return draft;
+      }
+
+      const element = this.allElements.find((candidate) => candidate.id === elementId);
+      const showIf = element?.show_if;
+
+      if (!showIf) {
+        return null;
+      }
+
+      return {
+        logic: showIf.logic,
+        conditions: showIf.conditions.filter((condition): condition is Condition => 'field_key' in condition),
+      };
+    },
+    stageShowIf(elementId: string, showIf: EditableShowIf | null) {
+      if (showIf === null || showIf.conditions.length === 0) {
+        const element = this.allElements.find((candidate) => candidate.id === elementId);
+        const hasSavedCondition = element?.show_if !== null && element?.show_if !== undefined;
+
+        delete this.showIfDrafts[elementId];
+
+        if (hasSavedCondition || element?.show_if_field_key) {
+          this.updateShowIf(elementId, null);
+        }
+
+        return;
+      }
+
+      const draft = structuredClone(showIf);
+
+      if (isShowIfComplete(draft)) {
+        delete this.showIfDrafts[elementId];
+        this.updateShowIf(elementId, draft);
+
+        return;
+      }
+
+      this.showIfDrafts[elementId] = draft;
+      this.publishError = '';
     },
     updateElementSettings(elementId: string, settings: Record<string, unknown>) {
       const element = this.allElements.find((el) => el.id === elementId);

@@ -6,6 +6,7 @@ import type { BuilderEndpoints, CascadeNode, Condition, SurveyCalculation, Surve
 import SurveyRichEditor from './SurveyRichEditor.vue';
 import RightPanel from './RightPanel.vue';
 import { elementSupportsJump, elementSupportsLogic, hasActiveJumpLogic, isContentBlockType, typeCategory } from '../utils/builderHelpers';
+import { useQuestionCollapse } from '../utils/questionCollapse';
 import { normalizeVariableTokenChips } from '../utils/variableTokens';
 
 const props = defineProps<{
@@ -14,6 +15,12 @@ const props = defineProps<{
 }>();
 
 const store = useSurveyBuilderStore();
+const questionCollapse = useQuestionCollapse();
+
+function removeQuestion(questionId: string) {
+  questionCollapse.remove(questionId);
+  store.removeQuestion(questionId);
+}
 
 // ── Preview state ──────────────────────────────────────────────────────────
 const previewSelections = ref<Record<string, string | Set<string>>>({});
@@ -1668,6 +1675,7 @@ function textInputType(element: SurveyElement) {
                     'is-dragging': dragQId === element.id,
                     'is-hidden-field': element.is_hidden,
                     'has-error': errorElementIds.has(element.id),
+                    'is-collapsed': questionCollapse.isCollapsed(element.id),
                   }"
                   @click="selectElement(element.id)"
                 >
@@ -1692,8 +1700,12 @@ function textInputType(element: SurveyElement) {
                     </span>
                     <span v-if="store.schema?.settings?.show_question_numbers !== false && questionNumberMap[element.id] !== undefined" class="sb-card-num">{{ questionNumberMap[element.id] }}</span>
                     <div class="sb-card-title-wrap">
+                      <span
+                        v-if="questionCollapse.isCollapsed(element.id) && isContentBlockType(element.type)"
+                        class="sb-card-collapsed-title"
+                      >{{ getQuestionType(element.type).label }}</span>
                       <input
-                        v-if="element.type === 'section_title'"
+                        v-else-if="element.type === 'section_title'"
                         class="sb-card-title"
                         :class="{ empty: !element.description }"
                         :value="contentBlockText(element)"
@@ -1701,7 +1713,7 @@ function textInputType(element: SurveyElement) {
                         @input="updateContentBlockText(element, ($event.target as HTMLInputElement).value)"
                         @click.stop
                       >
-                      <div v-else-if="element.type === 'description_block'" class="sb-card-rich-editor" @click.stop>
+                      <div v-else-if="element.type === 'description_block' && !questionCollapse.isCollapsed(element.id)" class="sb-card-rich-editor" @click.stop>
                         <SurveyRichEditor
                           :model-value="contentBlockText(element)"
                           placeholder="說明文字…"
@@ -1711,7 +1723,7 @@ function textInputType(element: SurveyElement) {
                         />
                       </div>
                       <textarea
-                        v-else-if="element.type === 'quote_block'"
+                        v-else-if="element.type === 'quote_block' && !questionCollapse.isCollapsed(element.id)"
                         class="sb-card-quote"
                         :value="contentBlockText(element)"
                         rows="2"
@@ -1719,9 +1731,9 @@ function textInputType(element: SurveyElement) {
                         @input="updateContentBlockText(element, ($event.target as HTMLTextAreaElement).value)"
                         @click.stop
                       />
-                      <div v-else-if="element.type === 'divider'" class="sb-card-divider" aria-label="分隔線"></div>
+                      <div v-else-if="element.type === 'divider' && !questionCollapse.isCollapsed(element.id)" class="sb-card-divider" aria-label="分隔線"></div>
                       <input
-                        v-else
+                        v-else-if="!isContentBlockType(element.type)"
                         class="sb-card-title"
                         :class="{ empty: !element.label }"
                         v-model="element.label"
@@ -1730,7 +1742,7 @@ function textInputType(element: SurveyElement) {
                         @click.stop
                       />
                       <textarea
-                        v-if="!['section_title', 'description_block', 'divider', 'quote_block'].includes(element.type)"
+                        v-if="!questionCollapse.isCollapsed(element.id) && !['section_title', 'description_block', 'divider', 'quote_block'].includes(element.type)"
                         class="sb-card-desc"
                         v-model="element.description"
                         rows="1"
@@ -1746,6 +1758,19 @@ function textInputType(element: SurveyElement) {
                       <span v-if="element.show_if_field_key || (element.show_if?.conditions ?? []).length > 0" class="sb-badge amber sb-badge-btn" @click.stop="selectElement(element.id); store.rightPanelTab = 'logic'">條件</span>
                       <span v-if="hasActiveJumpLogic(element)" class="sb-badge violet sb-badge-btn" @click.stop="selectElement(element.id); store.rightPanelTab = 'logic'; store.jumpLogicOpen = true">跳題</span>
                     </div>
+                    <button
+                      class="sb-card-collapse"
+                      :class="{ collapsed: questionCollapse.isCollapsed(element.id) }"
+                      type="button"
+                      :title="questionCollapse.isCollapsed(element.id) ? '展開題目' : '收合題目'"
+                      :aria-label="questionCollapse.isCollapsed(element.id) ? '展開題目' : '收合題目'"
+                      :aria-expanded="!questionCollapse.isCollapsed(element.id)"
+                      @click.stop="questionCollapse.toggle(element.id)"
+                    >
+                      <svg viewBox="0 0 20 20" aria-hidden="true">
+                        <path d="m5.5 12.5 4.5-4.5 4.5 4.5" />
+                      </svg>
+                    </button>
                   </div>
 
                   <!-- Options preview -->
@@ -1938,7 +1963,7 @@ function textInputType(element: SurveyElement) {
                     <button class="sb-quick-btn" type="button" @click.stop="store.duplicateQuestion(element.id)">⊕ 複製</button>
                     <button v-if="elementSupportsLogic(element)" class="sb-quick-btn" type="button" @click.stop="selectElement(element.id); store.rightPanelTab = 'logic'">⟁ 邏輯</button>
                     <div style="flex:1" />
-                    <button class="sb-quick-btn danger" type="button" @click.stop="store.removeQuestion(element.id)">✕ 刪除</button>
+                    <button class="sb-quick-btn danger" type="button" @click.stop="removeQuestion(element.id)">✕ 刪除</button>
                   </div>
                 </article>
               </template>

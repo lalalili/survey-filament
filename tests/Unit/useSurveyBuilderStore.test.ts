@@ -2,6 +2,7 @@
 
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ValidationError } from '../../resources/js/builder/api/builderApi';
 import { useSurveyBuilderStore } from '../../resources/js/builder/stores/useSurveyBuilderStore';
 
 function deferred<T>() {
@@ -35,6 +36,28 @@ function savePayload(content: string) {
   };
 }
 
+function questionSchema() {
+  return {
+    title: '問卷',
+    pages: [{
+      id: 'page-1',
+      kind: 'question',
+      title: '第一頁',
+      elements: [{
+        id: 'question-1',
+        type: 'short_text',
+        field_key: 'question_1',
+        label: '問題一',
+        description: '',
+        required: false,
+        options: [],
+        settings: {},
+        show_if: null,
+      }],
+    }],
+  };
+}
+
 describe('survey builder autosave', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -55,7 +78,7 @@ describe('survey builder autosave', () => {
     store.updatePage('welcome', {
       welcome_settings: { content: '<p>準備上傳圖片</p>' },
     });
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(2000);
 
     const imageContent = '<p>準備上傳圖片</p><img src="https://example.test/welcome.jpg">';
     store.updatePage('welcome', {
@@ -69,7 +92,7 @@ describe('survey builder autosave', () => {
     expect(store.welcomePage?.welcome_settings?.content).toBe(imageContent);
     expect(store.isDirty).toBe(true);
 
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(2000);
     secondSave.resolve(savePayload(imageContent));
     await secondSave.promise;
     await vi.advanceTimersByTimeAsync(0);
@@ -77,5 +100,148 @@ describe('survey builder autosave', () => {
     expect(save).toHaveBeenCalledTimes(2);
     expect(store.welcomePage?.welcome_settings?.content).toBe(imageContent);
     expect(store.isDirty).toBe(false);
+  });
+
+  it('keeps an incomplete display condition local without triggering autosave', async () => {
+    const store = useSurveyBuilderStore();
+    const save = vi.fn();
+
+    store.api = { save } as typeof store.api;
+    store.schema = questionSchema() as typeof store.schema;
+
+    store.stageShowIf('question-1', {
+      logic: 'and',
+      conditions: [{ field_key: 'source_question', op: 'equals', value: '' }],
+    });
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(save).not.toHaveBeenCalled();
+    expect(store.allElements[0]?.show_if).toBeNull();
+    expect(store.showIfEditorValue('question-1')?.conditions[0]?.value).toBe('');
+    expect(store.hasPendingShowIfDrafts).toBe(true);
+    expect(store.hasUnsavedChanges).toBe(true);
+  });
+
+  it('commits a completed display condition and autosaves it after two seconds', async () => {
+    const store = useSurveyBuilderStore();
+    const save = vi.fn().mockResolvedValue({
+      ...savePayload(''),
+      schema: questionSchema(),
+    });
+
+    store.api = { save } as typeof store.api;
+    store.schema = questionSchema() as typeof store.schema;
+
+    store.stageShowIf('question-1', {
+      logic: 'and',
+      conditions: [{ field_key: 'source_question', op: 'equals', value: '' }],
+    });
+    store.stageShowIf('question-1', {
+      logic: 'and',
+      conditions: [{ field_key: 'source_question', op: 'equals', value: 'yes' }],
+    });
+
+    expect(store.hasPendingShowIfDrafts).toBe(false);
+    expect(store.allElements[0]?.show_if?.conditions[0]).toMatchObject({ value: 'yes' });
+
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(save).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats empty-value operators as complete without requiring a value', () => {
+    const store = useSurveyBuilderStore();
+
+    store.schema = questionSchema() as typeof store.schema;
+    store.stageShowIf('question-1', {
+      logic: 'and',
+      conditions: [{ field_key: 'source_question', op: 'is_empty', value: '' }],
+    });
+
+    expect(store.hasPendingShowIfDrafts).toBe(false);
+    expect(store.allElements[0]?.show_if?.conditions[0]).toMatchObject({ op: 'is_empty' });
+  });
+
+  it('keeps the saved condition unchanged while an edited value is incomplete', () => {
+    const store = useSurveyBuilderStore();
+    const schema = questionSchema();
+    schema.pages[0].elements[0].show_if = {
+      logic: 'and',
+      conditions: [{ field_key: 'source_question', op: 'equals', value: 'old' }],
+    };
+    store.schema = schema as typeof store.schema;
+
+    store.stageShowIf('question-1', {
+      logic: 'and',
+      conditions: [{ field_key: 'source_question', op: 'equals', value: '' }],
+    });
+
+    expect(store.allElements[0]?.show_if?.conditions[0]).toMatchObject({ value: 'old' });
+    expect(store.showIfEditorValue('question-1')?.conditions[0]).toMatchObject({ value: '' });
+
+    store.stageShowIf('question-1', {
+      logic: 'and',
+      conditions: [{ field_key: 'source_question', op: 'equals', value: 'new' }],
+    });
+
+    expect(store.allElements[0]?.show_if?.conditions[0]).toMatchObject({ value: 'new' });
+    expect(store.hasPendingShowIfDrafts).toBe(false);
+  });
+
+  it('discards an incomplete new condition without scheduling autosave', async () => {
+    const store = useSurveyBuilderStore();
+    const save = vi.fn();
+
+    store.api = { save } as typeof store.api;
+    store.schema = questionSchema() as typeof store.schema;
+    store.stageShowIf('question-1', {
+      logic: 'and',
+      conditions: [{ field_key: 'source_question', op: 'equals', value: '' }],
+    });
+    store.stageShowIf('question-1', null);
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(store.hasPendingShowIfDrafts).toBe(false);
+    expect(store.hasUnsavedChanges).toBe(false);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('blocks publishing and focuses the first incomplete display condition', async () => {
+    const store = useSurveyBuilderStore();
+    const publish = vi.fn();
+
+    store.api = { publish } as typeof store.api;
+    store.schema = questionSchema() as typeof store.schema;
+    store.stageShowIf('question-1', {
+      logic: 'and',
+      conditions: [{ field_key: 'source_question', op: 'equals', value: '' }],
+    });
+
+    await store.publish();
+
+    expect(publish).not.toHaveBeenCalled();
+    expect(store.selectedPageId).toBe('page-1');
+    expect(store.selectedElementId).toBe('question-1');
+    expect(store.rightPanelTab).toBe('logic');
+    expect(store.publishError).toContain('尚有未完成的顯示條件');
+  });
+
+  it('reports autosave validation errors without opening a blocking alert', async () => {
+    const store = useSurveyBuilderStore();
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
+    const save = vi.fn().mockRejectedValue(new ValidationError('Validation failed.', {
+      'pages.0.elements.0.personalized_key': ['請設定對應名單欄位。'],
+    }));
+
+    store.api = { save } as typeof store.api;
+    store.schema = questionSchema() as typeof store.schema;
+    store.updateQuestion('question-1', { label: '更新後問題' });
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(alert).not.toHaveBeenCalled();
+    expect(store.saveError).toBe('Validation failed.');
+    expect(store.validationErrors).toHaveProperty('pages.0.elements.0.personalized_key');
   });
 });

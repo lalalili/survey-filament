@@ -21,6 +21,7 @@ const showActivityPanel = ref(false);
 const saveStatus = computed(() => {
   if (store.isPublishing) return 'Publishing...';
   if (store.isSaving) return '儲存中…';
+  if (store.hasPendingShowIfDrafts) return '規則設定中';
   if (store.publishError) {
     return store.publishError.length <= 28 ? `發布失敗：${store.publishError}` : '發布失敗';
   }
@@ -111,10 +112,10 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
         <button
           type="button"
           class="sb-btn accent"
-          :disabled="store.isSaving || store.isPublishing || (store.status === 'published' && !store.isDirty && !store.hasUnpublishedChanges)"
+          :disabled="store.isSaving || store.isPublishing || (store.status === 'published' && !store.isDirty && !store.hasUnpublishedChanges && !store.hasPendingShowIfDrafts)"
           @click="store.publish()"
         >
-          {{ (store.status === 'published' && !store.isDirty && !store.hasUnpublishedChanges) ? '已發佈' : '發佈問卷' }}
+          {{ (store.status === 'published' && !store.isDirty && !store.hasUnpublishedChanges && !store.hasPendingShowIfDrafts) ? '已發佈' : '發佈問卷' }}
         </button>
       </div>
     </template>

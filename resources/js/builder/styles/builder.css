@@ -196,6 +196,10 @@
   width: 4px; border-radius: var(--r3) 0 0 var(--r3);
   background: oklch(62% 0.18 27);
 }
+.sb-card.is-collapsed .sb-card-body,
+.sb-card.is-collapsed .sb-card-quick { display: none; }
+.sb-card.is-collapsed .sb-card-head { padding-bottom: 14px; align-items: center; }
+.sb-card.is-collapsed .sb-card-badges { margin-top: 0; }
 
 /* Drag handle */
 .sb-card-handle {
@@ -238,6 +242,35 @@
   margin-top: 8px; flex-shrink: 0; width: 18px;
 }
 .sb-card-title-wrap { flex: 1; min-width: 0; }
+.sb-card-collapsed-title {
+  display: block;
+  padding: 5px 8px;
+  color: var(--c-ink2);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.sb-card-collapse {
+  width: 30px; height: 30px; flex: 0 0 30px;
+  display: grid; place-items: center;
+  margin-left: 2px;
+  border: 1px solid transparent; border-radius: 999px;
+  background: var(--c-s2); color: var(--c-ink3);
+  cursor: pointer;
+  transition: color 140ms, background 140ms, border-color 140ms, transform 140ms;
+}
+.sb-card-collapse:hover {
+  color: var(--c-ink1); background: var(--c-s3); border-color: var(--c-line2);
+}
+.sb-card-collapse:focus-visible {
+  outline: 2px solid var(--c-accent); outline-offset: 2px;
+}
+.sb-card-collapse svg {
+  width: 16px; height: 16px; fill: none;
+  stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform 160ms ease;
+}
+.sb-card-collapse.collapsed svg { transform: rotate(180deg); }
 .sb-card-divider {
   width: 100%;
   height: 1px;

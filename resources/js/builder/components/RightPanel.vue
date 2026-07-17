@@ -214,6 +214,9 @@ const audienceColumnOptions = computed(() => (selectedAudienceList.value?.column
 const selectedDefinition = computed(() =>
   store.selectedElement ? getQuestionType(store.selectedElement.type) : null,
 );
+const selectedShowIf = computed(() => (
+  store.selectedElement ? store.showIfEditorValue(store.selectedElement.id) : null
+));
 
 // ── Library ──────────────────────────────────────────────────────────
 const questionTypeGroups = [
@@ -407,19 +410,22 @@ const selectionSourceOptions = computed(() => {
 });
 
 function addShowIfCondition(el: SurveyElement) {
-  const conditions = [...(el.show_if?.conditions ?? [])];
+  const showIf = store.showIfEditorValue(el.id);
+  const conditions = [...(showIf?.conditions ?? [])];
   conditions.push({ field_key: showIfTargetOptions.value[0]?.value ?? '', op: 'equals', value: '' });
-  store.updateShowIf(el.id, { logic: el.show_if?.logic ?? 'and', conditions });
+  store.stageShowIf(el.id, { logic: showIf?.logic ?? 'and', conditions });
 }
 function updateShowIfCondition(el: SurveyElement, i: number, patch: Partial<Condition>) {
-  const conditions = [...(el.show_if?.conditions ?? [])];
+  const showIf = store.showIfEditorValue(el.id);
+  const conditions = [...(showIf?.conditions ?? [])];
   conditions[i] = { ...conditions[i], ...patch };
-  store.updateShowIf(el.id, { logic: el.show_if?.logic ?? 'and', conditions });
+  store.stageShowIf(el.id, { logic: showIf?.logic ?? 'and', conditions });
 }
 function removeShowIfCondition(el: SurveyElement, i: number) {
-  const conditions = [...(el.show_if?.conditions ?? [])];
+  const showIf = store.showIfEditorValue(el.id);
+  const conditions = [...(showIf?.conditions ?? [])];
   conditions.splice(i, 1);
-  store.updateShowIf(el.id, conditions.length === 0 ? null : { logic: el.show_if?.logic ?? 'and', conditions });
+  store.stageShowIf(el.id, conditions.length === 0 ? null : { logic: showIf?.logic ?? 'and', conditions });
 }
 </script>
 
@@ -933,15 +939,15 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
           <div class="sb-prop-section" v-if="!['section_title', 'description_block', 'divider', 'quote_block'].includes(store.selectedElement.type)">
             <div class="sb-prop-heading-row">
               <span class="sb-prop-heading" style="margin:0">顯示條件</span>
-              <div v-if="(store.selectedElement.show_if?.conditions ?? []).length > 0 || store.selectedElement.show_if_field_key" class="sb-prop-actions">
-                <button type="button" class="sb-cond-del" title="取消顯示條件" @click="store.updateShowIf(store.selectedElement!.id, null)">
+              <div v-if="(selectedShowIf?.conditions ?? []).length > 0 || store.selectedElement.show_if_field_key" class="sb-prop-actions">
+                <button type="button" class="sb-cond-del" title="取消顯示條件" @click="store.stageShowIf(store.selectedElement!.id, null)">
                   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
             </div>
             <p class="sb-prop-hint">當以下條件成立時，才顯示此題目。</p>
 
-            <template v-if="(store.selectedElement.show_if?.conditions ?? []).length === 0">
+            <template v-if="(selectedShowIf?.conditions ?? []).length === 0">
               <div class="sb-logic-empty">
                 <template v-if="store.selectedElement.show_if_field_key">
                   <p class="sb-logic-empty-title">顯示條件（舊格式）</p>
@@ -958,13 +964,14 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
             <template v-else>
               <select
                 class="sb-prop-input"
-                :value="store.selectedElement.show_if?.logic ?? 'and'"
-                @change="store.updateShowIf(store.selectedElement!.id, { logic: ($event.target as HTMLSelectElement).value as 'and' | 'or' })"
+                :value="selectedShowIf?.logic ?? 'and'"
+                @change="store.stageShowIf(store.selectedElement!.id, { logic: ($event.target as HTMLSelectElement).value as 'and' | 'or', conditions: selectedShowIf?.conditions ?? [] })"
               >
                 <option value="and">所有條件成立</option>
                 <option value="or">任一條件成立</option>
               </select>
-              <div v-for="(condition, ci) in store.selectedElement.show_if?.conditions" :key="ci" class="sb-cond-block">
+              <p v-if="store.showIfDrafts[store.selectedElement.id]" class="sb-prop-hint" style="color:#b45309">規則設定中，完成所有欄位後會自動儲存。</p>
+              <div v-for="(condition, ci) in selectedShowIf?.conditions" :key="ci" class="sb-cond-block">
                 <div class="sb-cond-block-header">
                   <span class="sb-cond-index">條件 {{ ci + 1 }}</span>
                   <button type="button" class="sb-cond-del" title="刪除此條件" @click="removeShowIfCondition(store.selectedElement!, ci)">
