@@ -62,109 +62,111 @@ class SurveyTriggerRuleResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->components([
-            Section::make('基本設定')->schema([
-                Grid::make(1)->schema([
-                    Select::make('survey_id')
-                        ->label('所屬問卷')
-                        ->options(Survey::query()->pluck('title', 'id'))
-                        ->searchable()
-                        ->required()
-                        ->live(),
+        return $schema
+            ->columns(1)
+            ->components([
+                Section::make('基本設定')->schema([
+                    Grid::make(1)->schema([
+                        Select::make('survey_id')
+                            ->label('所屬問卷')
+                            ->options(Survey::query()->pluck('title', 'id'))
+                            ->searchable()
+                            ->required()
+                            ->live(),
 
-                    TextInput::make('name')
-                        ->label('規則名稱')
-                        ->required()
-                        ->maxLength(255),
+                        TextInput::make('name')
+                            ->label('規則名稱')
+                            ->required()
+                            ->maxLength(255),
+                    ]),
+
+                    Toggle::make('is_active')
+                        ->label('啟用')
+                        ->default(true),
                 ]),
 
-                Toggle::make('is_active')
-                    ->label('啟用')
-                    ->default(true),
-            ]),
+                Section::make('排程設定')
+                    ->description('開啟後，系統每日於指定時間批次掃描近 N 天內、尚未派送過的填答，符合條件者自動派送動作。')
+                    ->schema([
+                        Toggle::make('schedule_enabled')
+                            ->label('啟用排程')
+                            ->default(false)
+                            ->live(),
 
-            Section::make('排程設定')
-                ->description('開啟後，系統每日於指定時間批次掃描近 N 天內、尚未派送過的填答，符合條件者自動派送動作。')
-                ->schema([
-                    Toggle::make('schedule_enabled')
-                        ->label('啟用排程')
-                        ->default(false)
-                        ->live(),
+                        Grid::make(1)
+                            ->schema([
+                                TimePicker::make('schedule_time')
+                                    ->label('每日執行時間')
+                                    ->seconds(false)
+                                    ->format('H:i')
+                                    ->required(fn (Get $get): bool => (bool) $get('schedule_enabled')),
 
-                    Grid::make(1)
-                        ->schema([
-                            TimePicker::make('schedule_time')
-                                ->label('每日執行時間')
-                                ->seconds(false)
-                                ->format('H:i')
-                                ->required(fn (Get $get): bool => (bool) $get('schedule_enabled')),
-
-                            TextInput::make('schedule_window_days')
-                                ->label('掃描近幾天填答')
-                                ->numeric()
-                                ->minValue(1)
-                                ->default(7)
-                                ->suffix('天')
-                                ->required(fn (Get $get): bool => (bool) $get('schedule_enabled')),
-                        ])
-                        ->visible(fn (Get $get): bool => (bool) $get('schedule_enabled')),
-                ]),
-
-            Section::make('篩選條件')->schema([
-                RuleTreeField::make('rule_tree_json')
-                    ->hiddenLabel()
-                    ->columnSpanFull()
-                    ->availableFields(function (Get $get): array {
-                        $surveyId = $get('survey_id');
-                        if (! $surveyId) {
-                            return [];
-                        }
-
-                        // meta pseudo-field（非問卷答案）：回填距邀請天數，供「X 天內回填」條件使用。
-                        $meta = [[
-                            'key' => EvaluateAnswerRuleTreeAction::META_DAYS_SINCE_INVITATION,
-                            'label' => '回填距邀請天數',
-                            'type' => 'number',
-                            'options' => [],
-                        ]];
-
-                        $surveyFields = SurveyField::where('survey_id', $surveyId)
-                            ->orderBy('sort_order')
-                            ->get()
-                            ->map(fn (SurveyField $field): array => [
-                                'key' => $field->field_key,
-                                'label' => $field->label ?? $field->field_key,
-                                // 數值題（NPS／評分）給 number 型別，規則樹才會提供 > >= < <= 等運算子。
-                                'type' => in_array($field->type->value, ['nps', 'rating', 'number', 'integer'], true) ? 'number' : 'string',
-                                'options' => [],
+                                TextInput::make('schedule_window_days')
+                                    ->label('掃描近幾天填答')
+                                    ->numeric()
+                                    ->minValue(1)
+                                    ->default(7)
+                                    ->suffix('天')
+                                    ->required(fn (Get $get): bool => (bool) $get('schedule_enabled')),
                             ])
-                            ->values()
-                            ->all();
+                            ->visible(fn (Get $get): bool => (bool) $get('schedule_enabled')),
+                    ]),
 
-                        return array_merge($meta, $surveyFields);
-                    })
-                    ->default(['op' => 'AND', 'children' => []]),
-            ]),
+                Section::make('篩選條件')->schema([
+                    RuleTreeField::make('rule_tree_json')
+                        ->hiddenLabel()
+                        ->columnSpanFull()
+                        ->availableFields(function (Get $get): array {
+                            $surveyId = $get('survey_id');
+                            if (! $surveyId) {
+                                return [];
+                            }
 
-            Section::make('觸發動作')->schema([
-                // 虛擬欄位：只存 preset id 陣列；實際 actions_json 由 Create/Edit 頁的
-                // mutateFormData hook 在 preset_ids ↔ [{type:preset,preset_id}] 間轉換。
-                Select::make('preset_ids')
-                    ->label('觸發動作')
-                    ->multiple()
-                    ->required()
-                    ->validationMessages([
-                        'required' => '請選擇至少一個觸發動作。',
-                    ])
-                    ->options(fn (): array => SurveyTriggerActionPreset::query()
-                        ->where('is_active', true)
-                        ->orderBy('name')
-                        ->pluck('name', 'id')
-                        ->all())
-                    ->helperText('選擇命中後要執行的動作。動作內容（DMS endpoint／payload 等）由系統管理員於「DMS 動作設定」維護。')
-                    ->columnSpanFull(),
-            ]),
-        ]);
+                            // meta pseudo-field（非問卷答案）：回填距邀請天數，供「X 天內回填」條件使用。
+                            $meta = [[
+                                'key' => EvaluateAnswerRuleTreeAction::META_DAYS_SINCE_INVITATION,
+                                'label' => '回填距邀請天數',
+                                'type' => 'number',
+                                'options' => [],
+                            ]];
+
+                            $surveyFields = SurveyField::where('survey_id', $surveyId)
+                                ->orderBy('sort_order')
+                                ->get()
+                                ->map(fn (SurveyField $field): array => [
+                                    'key' => $field->field_key,
+                                    'label' => $field->label ?? $field->field_key,
+                                    // 數值題（NPS／評分）給 number 型別，規則樹才會提供 > >= < <= 等運算子。
+                                    'type' => in_array($field->type->value, ['nps', 'rating', 'number', 'integer'], true) ? 'number' : 'string',
+                                    'options' => [],
+                                ])
+                                ->values()
+                                ->all();
+
+                            return array_merge($meta, $surveyFields);
+                        })
+                        ->default(['op' => 'AND', 'children' => []]),
+                ]),
+
+                Section::make('觸發動作')->schema([
+                    // 虛擬欄位：只存 preset id 陣列；實際 actions_json 由 Create/Edit 頁的
+                    // mutateFormData hook 在 preset_ids ↔ [{type:preset,preset_id}] 間轉換。
+                    Select::make('preset_ids')
+                        ->label('觸發動作')
+                        ->multiple()
+                        ->required()
+                        ->validationMessages([
+                            'required' => '請選擇至少一個觸發動作。',
+                        ])
+                        ->options(fn (): array => SurveyTriggerActionPreset::query()
+                            ->where('is_active', true)
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->all())
+                        ->helperText('選擇命中後要執行的動作。動作內容（DMS endpoint／payload 等）由系統管理員於「DMS 動作設定」維護。')
+                        ->columnSpanFull(),
+                ]),
+            ]);
     }
 
     public static function table(Table $table): Table

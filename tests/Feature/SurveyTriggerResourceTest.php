@@ -11,6 +11,7 @@ use Lalalili\SurveyCore\Models\SurveyTriggerRule;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerActionPresets\SurveyTriggerActionPresetResource;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerAllowedHosts\SurveyTriggerAllowedHostResource;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\SurveyTriggerRuleResource;
+use Lalalili\SurveyFilament\Filament\Forms\Components\RuleTreeField;
 use Livewire\Component;
 
 /**
@@ -57,6 +58,7 @@ it('lays out trigger rule form fields in a single column', function (): void {
 
     expect($resource)
         ->not->toBeFalse()
+        ->toContain('->columns(1)')
         ->not->toContain('Grid::make(2)')
         ->toContain('Grid::make(1)');
 });
@@ -69,6 +71,21 @@ it('preserves the rule tree builder across Livewire validation updates', functio
         ->toContain('wire:ignore')
         ->toContain('wire:key="rule-tree-builder-')
         ->toContain('<rule-tree-builder');
+});
+
+it('exposes an optional renderless rule preview callback', function (): void {
+    $field = RuleTreeField::make('rule_tree_json')
+        ->previewUsing(fn (array $ruleTree, array $nodePath): array => [
+            'count' => count($ruleTree['children'] ?? []) + count($nodePath),
+        ]);
+
+    expect($field->hasPreview())->toBeTrue()
+        ->and($field->previewNode(
+            ruleTree: ['op' => 'AND', 'children' => [['field' => 'email']]],
+            nodePath: [0],
+        ))->toBe([
+            'count' => 2,
+        ]);
 });
 
 it('uses a translated required message for trigger actions', function (): void {
