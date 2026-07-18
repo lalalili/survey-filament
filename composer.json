@@ -22,7 +22,7 @@
         "larastan/larastan": "^3.0",
         "laravel/pint": "^1.0",
         "lalalili/marketing-automation": "^0.1.1",
-        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan": "~2.2.0",
         "lalalili/package-testing-support": "*"
     },
     "repositories": [
