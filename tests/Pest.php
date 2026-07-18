@@ -3,7 +3,12 @@
 use Lalalili\SurveyFilament\Tests\FilamentTestCase;
 use Lalalili\SurveyFilament\Tests\TestCase;
 
-uses(FilamentTestCase::class)->in('Feature/PageAuthorizationTest.php');
+$filamentTestFiles = [
+    'Feature/PageAuthorizationTest.php',
+    'Feature/SurveyAnalyticsFunnelTest.php',
+];
+
+uses(FilamentTestCase::class)->in(...$filamentTestFiles);
 uses(TestCase::class)->in('Unit');
 uses(TestCase::class)
     ->in(...array_values(array_diff(
@@ -11,5 +16,5 @@ uses(TestCase::class)
             fn (string $path): string => 'Feature/'.basename($path),
             glob(__DIR__.'/Feature/*Test.php') ?: [],
         ),
-        ['Feature/PageAuthorizationTest.php'],
+        $filamentTestFiles,
     )));

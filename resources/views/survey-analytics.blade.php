@@ -109,6 +109,41 @@
         </section>
     </div>
 
+    {{-- 填答流程漏斗（逐頁流失） --}}
+    @php
+        $funnel = $analytics['funnel']['steps'] ?? [];
+        $funnelMax = collect($funnel)->max('count') ?: 1;
+    @endphp
+    @if(collect($funnel)->sum('count') > 0)
+        <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <h2 class="mb-1 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">填答流程漏斗</h2>
+            <p class="mb-4 text-xs text-gray-400 dark:text-gray-500">依頁面順序的瀏覽量（括號為相對前一階段的留存率）。</p>
+            <div class="space-y-3">
+                @foreach($funnel as $index => $step)
+                    @php
+                        $width = $funnelMax > 0 ? round(($step['count'] / $funnelMax) * 100, 1) : 0;
+                        $previous = $index > 0 ? ($funnel[$index - 1]['count'] ?? 0) : null;
+                        $retention = ($previous !== null && $previous > 0) ? round(($step['count'] / $previous) * 100) : null;
+                    @endphp
+                    <div>
+                        <div class="mb-1 flex items-center justify-between gap-3 text-xs text-gray-600 dark:text-gray-300">
+                            <span class="truncate">{{ $step['label'] }}</span>
+                            <span class="shrink-0 tabular-nums">
+                                {{ number_format($step['count']) }}
+                                @if($retention !== null)
+                                    <span class="text-gray-400 dark:text-gray-500">（{{ $retention }}%）</span>
+                                @endif
+                            </span>
+                        </div>
+                        <div class="h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                            <div class="h-full rounded-full bg-primary-500 transition-all" style="width: {{ $width }}%"></div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     {{-- 單題統計 --}}
     <section>
         <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">單題統計</h2>
