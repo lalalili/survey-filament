@@ -5,6 +5,7 @@ namespace Lalalili\SurveyFilament\Tests;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Lalalili\PackageTestingSupport\PackageTestCase;
+use Lalalili\AudienceCore\AudienceCoreServiceProvider;
 use Lalalili\SurveyCore\SurveyCoreServiceProvider;
 use Lalalili\SurveyFilament\SurveyFilamentServiceProvider;
 use Spatie\Activitylog\ActivitylogServiceProvider;
@@ -14,6 +15,7 @@ abstract class TestCase extends PackageTestCase
     protected function getPackageProviders($app): array
     {
         return [
+            AudienceCoreServiceProvider::class,
             ActivitylogServiceProvider::class,
             SurveyCoreServiceProvider::class,
             SurveyFilamentServiceProvider::class,
@@ -44,6 +46,9 @@ abstract class TestCase extends PackageTestCase
             $table->timestamps();
         });
 
+        // audience_lists / audience_list_rows 的 canonical migration 在 audience-core；
+        // survey-core 曾有一份重複的（未註冊）副本，移除後這裡必須明確載入。
+        $this->loadMigrationsFrom(__DIR__.'/../../audience-core/database/migrations');
         $this->loadMigrationsFrom(__DIR__.'/../../survey-core/database/migrations');
     }
 }
