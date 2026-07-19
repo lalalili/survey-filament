@@ -3,7 +3,6 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\Surveys\Schemas;
 
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -123,12 +122,6 @@ class SurveyForm
                 ->searchable()
                 ->nullable()
                 ->helperText('同步 CRM、DMS 或會員系統 ID，便於對帳、去重與跨系統追蹤；未指定時使用名單資料列 ID。'),
-
-            KeyValue::make('settings_json.personalization.field_mappings')
-                ->label('個性化題目欄位對應')
-                ->helperText('左側填問卷 field_key，右側填名單欄位名稱；題目本身也可在「題目」頁籤設定個性化鍵值。')
-                ->nullable()
-                ->columnSpanFull(),
         ]);
     }
 

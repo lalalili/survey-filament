@@ -186,7 +186,6 @@ export interface SurveySettings {
     name_column?: string | null;
     email_column?: string | null;
     external_id_column?: string | null;
-    field_mappings?: Record<string, string>;
     result_context_columns?: {
       dealer?: string | null;
       location?: string | null;

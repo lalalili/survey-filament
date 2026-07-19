@@ -110,7 +110,6 @@ function updatePersonalizationAudience(audienceListId: string) {
   updatePersonalizationSettings({
     audience_list_id: audienceListId || null,
     required: audienceListId !== '',
-    field_mappings: {},
     result_context_columns: inferResultContextColumns(audienceList),
   });
 
