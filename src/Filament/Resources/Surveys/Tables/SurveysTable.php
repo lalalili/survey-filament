@@ -4,7 +4,6 @@ namespace Lalalili\SurveyFilament\Filament\Resources\Surveys\Tables;
 
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Support\Enums\IconPosition;
 use Filament\Tables\Columns\TextColumn;
@@ -171,7 +170,7 @@ class SurveysTable
                         ->modalSubmitActionLabel('確認清除')
                         ->action(fn (Survey $record) => $record->responses()->forceDelete()),
 
-                    DeleteAction::make()->label('刪除'),
+                    SurveyResource::deleteAction(),
                     RestoreAction::make()->label('還原'),
                 ]),
             ])

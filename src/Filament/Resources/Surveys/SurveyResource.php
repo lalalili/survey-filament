@@ -3,10 +3,13 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\Surveys;
 
 use BackedEnum;
+use Filament\Actions\DeleteAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\CreateSurvey;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\EditSurvey;
@@ -87,6 +90,43 @@ class SurveyResource extends Resource
             ->orderBy('category')
             ->pluck('category', 'category')
             ->all();
+    }
+
+    public static function deleteAction(): DeleteAction
+    {
+        return DeleteAction::make()
+            ->label('刪除')
+            ->hidden(fn (Survey $record): bool => $record->status === SurveyStatus::Published)
+            ->before(fn (DeleteAction $action, Survey $record) => self::guardAgainstDeletingActiveSurvey($action, $record));
+    }
+
+    public static function guardAgainstDeletingActiveSurvey(DeleteAction $action, Survey $record): void
+    {
+        if ($record->status === SurveyStatus::Published) {
+            Notification::make()
+                ->danger()
+                ->title('無法刪除問卷')
+                ->body('此問卷已發佈，請先關閉問卷再刪除。')
+                ->persistent()
+                ->send();
+
+            $action->halt();
+
+            return;
+        }
+
+        $triggerRuleCount = $record->triggerRules()->count();
+
+        if ($triggerRuleCount > 0) {
+            Notification::make()
+                ->danger()
+                ->title('無法刪除問卷')
+                ->body("此問卷仍有 {$triggerRuleCount} 筆發送設定，請先移除後再刪除。")
+                ->persistent()
+                ->send();
+
+            $action->halt();
+        }
     }
 
     public static function getRelations(): array

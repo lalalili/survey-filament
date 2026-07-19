@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema as SchemaFacade;
 use Lalalili\AudienceCore\Models\AudienceList;
+use Lalalili\AudienceCore\Support\AudienceListReferenceChecker;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\Pages\CreateRecipient;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\Pages\EditRecipient;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\Pages\ImportRecipients;
@@ -138,9 +139,9 @@ class RecipientResource extends Resource
 
     public static function prepareActivityDispatchReferencesForDelete(AudienceList $record, DeleteAction $action): int
     {
-        $referencesCount = self::activityDispatchReferencesCount($record);
+        $references = (new AudienceListReferenceChecker)->check($record);
 
-        if ($referencesCount === 0) {
+        if ($references->isEmpty()) {
             return 0;
         }
 
@@ -148,13 +149,13 @@ class RecipientResource extends Resource
             Notification::make()
                 ->danger()
                 ->title('無法刪除名單')
-                ->body("此名單已有 {$referencesCount} 筆自動化發送紀錄引用。請保留名單以維持歷史紀錄完整。")
+                ->body('此名單仍被引用：'.implode('、', $references->summaryLines()).'。請保留名單以維持歷史紀錄完整。')
                 ->persistent()
                 ->send();
 
             $action->halt();
 
-            return $referencesCount;
+            return $references->activityDispatches;
         }
 
         return self::detachActivityDispatchReferences($record);
@@ -162,13 +163,7 @@ class RecipientResource extends Resource
 
     public static function activityDispatchReferencesCount(AudienceList $record): int
     {
-        if (! self::hasActivityDispatchAudienceListRowColumn()) {
-            return 0;
-        }
-
-        return (int) DB::table('activity_dispatches')
-            ->whereIn('audience_list_row_id', $record->rows()->select('id'))
-            ->count();
+        return (new AudienceListReferenceChecker)->check($record)->activityDispatches;
     }
 
     public static function detachActivityDispatchReferences(AudienceList $record): int

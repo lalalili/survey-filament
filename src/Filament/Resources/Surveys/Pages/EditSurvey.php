@@ -3,7 +3,6 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages;
 
 use Filament\Actions\Action;
-use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Lalalili\SurveyCore\Actions\CloseSurveyAction;
 use Lalalili\SurveyCore\Actions\PublishSurveyAction;
@@ -46,7 +45,7 @@ class EditSurvey extends EditRecord
                 ->modalHeading('確認關閉問卷')
                 ->modalDescription('關閉後將停止接受新的填寫，確認嗎？'),
 
-            DeleteAction::make()->label('刪除'),
+            SurveyResource::deleteAction(),
         ];
     }
 }
