@@ -106,6 +106,18 @@ it('documents the core builder workflow in the guide', function () {
     }
 });
 
+it('explains safe changes to published surveys in user-friendly language', function () {
+    expect(surveyGuideText())
+        ->toContain('修改已發佈問卷與刪除題目')
+        ->toContain('只會更新草稿')
+        ->toContain('受影響的歷史答案數量')
+        ->toContain('改為退役')
+        ->toContain('部分系統識別設定、題型及曾被使用的選項會被鎖定')
+        ->not->toContain('欄位代碼')
+        ->toContain('重新整理提示')
+        ->toContain('不能永久刪除');
+});
+
 it('documents cascade select xlsx import instead of paused csv import', function () {
     expect(surveyGuideText())
         ->toContain('下載範例檔')
