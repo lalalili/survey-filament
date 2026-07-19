@@ -16,7 +16,9 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -30,6 +32,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Lalalili\SurveyCore\Actions\ExportSurveyResponsesAction;
+use Lalalili\SurveyCore\Actions\ReviewSurveyResponseAction;
 use Lalalili\SurveyCore\Enums\SurveyResponseCompletionStatus;
 use Lalalili\SurveyCore\Enums\SurveyResponseQualityStatus;
 use Lalalili\SurveyCore\Models\Survey;
@@ -251,14 +254,25 @@ class ResponseResource extends Resource
                                     ->mapWithKeys(fn (SurveyResponseQualityStatus $status) => [$status->value => $status->label()]))
                                 ->required()
                                 ->native(false),
+                            Placeholder::make('status_help')
+                                ->label('狀態用途')
+                                ->content('已接受：納入報表計算。待檢查：暫不納入報表，待人工確認。已隔離：排除於報表計算。'),
+                            Textarea::make('notes')
+                                ->label('備註')
+                                ->rows(4),
                         ])
                         ->fillForm(fn (SurveyResponse $record): array => [
                             'quality_status' => $record->quality_status->value,
+                            'notes' => $record->notes,
                         ])
                         ->action(function (SurveyResponse $record, array $data): void {
-                            $record->update([
-                                'quality_status' => SurveyResponseQualityStatus::from($data['quality_status']),
-                            ]);
+                            app(ReviewSurveyResponseAction::class)->execute(
+                                response: $record,
+                                status: SurveyResponseQualityStatus::from($data['quality_status']),
+                                notes: $data['notes'] ?? null,
+                                source: 'manual',
+                                causer: Filament::auth()->user(),
+                            );
 
                             Notification::make()
                                 ->title('接受狀態已更新')
@@ -314,7 +328,23 @@ class ResponseResource extends Resource
                         ->icon('heroicon-o-no-symbol')
                         ->color('danger')
                         ->visible(fn () => static::canEdit(new SurveyResponse))
-                        ->action(fn ($records) => $records->each->update(['quality_status' => SurveyResponseQualityStatus::Quarantined])),
+                        ->action(function (Collection $records): void {
+                            $reviewResponse = app(ReviewSurveyResponseAction::class);
+
+                            foreach ($records as $response) {
+                                if (! $response instanceof SurveyResponse) {
+                                    continue;
+                                }
+
+                                $reviewResponse->execute(
+                                    response: $response,
+                                    status: SurveyResponseQualityStatus::Quarantined,
+                                    notes: $response->notes,
+                                    source: 'bulk',
+                                    causer: Filament::auth()->user(),
+                                );
+                            }
+                        }),
                     DeleteBulkAction::make()->label('批次刪除'),
                     RestoreBulkAction::make()->label('批次還原'),
                     ForceDeleteBulkAction::make()->label('批次永久刪除'),

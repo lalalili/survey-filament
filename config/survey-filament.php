@@ -21,7 +21,7 @@ return [
     'navigation_sort' => 50,
 
     // Keep the standalone survey package recipient list visible by default.
-    'recipient_navigation_enabled'          => true,
+    'recipient_navigation_enabled' => true,
     'recipient_navigation_super_admin_only' => false,
 
     'trigger_action_preset_navigation_enabled' => true,
@@ -85,6 +85,15 @@ return [
     | free-form category input in the reusable package.
     */
     'survey_category_options' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Audience List Schema Profile Options
+    |--------------------------------------------------------------------------
+    | Optional data-profile options for audience lists. Keys are persisted to
+    | audience_lists.schema_profile and may align with survey category keys.
+    */
+    'audience_schema_profile_options' => [],
 
     // Survey table columns hidden by default. Supported values include:
     // category, fields_count, recipients_count.

@@ -31,6 +31,7 @@ class ResponsesTrendChart extends ChartWidget
         };
 
         $counts = SurveyQueryScopes::responses(SurveyResponse::query())
+            ->reportable()
             ->whereDate('submitted_at', '>=', now()->subDays(6)->startOfDay())
             ->selectRaw("{$dateExpr} as day, COUNT(*) as total")
             ->groupByRaw($dateExpr)

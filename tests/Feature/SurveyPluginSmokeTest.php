@@ -31,7 +31,7 @@ it('can instantiate the plugin', function () {
 
 it('can create and retrieve a survey model', function () {
     $survey = Survey::create([
-        'title'  => 'Smoke Test Survey',
+        'title' => 'Smoke Test Survey',
         'status' => SurveyStatus::Draft,
     ]);
 
@@ -61,7 +61,8 @@ it('can hide optional survey table columns through config', function () {
 });
 
 it('does not expose a separate personalization required toggle', function () {
-    $livewire = new class () extends Component implements HasSchemas {
+    $livewire = new class extends Component implements HasSchemas
+    {
         use InteractsWithSchemas;
     };
 
@@ -69,6 +70,26 @@ it('does not expose a separate personalization required toggle', function () {
 
     expect($fields)->toHaveKey('settings_json.personalization.audience_list_id')
         ->and($fields)->not->toHaveKey('settings_json.personalization.required');
+});
+
+it('configures audience list schema profiles', function () {
+    config()->set('survey-filament.audience_schema_profile_options', [
+        'CSI' => '售後服務滿意度',
+        'SSI' => '銷售滿意度',
+    ]);
+
+    $livewire = new class extends Component implements HasSchemas
+    {
+        use InteractsWithSchemas;
+    };
+
+    $fields = RecipientResource::form(FilamentSchema::make($livewire))->getFlatFields();
+
+    expect($fields)->toHaveKey('schema_profile')
+        ->and(RecipientResource::schemaProfileOptions())->toBe([
+            'CSI' => '售後服務滿意度',
+            'SSI' => '銷售滿意度',
+        ]);
 });
 
 it('defaults resource overrides to null', function () {
@@ -123,20 +144,20 @@ it('restricts audience list deletion when activity dispatches reference its rows
     $audienceList = AudienceList::create(['name' => 'Referenced List']);
     $referencedRow = AudienceListRow::create([
         'audience_list_id' => $audienceList->id,
-        'data_json'        => ['email' => 'referenced@example.com'],
-        'status'           => 'active',
+        'data_json' => ['email' => 'referenced@example.com'],
+        'status' => 'active',
     ]);
 
     DB::table('activity_dispatches')->insert([
         [
             'audience_list_row_id' => $referencedRow->id,
-            'created_at'           => now(),
-            'updated_at'           => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ],
         [
             'audience_list_row_id' => $referencedRow->id,
-            'created_at'           => now(),
-            'updated_at'           => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ],
     ]);
 
@@ -164,10 +185,9 @@ it('registers the collectors relation manager', function () {
 
 function packageNavigationTestUser(bool $isSuperAdmin): Authenticatable
 {
-    return new class ($isSuperAdmin) implements Authenticatable {
-        public function __construct(public bool $is_super_admin)
-        {
-        }
+    return new class($isSuperAdmin) implements Authenticatable
+    {
+        public function __construct(public bool $is_super_admin) {}
 
         public function getAuthIdentifierName(): string
         {
@@ -194,9 +214,7 @@ function packageNavigationTestUser(bool $isSuperAdmin): Authenticatable
             return null;
         }
 
-        public function setRememberToken($value): void
-        {
-        }
+        public function setRememberToken($value): void {}
 
         public function getRememberTokenName(): string
         {

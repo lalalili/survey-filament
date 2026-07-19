@@ -9,6 +9,7 @@ import { elementSupportsJump, elementSupportsLogic, hasActiveJumpLogic, isConten
 import { useQuestionCollapse } from '../utils/questionCollapse';
 import { findPreviewThankYouPageId } from '../utils/previewSubmission';
 import { normalizeVariableTokenChips } from '../utils/variableTokens';
+import { isSystemContextField, visibleSurveyElements } from '../utils/systemContextFields';
 
 const props = defineProps<{
   endpoints: BuilderEndpoints;
@@ -19,6 +20,9 @@ const store = useSurveyBuilderStore();
 const questionCollapse = useQuestionCollapse();
 
 function removeQuestion(questionId: string) {
+  const impactMessage = store.questionRemovalMessage(questionId);
+  if (impactMessage && !confirm(impactMessage)) return;
+
   questionCollapse.remove(questionId);
   store.removeQuestion(questionId);
 }
@@ -137,7 +141,7 @@ function arrangeElementsForPreview(elements: SurveyElement[], seed: number): Sur
 const previewPageElements = computed<SurveyElement[]>(() => {
   const page = store.selectedPage;
   if (!page || page.kind === 'welcome' || page.kind === 'thank_you') return [];
-  const elements = page.elements ?? [];
+  const elements = visibleSurveyElements(page.elements ?? []);
   if (!store.isPreviewMode) return elements;
   return arrangeElementsForPreview(elements, previewSeed.value);
 });
@@ -707,7 +711,7 @@ const questionNumberMap = computed<Record<string, number>>(() => {
   for (const page of store.schema?.pages ?? []) {
     if (page.kind === 'welcome' || page.kind === 'thank_you') continue;
     for (const el of page.elements ?? []) {
-      if (isContentBlockType(el.type)) continue;
+      if (isContentBlockType(el.type) || isSystemContextField(el)) continue;
       n += 1;
       map[el.id] = n;
     }
@@ -738,6 +742,11 @@ const previewShowsProgress = computed(() =>
 const previewProgressWidth = computed(() =>
   `${((previewCurrentQuestionPageIndex.value + 1) / previewQuestionPages.value.length) * 100}%`,
 );
+const selectedPageVisibleElements = computed(() => visibleSurveyElements(store.selectedPage?.elements ?? []));
+
+function elementSchemaIndex(element: SurveyElement): number {
+  return store.selectedPage?.elements.findIndex((candidate) => candidate.id === element.id) ?? 0;
+}
 const previewPrimaryColor = computed(() => {
   const overridePrimary = store.schema?.theme_overrides?.primary;
   if (typeof overridePrimary === 'string' && overridePrimary !== '') {
@@ -970,6 +979,12 @@ function addOption(el: SurveyElement) {
 }
 
 function removeOption(el: SurveyElement, i: number) {
+  const impact = store.fieldImpact(el.id);
+  if (impact?.locked_properties.includes('used_option_values')) {
+    const optionLabel = el.options[i]?.label || `選項 ${i + 1}`;
+    if (!confirm(`此題已有 ${impact.answer_count} 筆歷史答案。「${optionLabel}」若曾被填答，發布時將禁止刪除其 option value。確定先從草稿移除此選項？`)) return;
+  }
+
   el.options.splice(i, 1);
   store.markDirty();
 }
@@ -1008,8 +1023,10 @@ function deletePage(pageId: string) {
   if (!p || p.kind === 'welcome' || p.kind === 'thank_you') return;
   const qPages = store.schema.pages.filter((pp) => (pp.kind ?? 'question') === 'question');
   if (qPages.length <= 1) { alert('至少需要保留一個問題頁'); return; }
-  const count = (p.elements ?? []).length;
-  if (count > 0 && !confirm(`刪除「${p.title || '未命名頁面'}」？此頁包含 ${count} 道題目，將一併移除。`)) return;
+  const count = visibleSurveyElements(p.elements ?? []).length;
+  const impactMessage = store.pageRemovalMessage(pageId);
+  const confirmation = impactMessage ?? `刪除「${p.title || '未命名頁面'}」？此頁包含 ${count} 道題目，將一併移除。`;
+  if (count > 0 && !confirm(confirmation)) return;
   store.removePage(pageId);
 }
 
@@ -1254,7 +1271,7 @@ function textInputType(element: SurveyElement) {
               <span class="sb-page-tab-num" :class="{ 'error-num': errorPageIds.has(page.id) }">P{{ String(i + 1).padStart(2, '0') }}</span>
               <span>{{ page.title || '未命名頁面' }}</span>
               <span v-if="errorPageIds.has(page.id)" class="sb-page-tab-error-dot" title="此頁有驗證錯誤">!</span>
-              <span class="sb-page-tab-count">{{ page.elements.length }}</span>
+              <span class="sb-page-tab-count">{{ visibleSurveyElements(page.elements).length }}</span>
               <button
                 class="sb-page-tab-close"
                 type="button"
@@ -1686,7 +1703,7 @@ function textInputType(element: SurveyElement) {
 
           <!-- Question list with drop zones -->
           <template v-else-if="store.selectedPage">
-            <template v-if="store.selectedPage.elements.length === 0">
+            <template v-if="selectedPageVisibleElements.length === 0">
               <div class="sb-empty-page">
                 <div class="sb-empty-page-icon">＋</div>
                 <p>從右側選擇題型加入此頁面</p>
@@ -1694,16 +1711,16 @@ function textInputType(element: SurveyElement) {
               </div>
             </template>
             <template v-else>
-              <template v-for="(element, i) in store.selectedPage.elements" :key="element.id">
+              <template v-for="element in selectedPageVisibleElements" :key="element.id">
                 <!-- Drop zone before each card -->
                 <div
                   class="sb-drop-zone"
-                  :class="{ over: isZoneActive(store.selectedPage.id, i) }"
-                  @dragover="onDragOverZone($event, store.selectedPage.id, i)"
+                  :class="{ over: isZoneActive(store.selectedPage.id, elementSchemaIndex(element)) }"
+                  @dragover="onDragOverZone($event, store.selectedPage.id, elementSchemaIndex(element))"
                   @dragleave="onDragLeave"
-                  @drop="onDropZone($event, store.selectedPage.id, i)"
+                  @drop="onDropZone($event, store.selectedPage.id, elementSchemaIndex(element))"
                 >
-                  <span v-if="isZoneActive(store.selectedPage.id, i)">放開以移動至此</span>
+                  <span v-if="isZoneActive(store.selectedPage.id, elementSchemaIndex(element))">放開以移動至此</span>
                 </div>
 
                 <!-- Question card -->

@@ -12,6 +12,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
+use Lalalili\SurveyCore\Actions\ReviewSurveyResponseAction;
 use Lalalili\SurveyCore\Enums\SurveyFieldType;
 use Lalalili\SurveyCore\Models\SurveyAnswer;
 use Lalalili\SurveyCore\Models\SurveyResponse;
@@ -70,7 +71,13 @@ class ViewResponse extends ViewRecord
                     'tag_ids' => $this->record->tags->pluck('id')->all(),
                 ])
                 ->action(function (array $data): void {
-                    $this->record->update(['notes' => $data['notes'] ?? null]);
+                    app(ReviewSurveyResponseAction::class)->execute(
+                        response: $this->record,
+                        status: $this->record->quality_status,
+                        notes: $data['notes'] ?? null,
+                        source: 'manual',
+                        causer: auth()->user(),
+                    );
                     $this->record->tags()->sync($data['tag_ids'] ?? []);
                     $this->record->refresh()->load(['survey', 'recipient', 'answers.field', 'tags']);
                 }),
@@ -88,16 +95,21 @@ class ViewResponse extends ViewRecord
 
             RepeatableEntry::make('answers')
                 ->label('填答內容')
+                ->extraAttributes(['class' => 'survey-response-answers'])
                 ->schema([
-                    TextEntry::make('field.label')->label('題目'),
+                    TextEntry::make('snapshot_field_label')
+                        ->label('題目')
+                        ->inlineLabel()
+                        ->state(fn (SurveyAnswer $record): string => $record->fieldLabel()),
                     TextEntry::make('value')
                         ->label('答案')
+                        ->inlineLabel()
                         ->state(fn (SurveyAnswer $record): string => $this->answerDisplayValue($record))
                         ->url(fn (SurveyAnswer $record): ?string => $this->isFileUploadAnswer($record) ? $this->fileUrl($record) : null)
                         ->openUrlInNewTab(),
                 ])
-                // 電腦版兩題一行（手機仍單欄）。
-                ->grid(['default' => 1, 'md' => 2])
+                // 每行單欄；間距由 survey-response-answers CSS 收緊。
+                ->grid(1)
                 ->columnSpanFull(),
         ]);
     }
@@ -119,17 +131,17 @@ class ViewResponse extends ViewRecord
 
     private function shouldDisplayOptionLabels(SurveyAnswer $answer): bool
     {
-        return in_array($answer->field->type, [
-            SurveyFieldType::SingleChoice,
-            SurveyFieldType::MultipleChoice,
-            SurveyFieldType::Select,
-            SurveyFieldType::Ranking,
+        return in_array($answer->fieldType(), [
+            SurveyFieldType::SingleChoice->value,
+            SurveyFieldType::MultipleChoice->value,
+            SurveyFieldType::Select->value,
+            SurveyFieldType::Ranking->value,
         ], true);
     }
 
     private function optionAnswerDisplayValue(SurveyAnswer $answer, mixed $value): string
     {
-        $labelsByValue = collect($answer->field->normalizedOptions())
+        $labelsByValue = collect($answer->normalizedSnapshotOptions())
             ->mapWithKeys(fn (array $option): array => [
                 $option['value'] => $option['label'] !== '' ? $option['label'] : $option['value'],
             ]);
@@ -162,7 +174,7 @@ class ViewResponse extends ViewRecord
 
     private function isFileUploadAnswer(SurveyAnswer $answer): bool
     {
-        return $answer->field->type->value === 'file_upload';
+        return $answer->fieldType() === SurveyFieldType::FileUpload->value;
     }
 
     /**
@@ -170,7 +182,7 @@ class ViewResponse extends ViewRecord
      */
     private function fileUrl(SurveyAnswer $answer): ?string
     {
-        $fieldKey = $answer->field->field_key;
+        $fieldKey = $answer->fieldKey();
 
         $media = $this->record->getMedia('survey_files')
             ->first(fn ($item): bool => $item->getCustomProperty('survey_field_key') === $fieldKey);

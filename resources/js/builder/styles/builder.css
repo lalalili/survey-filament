@@ -1,3 +1,18 @@
+.sb-request-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px;
+  color: var(--c-danger-ink);
+  background: var(--c-danger-bg);
+  border-bottom: 1px solid var(--c-danger-line);
+  flex-shrink: 0;
+}
+.sb-request-error-icon { color: var(--c-danger); line-height: 1.5; }
+.sb-request-error div { display: flex; flex-wrap: wrap; gap: 4px 8px; min-width: 0; }
+.sb-request-error strong { white-space: nowrap; }
+.sb-request-error span:last-child { overflow-wrap: anywhere; }
+
 .sb-page-tabs-wrap {
   display: flex; align-items: stretch; gap: 4px;
   padding: 4px;
@@ -1827,6 +1842,8 @@
 .sb-set-field:last-child { border-bottom: none; }
 .sb-set-field.full { flex-direction: column; align-items: stretch; gap: 8px; }
 .sb-set-field-label { font-size: 13px; color: var(--c-ink2); font-weight: 500; }
+.sb-set-status-success { color: var(--c-nps-green-ink); }
+.sb-set-status-danger { color: var(--c-danger); }
 .sb-set-color-row {
   display: grid; grid-template-columns: 84px 44px 1fr;
   align-items: center; gap: 14px; justify-content: start;

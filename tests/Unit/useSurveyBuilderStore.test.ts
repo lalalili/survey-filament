@@ -64,6 +64,56 @@ describe('survey builder autosave', () => {
     vi.useFakeTimers();
   });
 
+  it('hydrates field impacts and explains that answered questions are retired instead of erased', async () => {
+    const store = useSurveyBuilderStore();
+    store.api = {
+      load: vi.fn().mockResolvedValue({
+        survey: { id: 1, title: '問卷', status: 'published', version: 2, published_at: null },
+        schema: { ...questionSchema(), id: 1, status: 'published', version: 2 },
+        field_impacts: {
+          'question-1': {
+            element_id: 'question-1',
+            field_key: 'question_1',
+            answer_count: 315,
+            response_count: 300,
+            locked_properties: ['field_key', 'type', 'used_option_values'],
+          },
+        },
+      }),
+    } as typeof store.api;
+
+    await store.loadBuilder();
+
+    expect(store.fieldImpact('question-1')).toMatchObject({ answer_count: 315, response_count: 300 });
+    expect(store.questionRemovalMessage('question-1'))
+      .toContain('315 筆歷史答案')
+      .toContain('發布後此題將退役')
+      .toContain('歷史答案會完整保留');
+  });
+
+  it('summarizes answered fields before removing a page and keeps normal deletion unchanged', () => {
+    const store = useSurveyBuilderStore();
+    store.schema = questionSchema() as typeof store.schema;
+    store.fieldImpacts = {
+      'question-1': {
+        element_id: 'question-1',
+        field_key: 'question_1',
+        answer_count: 120,
+        response_count: 100,
+        locked_properties: ['field_key', 'type'],
+      },
+    };
+
+    expect(store.pageRemovalMessage('page-1'))
+      .toContain('1 道題目包含歷史答案')
+      .toContain('共 120 筆答案')
+      .toContain('發布後這些題目將退役');
+
+    store.fieldImpacts = {};
+    expect(store.questionRemovalMessage('question-1')).toBeNull();
+    expect(store.pageRemovalMessage('page-1')).toBeNull();
+  });
+
   it('does not overwrite changes made while an autosave request is in flight', async () => {
     const firstSave = deferred<ReturnType<typeof savePayload>>();
     const secondSave = deferred<ReturnType<typeof savePayload>>();
@@ -100,6 +150,56 @@ describe('survey builder autosave', () => {
     expect(save).toHaveBeenCalledTimes(2);
     expect(store.welcomePage?.welcome_settings?.content).toBe(imageContent);
     expect(store.isDirty).toBe(false);
+  });
+
+  it('hydrates a uniquely matching audience list on load without writing during GET', async () => {
+    const store = useSurveyBuilderStore();
+    const save = vi.fn();
+    const load = vi.fn().mockResolvedValue({
+      survey: {
+        id: 2,
+        title: 'SSI 問卷',
+        status: 'draft',
+        version: 1,
+        published_at: null,
+      },
+      schema: {
+        ...questionSchema(),
+        id: 2,
+        status: 'draft',
+        version: 1,
+        settings: { category: 'SSI' },
+      },
+      audience_lists: [{
+        id: 2,
+        name: 'SSI 名單',
+        schema_profile: 'SSI',
+        columns: [
+          { key: 'dlr', type: 'string' },
+          { key: 'dept', type: 'string' },
+          { key: 'regono', type: 'string' },
+          { key: 'delivery_date', type: 'date' },
+        ],
+      }],
+    });
+
+    store.api = { load, save } as typeof store.api;
+    await store.loadBuilder();
+    await vi.advanceTimersByTimeAsync(3000);
+
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(save).not.toHaveBeenCalled();
+    expect(store.schema?.settings?.personalization).toMatchObject({
+      audience_list_id: 2,
+      result_context_columns: {
+        dealer: 'dlr',
+        location: 'dept',
+        vehicle_plate: 'regono',
+        delivery_date: 'delivery_date',
+      },
+    });
+    expect(store.isDirty).toBe(true);
+    expect(store.hasUnpublishedChanges).toBe(true);
   });
 
   it('keeps an incomplete display condition local without triggering autosave', async () => {

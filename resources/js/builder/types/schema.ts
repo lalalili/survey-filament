@@ -135,11 +135,13 @@ export interface AudienceListColumn {
   label?: string | number | null;
   value?: string | number | null;
   name?: string | number | null;
+  type?: string | null;
 }
 
 export interface AudienceListSummary {
   id: number;
   name: string;
+  schema_profile?: string | null;
   columns: Array<string | AudienceListColumn>;
 }
 
@@ -147,6 +149,14 @@ export interface BuilderCapabilities {
   can_manage_advanced_fields: boolean;
   is_super_admin: boolean;
   question_types: string[];
+}
+
+export interface FieldImpact {
+  element_id: string;
+  field_key: string;
+  answer_count: number;
+  response_count: number;
+  locked_properties: Array<'field_key' | 'type' | 'used_option_values' | string>;
 }
 
 export interface SurveySettings {
@@ -177,6 +187,12 @@ export interface SurveySettings {
     email_column?: string | null;
     external_id_column?: string | null;
     field_mappings?: Record<string, string>;
+    result_context_columns?: {
+      dealer?: string | null;
+      location?: string | null;
+      vehicle_plate?: string | null;
+      delivery_date?: string | null;
+    };
   };
   anomaly?: {
     min_seconds?: number | null;
@@ -241,6 +257,7 @@ export interface BuilderPayload {
   themes?: SurveyTheme[];
   audience_lists?: AudienceListSummary[];
   capabilities?: BuilderCapabilities;
+  field_impacts?: Record<string, FieldImpact>;
 }
 
 export interface BuilderActivity {

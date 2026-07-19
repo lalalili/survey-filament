@@ -15,6 +15,7 @@ import type { NpsDialogState } from '../dialogs/NpsDialog.vue';
 import CascadeDialog from '../dialogs/CascadeDialog.vue';
 import type { CascadeDialogState } from '../dialogs/CascadeDialog.vue';
 import { calculationToken, calculationVariableToken, variableTokenChipHtml } from '../utils/variableTokens';
+import { visibleSurveyElements } from '../utils/systemContextFields';
 
 const store = useSurveyBuilderStore();
 const canManageAdvancedFields = computed(() => store.capabilities.can_manage_advanced_fields);
@@ -189,6 +190,18 @@ function insertCalculationIntoThankYou(calculation: SurveyCalculation) {
   });
   store.selectedPageId = page.id;
   store.selectedElementId = null;
+}
+
+function deleteSelectedPage() {
+  const page = store.selectedPage;
+  if (!page || !store.schema || store.questionPages.length <= 1) return;
+
+  const impactMessage = store.pageRemovalMessage(page.id);
+  const questionCount = visibleSurveyElements(page.elements).length;
+  const confirmation = impactMessage ?? `刪除「${page.title || '未命名頁面'}」？此頁包含 ${questionCount} 道題目，將一併移除。`;
+
+  if (questionCount > 0 && !confirm(confirmation)) return;
+  store.removePage(page.id);
 }
 
 async function copyCalculationToken(calculation: SurveyCalculation) {
@@ -378,8 +391,7 @@ function onJumpChange(elementId: string, optionId: string, raw: string) {
 
 // ── Show-if conditions ───────────────────────────────────────────────
 const showIfTargetOptions = computed(() =>
-  (store.schema?.pages ?? [])
-    .flatMap((p) => p.elements)
+  store.allElements
     .filter((el) => {
       const d = getQuestionType(el.type);
       return el.field_key && el.id !== store.selectedElementId && !d.type.startsWith('section_') && el.type !== 'description_block';
@@ -400,7 +412,7 @@ function showIfConditionValueOptions(fieldKey: string): Array<{ value: string; l
 // ── Selection-based (重複核選題) source ──────────────────────────────
 const selectionSourceOptions = computed(() => {
   if (!store.schema || !store.selectedElement) return [];
-  const elements = store.schema.pages.flatMap((p) => p.elements);
+  const elements = store.allElements;
   const currentIndex = elements.findIndex((e) => e.id === store.selectedElementId);
   const choiceTypes = ['single_choice', 'multiple_choice', 'select'];
   return elements
@@ -485,7 +497,7 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
               class="sb-prop-action danger"
               type="button"
               :disabled="!store.schema || store.schema.pages.length <= 1"
-              @click="store.schema && store.schema.pages.length > 1 && store.removePage(store.selectedPage!.id)"
+              @click="deleteSelectedPage"
             >⊖ 刪除此頁</button>
           </div>
 
@@ -538,6 +550,17 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
 
         <!-- Element selected: properties -->
         <template v-else>
+          <div
+            v-if="store.fieldImpact(store.selectedElement.id)?.answer_count"
+            class="sb-prop-section"
+          >
+            <div class="sb-prop-heading">歷史答案保護</div>
+            <p class="sb-prop-hint">
+              此題已有 {{ store.fieldImpact(store.selectedElement.id)?.answer_count }} 筆答案、
+              {{ store.fieldImpact(store.selectedElement.id)?.response_count }} 份回覆。
+              欄位代碼、題型及已使用的選項值受保護；發布時系統會拒絕破壞歷史答案的變更。
+            </p>
+          </div>
           <div class="sb-prop-section">
             <div class="sb-prop-heading">{{ isContentBlock(store.selectedElement) ? '內容' : '題目' }}</div>
             <label v-if="!isContentBlock(store.selectedElement)" class="sb-prop-row col">

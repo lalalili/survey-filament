@@ -34,6 +34,7 @@ const saveStatus = computed(() => {
 });
 
 const statusTooltip = computed(() => store.publishError || store.saveError || saveStatus.value);
+const visibleError = computed(() => store.publishError || store.saveError);
 
 function beforeUnload(event: BeforeUnloadEvent) {
   if (!store.hasUnsavedChanges) return;
@@ -134,6 +135,19 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
         </span>
       </div>
     </template>
+
+    <div
+      v-if="visibleError"
+      class="sb-request-error"
+      role="alert"
+      aria-live="assertive"
+    >
+      <span class="sb-request-error-icon" aria-hidden="true">⚠</span>
+      <div>
+        <strong>{{ store.publishError ? '發布失敗' : '儲存失敗' }}</strong>
+        <span>{{ visibleError }}</span>
+      </div>
+    </div>
 
     <CanvasArea :endpoints="props.endpoints" :csrf-token="props.csrfToken" />
 

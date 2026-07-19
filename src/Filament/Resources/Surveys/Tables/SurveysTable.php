@@ -5,7 +5,6 @@ namespace Lalalili\SurveyFilament\Filament\Resources\Surveys\Tables;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Support\Enums\IconPosition;
 use Filament\Tables\Columns\TextColumn;
@@ -174,7 +173,6 @@ class SurveysTable
 
                     DeleteAction::make()->label('刪除'),
                     RestoreAction::make()->label('還原'),
-                    ForceDeleteAction::make()->label('永久刪除'),
                 ]),
             ])
             ->bulkActions([]);

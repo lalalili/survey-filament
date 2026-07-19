@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue';
-import type { AudienceListColumn, SurveySettings } from '../types/schema';
+import type { SurveySettings } from '../types/schema';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
 import SurveyRichEditor from '../components/SurveyRichEditor.vue';
 import { calculationVariableToken } from '../utils/variableTokens';
+import {
+  audienceColumnOptions as columnsForAudience,
+  inferResultContextColumns,
+  type ResultContextKey,
+} from '../utils/systemContextFields';
 
 // 伺服器是否已設定 Turnstile 金鑰（由 app.ts provide）。未設定時停用「我不是機器人」開關。
 const turnstileConfigured = inject<boolean>('turnstileConfigured', false);
@@ -58,39 +63,28 @@ const selectedAudienceList = computed(() => {
   return store.audienceLists.find((list) => String(list.id) === String(audienceListId)) ?? null;
 });
 
-type AudienceColumnOption = {
-  value: string;
-  label: string;
-};
+const audienceColumnOptions = computed(() => columnsForAudience(selectedAudienceList.value));
 
-function normalizeAudienceColumnOption(column: string | AudienceListColumn): AudienceColumnOption | null {
-  if (typeof column === 'string') {
-    return {
-      value: column,
-      label: column,
-    };
-  }
+const audienceDateColumnOptions = computed(() => audienceColumnOptions.value
+  .filter((column) => column.type === 'date'));
 
-  const value = column.key ?? column.value ?? column.name ?? column.label;
+const resultContextFields: Array<{ key: ResultContextKey; label: string }> = [
+  { key: 'dealer', label: '經銷商' },
+  { key: 'location', label: '據點' },
+  { key: 'vehicle_plate', label: '車牌' },
+  { key: 'delivery_date', label: '交車日' },
+];
 
-  if (value === undefined || value === null || String(value).trim() === '') {
-    return null;
-  }
+const selectedResultContextColumns = computed(() => store.schema?.settings?.personalization?.result_context_columns ?? {});
+const audienceProfileMismatch = computed(() => {
+  const profile = selectedAudienceList.value?.schema_profile;
+  const category = store.schema?.settings?.category;
 
-  const normalizedValue = String(value);
-  const label = column.label !== undefined && column.label !== null && String(column.label).trim() !== ''
-    ? String(column.label)
-    : normalizedValue;
-
-  return {
-    value: normalizedValue,
-    label: label === normalizedValue ? label : `${label} (${normalizedValue})`,
-  };
-}
-
-const audienceColumnOptions = computed(() => (selectedAudienceList.value?.columns ?? [])
-  .map((column) => normalizeAudienceColumnOption(column))
-  .filter((column): column is AudienceColumnOption => column !== null));
+  return Boolean(profile && category && profile !== category);
+});
+const completedResultContextCount = computed(() => resultContextFields
+  .filter(({ key }) => Boolean(selectedResultContextColumns.value[key]))
+  .length);
 
 function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings['personalization']>>) {
   store.updateSurveySettings({
@@ -101,12 +95,28 @@ function updatePersonalizationSettings(patch: Partial<NonNullable<SurveySettings
   });
 }
 
+function updateResultContextColumn(key: ResultContextKey, value: string): void {
+  updatePersonalizationSettings({
+    result_context_columns: {
+      ...selectedResultContextColumns.value,
+      [key]: value || null,
+    },
+  });
+}
+
 function updatePersonalizationAudience(audienceListId: string) {
+  const audienceList = store.audienceLists.find((list) => String(list.id) === String(audienceListId)) ?? null;
+
   updatePersonalizationSettings({
     audience_list_id: audienceListId || null,
     required: audienceListId !== '',
     field_mappings: {},
+    result_context_columns: inferResultContextColumns(audienceList),
   });
+
+  if (audienceList?.schema_profile && !store.schema?.settings?.category) {
+    store.updateSurveySettings({ category: audienceList.schema_profile });
+  }
 }
 </script>
 
@@ -598,6 +608,12 @@ function updatePersonalizationAudience(audienceListId: string) {
                 <div v-if="selectedAudienceList" class="sb-set-hint" style="margin-bottom:4px">
                   欄位對應：在左側畫布選取隱藏欄位，於右側「個性化」屬性面板選擇對應的名單欄位。
                 </div>
+                <div v-if="selectedAudienceList?.schema_profile" class="sb-set-hint" style="margin-bottom:4px">
+                  名單資料設定檔：{{ selectedAudienceList.schema_profile }}
+                </div>
+                <div v-if="audienceProfileMismatch" class="sb-set-hint sb-set-status-danger" style="margin-bottom:8px">
+                  名單資料設定檔與問卷分類不一致。草稿仍可儲存，但發佈前必須改為相同分類。
+                </div>
                 <template v-if="selectedAudienceList">
                   <div class="sb-set-field">
                     <div class="sb-set-field-label">姓名欄位</div>
@@ -637,6 +653,38 @@ function updatePersonalizationAudience(audienceListId: string) {
                       <option v-for="column in audienceColumnOptions" :key="column.value" :value="column.value">{{ column.label }}</option>
                     </select>
                     <div class="sb-set-hint" style="margin-top:4px">同步 CRM、DMS 或會員系統 ID，便於對帳、去重與跨系統追蹤；未指定時使用名單資料列 ID。</div>
+                  </div>
+                  <div class="sb-set-field full">
+                    <div class="sb-set-field-label">問卷結果固定欄位</div>
+                    <div class="sb-set-hint" style="margin-bottom:8px">
+                      系統會將以下欄位帶入每筆問卷結果。目前已完成 {{ completedResultContextCount }}/4 項對應。
+                    </div>
+                    <div class="sb-set-card">
+                      <div v-for="field in resultContextFields" :key="field.key" class="sb-set-field">
+                        <div class="sb-set-field-label">
+                          {{ field.label }}
+                          <span :class="selectedResultContextColumns[field.key] ? 'sb-set-status-success' : 'sb-set-status-danger'">
+                            {{ selectedResultContextColumns[field.key] ? '已對應' : '未完成' }}
+                          </span>
+                        </div>
+                        <select
+                          class="sb-prop-input"
+                          style="max-width:260px"
+                          :value="selectedResultContextColumns[field.key] ?? ''"
+                          @change="updateResultContextColumn(field.key, ($event.target as HTMLSelectElement).value)"
+                        >
+                          <option value="">未指定</option>
+                          <option
+                            v-for="column in field.key === 'delivery_date' ? audienceDateColumnOptions : audienceColumnOptions"
+                            :key="column.value"
+                            :value="column.value"
+                          >{{ column.label }}</option>
+                        </select>
+                        <div v-if="field.key === 'delivery_date'" class="sb-set-hint" style="margin-top:4px">
+                          僅能選擇資料類型為日期的名單欄位，以支援結果頁日期區間篩選。
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </template>
               </div>

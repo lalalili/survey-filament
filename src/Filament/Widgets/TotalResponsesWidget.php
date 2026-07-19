@@ -14,7 +14,7 @@ class TotalResponsesWidget extends BaseWidget
     protected function getStats(): array
     {
         return [
-            Stat::make('Total Responses', SurveyQueryScopes::responses(SurveyResponse::query())->count())
+            Stat::make('Total Responses', SurveyQueryScopes::responses(SurveyResponse::query())->reportable()->count())
                 ->icon('heroicon-o-inbox-stack'),
         ];
     }

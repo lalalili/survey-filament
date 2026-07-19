@@ -1,6 +1,7 @@
 <?php
 
 use Lalalili\SurveyCore\Enums\SurveyStatus;
+use Lalalili\SurveyCore\Enums\SurveyResponseQualityStatus;
 use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyCore\Models\SurveyResponse;
 use Lalalili\SurveyFilament\Filament\Widgets\PublishedSurveysWidget;
@@ -72,6 +73,18 @@ it('limits widget stats to the tenant scope', function (): void {
     expect(widgetStatValue(new TotalSurveysWidget))->toBe(1)
         ->and(widgetStatValue(new PublishedSurveysWidget))->toBe(1)
         ->and(widgetStatValue(new TotalResponsesWidget))->toBe(1);
+});
+
+it('only counts accepted formal submitted responses in response widgets', function (): void {
+    $survey = Survey::create(['title' => '報表問卷', 'status' => SurveyStatus::Published]);
+
+    SurveyResponse::create(['survey_id' => $survey->id, 'submitted_at' => now(), 'completion_status' => 'complete']);
+    SurveyResponse::create(['survey_id' => $survey->id, 'submitted_at' => now(), 'completion_status' => 'complete', 'is_test' => true]);
+    SurveyResponse::create(['survey_id' => $survey->id, 'submitted_at' => now(), 'completion_status' => 'complete', 'quality_status' => SurveyResponseQualityStatus::Flagged]);
+    SurveyResponse::create(['survey_id' => $survey->id, 'submitted_at' => now(), 'completion_status' => 'complete', 'quality_status' => SurveyResponseQualityStatus::Quarantined]);
+    SurveyResponse::create(['survey_id' => $survey->id, 'completion_status' => 'partial']);
+
+    expect(widgetStatValue(new TotalResponsesWidget))->toBe(1);
 });
 
 it('keeps widgets unscoped when no query scope is configured', function (): void {

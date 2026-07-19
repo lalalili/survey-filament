@@ -7,6 +7,7 @@ use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -77,6 +78,13 @@ class RecipientResource extends Resource
                 ->maxLength(255)
                 ->columnSpanFull(),
 
+            Select::make('schema_profile')
+                ->label('資料設定檔')
+                ->options(fn (): array => self::schemaProfileOptions())
+                ->placeholder('未指定')
+                ->helperText('用於確認名單欄位結構是否符合問卷分類。')
+                ->native(false),
+
             Textarea::make('description')
                 ->label('說明')
                 ->rows(2)
@@ -89,6 +97,12 @@ class RecipientResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')->label('名單名稱')->searchable()->sortable(),
+                TextColumn::make('schema_profile')
+                    ->label('資料設定檔')
+                    ->formatStateUsing(fn (?string $state): string => self::schemaProfileOptions()[$state] ?? $state ?? '—')
+                    ->badge()
+                    ->color(fn (?string $state): string => filled($state) ? 'info' : 'gray')
+                    ->sortable(),
                 TextColumn::make('rows_count')->label('資料筆數')->sortable(),
                 TextColumn::make('columns_json')
                     ->label('欄位')
@@ -226,5 +240,21 @@ class RecipientResource extends Resource
         }
 
         return implode('、', array_filter($labels));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function schemaProfileOptions(): array
+    {
+        $options = config('survey-filament.audience_schema_profile_options', []);
+
+        if (! is_array($options)) {
+            return [];
+        }
+
+        return collect($options)
+            ->mapWithKeys(fn (mixed $label, mixed $value): array => [(string) $value => (string) $label])
+            ->all();
     }
 }

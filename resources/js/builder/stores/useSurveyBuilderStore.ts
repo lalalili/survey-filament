@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia';
 import { ValidationError, createBuilderApi } from '../api/builderApi';
 import { getQuestionType } from '../registry/questionTypes';
-import type { AudienceListSummary, BuilderActivity, BuilderCapabilities, BuilderEndpoints, Condition, SurveyBuilderSchema, SurveyElement, SurveyOptionAction, SurveyPage, SurveySettings, SurveyTheme } from '../types/schema';
+import type { AudienceListSummary, BuilderActivity, BuilderCapabilities, BuilderEndpoints, Condition, FieldImpact, SurveyBuilderSchema, SurveyElement, SurveyOptionAction, SurveyPage, SurveySettings, SurveyTheme } from '../types/schema';
+import { hydratePersonalizationSettings, isSystemContextField, visibleSurveyElements } from '../utils/systemContextFields';
 
 type BuilderApi = ReturnType<typeof createBuilderApi>;
 
@@ -85,6 +86,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       is_super_admin: false,
       question_types: [],
     } as BuilderCapabilities,
+    fieldImpacts: {} as Record<string, FieldImpact>,
     selectedPageId: null as string | null,
     selectedElementId: null as string | null,
     isDirty: false,
@@ -115,10 +117,10 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
     },
     selectedElement(): SurveyElement | null {
       const page = this.selectedPage;
-      return page?.elements.find((element) => element.id === this.selectedElementId) ?? null;
+      return page?.elements.find((element) => element.id === this.selectedElementId && !isSystemContextField(element)) ?? null;
     },
     allElements(state): SurveyElement[] {
-      return state.schema?.pages.flatMap((page) => page.elements) ?? [];
+      return state.schema?.pages.flatMap((page) => visibleSurveyElements(page.elements)) ?? [];
     },
     questionPages(state): SurveyPage[] {
       return state.schema?.pages.filter((page) => (page.kind ?? 'question') === 'question') ?? [];
@@ -180,6 +182,8 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       });
       this.themes = payload.themes ?? [];
       this.audienceLists = payload.audience_lists ?? [];
+      this.fieldImpacts = payload.field_impacts ?? {};
+      const personalizationHydrated = hydratePersonalizationSettings(this.schema.settings, this.audienceLists);
       this.capabilities = {
         can_manage_advanced_fields: payload.capabilities?.can_manage_advanced_fields ?? false,
         is_super_admin: payload.capabilities?.is_super_admin ?? false,
@@ -189,8 +193,8 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       this.selectedElementId = null;
       this.showIfDrafts = {};
       schemaRevision = 0;
-      this.isDirty = false;
-      this.hasUnpublishedChanges = false;
+      this.isDirty = personalizationHydrated;
+      this.hasUnpublishedChanges = personalizationHydrated;
       this.saveError = '';
       this.publishError = '';
       this.validationErrors = {};
@@ -278,6 +282,33 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       page.elements.splice(index, 1);
       this.selectedElementId = null;
       this.markDirty();
+    },
+    fieldImpact(elementId: string): FieldImpact | null {
+      return this.fieldImpacts[elementId] ?? null;
+    },
+    questionRemovalMessage(questionId: string): string | null {
+      const impact = this.fieldImpact(questionId);
+
+      if (!impact || impact.answer_count <= 0) {
+        return null;
+      }
+
+      return `此題已有 ${impact.answer_count} 筆歷史答案（${impact.response_count} 份回覆）。刪除後需發布才會生效；發布後此題將退役、不再顯示於新填答，但歷史答案會完整保留。確定刪除？`;
+    },
+    pageRemovalMessage(pageId: string): string | null {
+      const page = this.schema?.pages.find((candidate) => candidate.id === pageId);
+      const impacts = (page?.elements ?? [])
+        .map((element) => this.fieldImpact(element.id))
+        .filter((impact): impact is FieldImpact => impact !== null && impact.answer_count > 0);
+
+      if (impacts.length === 0) {
+        return null;
+      }
+
+      const answerCount = impacts.reduce((total, impact) => total + impact.answer_count, 0);
+      const responseCount = impacts.reduce((highest, impact) => Math.max(highest, impact.response_count), 0);
+
+      return `此頁有 ${impacts.length} 道題目包含歷史答案，共 ${answerCount} 筆答案（涉及至少 ${responseCount} 份回覆）。刪除後需發布才會生效；發布後這些題目將退役、不再顯示於新填答，但歷史答案會完整保留。確定刪除此頁？`;
     },
     selectElement(elementId: string) {
       this.selectedElementId = elementId;

@@ -38,7 +38,7 @@ async function requestJson<T>(url: string, init: RequestInit = {}): Promise<T> {
     if (response.status === 422 && data.errors !== null && typeof data.errors === 'object') {
       throw new ValidationError(message, data.errors as Record<string, string[]>);
     }
-    throw new Error(message);
+    throw new Error(response.status >= 500 ? '系統暫時無法完成儲存，請稍後再試。' : message);
   }
 
   return data as T;
@@ -63,7 +63,7 @@ async function requestForm<T>(url: string, formData: FormData, csrfToken: string
     if (response.status === 422 && data.errors !== null && typeof data.errors === 'object') {
       throw new ValidationError(message, data.errors as Record<string, string[]>);
     }
-    throw new Error(message);
+    throw new Error(response.status >= 500 ? '系統暫時無法完成操作，請稍後再試。' : message);
   }
 
   return data as T;
