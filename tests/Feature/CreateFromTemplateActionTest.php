@@ -31,11 +31,21 @@ it('offers every registry template as a select option keyed by slug', function (
     }
 });
 
+/**
+ * 草稿的題目只存在 draft_schema：survey_fields 要到發佈時才由
+ * SyncSurveyBuilderSchemaToFieldsAction 同步寫入。
+ */
+function draftQuestionCount(array $draftSchema): int
+{
+    return collect($draftSchema['pages'] ?? [])
+        ->sum(fn (array $page): int => count($page['elements'] ?? []));
+}
+
 it('creates a draft survey with questions for every offered template option', function (string $slug): void {
     $survey = app(CreateSurveyFromBuilderTemplateAction::class)->execute($slug);
 
     expect($survey->exists)->toBeTrue()
         ->and($survey->status)->toBe(SurveyStatus::Draft)
         ->and($survey->title)->not->toBeEmpty()
-        ->and($survey->fields()->count())->toBeGreaterThan(0);
+        ->and(draftQuestionCount($survey->draft_schema ?? []))->toBeGreaterThan(0);
 })->with(fn (): array => array_keys(listSurveysTemplateOptions()));
