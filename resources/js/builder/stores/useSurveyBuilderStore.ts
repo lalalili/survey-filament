@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ValidationError, createBuilderApi } from '../api/builderApi';
 import { getQuestionType } from '../registry/questionTypes';
-import type { AudienceListSummary, BuilderActivity, BuilderCapabilities, BuilderEndpoints, Condition, FieldImpact, SurveyBuilderSchema, SurveyElement, SurveyOptionAction, SurveyPage, SurveySettings, SurveyTheme } from '../types/schema';
+import type { AudienceListSummary, BuilderActivity, BuilderCapabilities, BuilderEndpoints, Condition, ConditionGroup, FieldImpact, SurveyBuilderSchema, SurveyElement, SurveyOptionAction, SurveyPage, SurveySettings, SurveyTheme } from '../types/schema';
 import { hydratePersonalizationSettings, isSystemContextField, visibleSurveyElements } from '../utils/systemContextFields';
 
 type BuilderApi = ReturnType<typeof createBuilderApi>;
@@ -558,12 +558,72 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       const copy: typeof source = JSON.parse(JSON.stringify(source));
       copy.id = `page_${Math.random().toString(36).slice(2, 9)}`;
       copy.title = `${source.title}（副本）`;
-      // Regenerate element IDs to avoid duplicates
-      copy.elements = copy.elements.map((el) => ({
-        ...el,
-        id: `q_${Math.random().toString(36).slice(2, 9)}`,
-        field_key: el.field_key ? `${el.field_key}_copy` : el.field_key,
-      }));
+
+      // Regenerate element IDs / field keys, remembering the mapping so the
+      // copied page can re-point its own references below.
+      const fieldKeyMap = new Map<string, string>();
+
+      copy.elements = copy.elements.map((el) => {
+        const duplicated = {
+          ...el,
+          id: `q_${Math.random().toString(36).slice(2, 9)}`,
+        };
+
+        if (el.field_key) {
+          duplicated.field_key = `question_${Math.random().toString(36).slice(2, 9)}`;
+          fieldKeyMap.set(el.field_key, duplicated.field_key);
+        }
+
+        return duplicated;
+      });
+
+      // 副本頁內的參照必須指向副本自己的題目。少了這步，複製出來的頁面其
+      // 顯示條件／跳轉條件仍指向原始頁的題目，副本會跟著原始頁的作答連動
+      // （線上問卷曾出現「座椅」的追問題跟著「空調」的答案顯示）。
+      // 指向其他頁題目的參照不屬於這次複製的範圍，維持不變。
+      const remapConditionGroup = (group: ConditionGroup | null | undefined): void => {
+        if (!group || !Array.isArray(group.conditions)) {
+          return;
+        }
+
+        group.conditions.forEach((node) => {
+          if (node && Array.isArray((node as ConditionGroup).conditions)) {
+            remapConditionGroup(node as ConditionGroup);
+
+            return;
+          }
+
+          const leaf = node as Condition;
+          const mapped = leaf.field_key ? fieldKeyMap.get(leaf.field_key) : undefined;
+
+          if (mapped) {
+            leaf.field_key = mapped;
+          }
+        });
+      };
+
+      copy.elements.forEach((el) => {
+        remapConditionGroup(el.show_if);
+
+        const mappedLegacyKey = el.show_if_field_key ? fieldKeyMap.get(el.show_if_field_key) : undefined;
+        if (mappedLegacyKey) {
+          el.show_if_field_key = mappedLegacyKey;
+        }
+
+        el.options?.forEach((option) => {
+          if (option.action?.target_page_id === source.id) {
+            option.action.target_page_id = copy.id;
+          }
+        });
+      });
+
+      copy.jump_rules?.forEach((rule) => {
+        remapConditionGroup(rule.condition);
+
+        if (rule.action?.target_page_id === source.id) {
+          rule.action.target_page_id = copy.id;
+        }
+      });
 
       copy.kind = 'question';
       this.schema.pages.splice(index + 1, 0, copy);
