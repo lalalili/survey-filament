@@ -111,13 +111,17 @@ class SurveysTable
             ->columnToggleFormColumns(2)
             ->actions([
                 ActionGroup::make([
+                    // 編輯與分析都導向僅限可編輯者的頁面（builder 會 abort 403），
+                    // 因此選單同樣以 canEdit 為準，避免唯讀角色看得到卻點不進去。
                     Action::make('edit')
                         ->label('編輯')
                         ->icon('heroicon-o-pencil-square')
+                        ->visible(fn (Survey $record): bool => SurveyResource::canEdit($record))
                         ->url(fn (Survey $record): string => SurveyResource::getUrl('builder', ['record' => $record])),
                     Action::make('analytics')
                         ->label('分析')
                         ->icon('heroicon-o-chart-bar-square')
+                        ->visible(fn (Survey $record): bool => SurveyResource::canEdit($record))
                         ->url(fn (Survey $record): string => SurveyResource::getUrl('analytics', ['record' => $record])),
 
                     // Google Drive 綁定改於 Builder 的「上傳設定」內完成（檔案上傳題設定區）。

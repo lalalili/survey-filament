@@ -20,7 +20,7 @@ class ImportSurveyJsonHeaderAction
         return Action::make('import_builder_json')
             ->label('匯入問卷 JSON')
             ->icon('heroicon-o-arrow-up-tray')
-            ->visible(fn (): bool => (bool) config('survey-filament.builder_json_actions_enabled', false))
+            ->visible(fn (): bool => (bool) config('survey-filament.builder_json_actions_enabled', false) && SurveyResource::canCreate())
             ->schema([
                 FileUpload::make('json_file')
                     ->label('Builder JSON')
@@ -36,6 +36,8 @@ class ImportSurveyJsonHeaderAction
                     ->default(false),
             ])
             ->action(function (array $data) {
+                abort_unless(SurveyResource::canCreate(), 403);
+
                 $importSchema = app(ImportSurveyBuilderSchemaAction::class);
                 $path = self::uploadedJsonPath($data['json_file'] ?? null);
 

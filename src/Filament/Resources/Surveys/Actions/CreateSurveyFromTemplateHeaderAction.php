@@ -16,6 +16,7 @@ class CreateSurveyFromTemplateHeaderAction
         return Action::make('create_from_template')
             ->label('從範本建立')
             ->icon('heroicon-o-rectangle-stack')
+            ->visible(fn (): bool => SurveyResource::canCreate())
             ->schema([
                 Select::make('template')
                     ->label('選擇範本')

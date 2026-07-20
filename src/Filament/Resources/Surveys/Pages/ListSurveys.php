@@ -28,6 +28,7 @@ class ListSurveys extends ListRecords
             Action::make('create')
                 ->label('新增問卷')
                 ->icon('heroicon-o-plus')
+                ->visible(fn (): bool => SurveyResource::canCreate())
                 ->action(function () {
                     abort_unless(SurveyResource::canCreate(), 403);
 

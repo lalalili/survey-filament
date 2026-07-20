@@ -32,7 +32,10 @@ class SurveyAnalytics extends Page
         $survey = $this->getRecord();
 
         abort_unless($survey instanceof Survey, 404);
+        // 與列表的「分析」action 一致：除了資料範圍（canView）外，還必須具備編輯權限
+        // 才能看分析頁；唯讀角色請走問卷結果頁。
         abort_unless(static::getResource()::canView($survey), 403);
+        abort_unless(static::getResource()::canEdit($survey), 403);
 
         $this->collectorOptions = $survey->collectors
             ->map(fn ($collector): array => ['id' => (int) $collector->id, 'name' => (string) $collector->name])
@@ -65,6 +68,7 @@ class SurveyAnalytics extends Page
             Action::make('builder')
                 ->label('編輯問卷')
                 ->icon('heroicon-o-pencil-square')
+                ->visible(fn (): bool => SurveyResource::canEdit($this->getRecord()))
                 ->url(fn (): string => SurveyResource::getUrl('builder', ['record' => $this->getRecord()])),
         ];
     }
