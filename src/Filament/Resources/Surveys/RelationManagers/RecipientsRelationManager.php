@@ -50,7 +50,7 @@ class RecipientsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('name')->label('姓名')->searchable(),
                 TextColumn::make('email')->label('Email')->searchable(),
-                TextColumn::make('external_id')->label('ID')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('external_id')->label('ID')->searchable()->toggleable(isToggledHiddenByDefault: true),
 
                 // 手機／車牌取自名單 payload_json（上游調查名單欄位），供發券回填 DMS 辨識顧客。
                 TextColumn::make('mobile')

@@ -75,6 +75,7 @@ class SurveyTriggerAllowedHostResource extends Resource
 
                 TextColumn::make('description')
                     ->label('說明')
+                    ->searchable()
                     ->placeholder('—'),
 
                 TextColumn::make('created_at')

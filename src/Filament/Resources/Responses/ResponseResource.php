@@ -140,7 +140,7 @@ class ResponseResource extends Resource
                 TextColumn::make('survey.title')->label('問卷')->searchable()->sortable(),
                 TextColumn::make('recipient.name')->label('收件人姓名')->searchable(),
                 TextColumn::make('recipient.email')->label('收件人 Email')->searchable(),
-                TextColumn::make('recipient.external_id')->label('外部 ID')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('recipient.external_id')->label('外部 ID')->searchable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('completion_status')
                     ->label('完成狀態')
                     ->formatStateUsing(fn ($state) => $state instanceof SurveyResponseCompletionStatus ? $state->label() : $state->value)
