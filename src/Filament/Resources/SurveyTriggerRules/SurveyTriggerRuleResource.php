@@ -10,6 +10,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -212,10 +213,33 @@ class SurveyTriggerRuleResource extends Resource
             ->recordActions([
                 ActionGroup::make([
                     EditAction::make(),
-                    DeleteAction::make(),
+                    self::deleteAction(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
+    }
+
+    public static function deleteAction(): DeleteAction
+    {
+        return DeleteAction::make()
+            ->label('刪除')
+            ->before(fn (DeleteAction $action, SurveyTriggerRule $record) => self::guardAgainstDeletingScheduledTriggerRule($action, $record));
+    }
+
+    public static function guardAgainstDeletingScheduledTriggerRule(DeleteAction $action, SurveyTriggerRule $record): void
+    {
+        if (! $record->schedule_enabled) {
+            return;
+        }
+
+        Notification::make()
+            ->danger()
+            ->title('無法刪除發送設定')
+            ->body('此發送設定已啟用排程，請先停用排程再刪除。')
+            ->persistent()
+            ->send();
+
+        $action->halt();
     }
 
     /**

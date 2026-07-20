@@ -3,7 +3,6 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\Pages;
 
 use Filament\Actions\Action;
-use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
@@ -160,7 +159,7 @@ class EditSurveyTriggerRule extends EditRecord
                 })
                 ->modalSubmitActionLabel('執行'),
 
-            DeleteAction::make(),
+            SurveyTriggerRuleResource::deleteAction(),
         ];
     }
 
