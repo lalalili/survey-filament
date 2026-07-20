@@ -311,11 +311,9 @@ class ResponseResource extends Resource
                                 return;
                             }
 
-                            $asyncAction = app()->bound('survey-filament.response_export_action')
-                                ? app('survey-filament.response_export_action')
-                                : config('survey-filament.response_export_action');
+                            $asyncAction = self::resolveResponseExportHandler();
 
-                            if (is_callable($asyncAction)) {
+                            if ($asyncAction !== null) {
                                 $asyncAction($survey, $records);
 
                                 return;
@@ -351,6 +349,21 @@ class ResponseResource extends Resource
                 ]),
             ])
             ->defaultSort('submitted_at', 'desc');
+    }
+
+    /**
+     * 回覆批次匯出的非同步覆寫（見 README「回覆批次匯出」）。優先取容器綁定，
+     * 其次取 config；兩者皆未設定時回傳 null，呼叫端 fallback 到同步匯出。
+     *
+     * @return (callable(Survey, Collection<int, SurveyResponse>): void)|null
+     */
+    public static function resolveResponseExportHandler(): ?callable
+    {
+        $handler = app()->bound('survey-filament.response_export_action')
+            ? app('survey-filament.response_export_action')
+            : config('survey-filament.response_export_action');
+
+        return is_callable($handler) ? $handler : null;
     }
 
     /**

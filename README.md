@@ -51,6 +51,32 @@ php artisan vendor:publish --tag=survey-filament-config
 |---|---|---|
 | `navigation_group` | 側邊欄群組名稱 | `問卷管理` |
 | `navigation_sort` | 群組排序權重 | `50` |
+| `response_export_action` | 回覆批次匯出的非同步覆寫（見下方「回覆批次匯出」） | `null` |
+
+## 回覆批次匯出（`response_export_action` 縫）
+
+`ResponseResource` 的「匯出」bulk action（`Filament/Resources/Responses/ResponseResource.php`）預設是**同步**匯出：直接呼叫
+`ExportSurveyResponsesAction::execute($survey, 'xlsx', $records, answersOnly: true)`，把 XLSX 以 `StreamedResponse` 回傳給瀏覽器下載。
+這個同步行為在套件內完全自足，單獨安裝（不含任何宿主 app 程式碼）即可運作。
+
+若宿主需要非同步批次匯出（大量資料、背景 Job、Email/通知完成提醒等），可覆寫這個縫，解析順序為：
+
+1. 容器綁定 `survey-filament.response_export_action`（優先）
+2. `config('survey-filament.response_export_action')`（次之）
+3. 兩者皆未設定 → fallback 到上述同步匯出
+
+覆寫的簽名是 `callable(Survey $survey, Illuminate\Support\Collection $records): void`，例如本專案（lxm-survey）的接法
+（`app/Providers/AppServiceProvider.php`）：
+
+```php
+// 用容器綁定而非 config，才能與 config:cache 相容
+$this->app->bind('survey-filament.response_export_action', fn () => function (Survey $survey, Collection $records): void {
+    app(DispatchSurveyResponseExportAction::class)->execute($survey, $records);
+});
+```
+
+`DispatchSurveyResponseExportAction`、非同步匯出 Job、下載路由與授權（誰能下載、連結有效期）都是**宿主 app 的責任**，
+不屬於本套件範圍；套件只保證「沒有接縫時，同步下載一定能用」。
 
 ## Resources
 
