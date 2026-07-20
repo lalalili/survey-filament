@@ -641,7 +641,7 @@ function updatePersonalizationAudience(audienceListId: string) {
                     <div class="sb-set-hint" style="margin-top:4px">同步為收件人 Email，EDM 活動選擇此問卷時可沿用此欄位作為收件地址來源。</div>
                   </div>
                   <div class="sb-set-field">
-                    <div class="sb-set-field-label">外部 ID 欄位</div>
+                    <div class="sb-set-field-label">外部識別碼欄位</div>
                     <select
                       class="sb-prop-input"
                       style="max-width:220px"
@@ -651,7 +651,7 @@ function updatePersonalizationAudience(audienceListId: string) {
                       <option value="">未指定</option>
                       <option v-for="column in audienceColumnOptions" :key="column.value" :value="column.value">{{ column.label }}</option>
                     </select>
-                    <div class="sb-set-hint" style="margin-top:4px">同步 CRM、DMS 或會員系統 ID，便於對帳、去重與跨系統追蹤；未指定時使用名單資料列 ID。</div>
+                    <div class="sb-set-hint" style="margin-top:4px">指定名單中哪一欄作為收件人的外部識別碼，供對帳、去重與跨系統追蹤；未指定時自動使用名單資料列 ID。</div>
                   </div>
                   <div class="sb-set-field full">
                     <div class="sb-set-field-label">問卷結果固定欄位</div>

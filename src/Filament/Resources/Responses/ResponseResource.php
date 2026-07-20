@@ -77,10 +77,13 @@ class ResponseResource extends Resource
     }
 
     /**
-     * external_id 是串接名單、發信與問卷收件人的鍵，不是給人閱讀的編號；
-     * 光看「外部識別碼」看不出用途，列表與表單都掛這段說明。
+     * external_id 是對應來源系統的識別碼，不是給人閱讀的編號；光看欄位名看不出
+     * 用途，列表與表單都掛這段說明。
+     *
+     * 註：名單同步與信件個人化連結的主要比對鍵是 audience_list_row_id，
+     * external_id 只在收件人沒有名單列來源時作為備援，說明勿再誇大其角色。
      */
-    public const string EXTERNAL_ID_HINT = '跨系統對應同一位收件人的識別碼。問卷邀請信靠它產生個人化連結，對應不到時該筆回覆無法歸戶。';
+    public const string EXTERNAL_ID_HINT = '對應來源系統（CRM／DMS／會員系統）的識別碼，供對帳、去重與跨系統追蹤。名單同步時未指定對應欄位，會自動填入名單資料列 ID。';
 
     /**
      * 將品質判定旗標代碼轉成可讀的中文說明。
