@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Schema as SchemaFacade;
 use Illuminate\Support\Facades\View as ViewFacade;
 use Lalalili\MarketingAutomation\Enums\Channel;
 use Lalalili\SurveyCore\Enums\SurveyRecipientStatus;
+use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
 use Lalalili\SurveyCore\Enums\SurveyTokenStatus;
 use Lalalili\SurveyCore\Models\SurveyRecipient;
 use Lalalili\SurveyCore\Models\SurveyToken;
@@ -40,7 +41,10 @@ class RecipientsRelationManager extends RelationManager
         return $schema->components([
             TextInput::make('name')->label('姓名')->maxLength(255),
             TextInput::make('email')->label('Email')->email()->maxLength(255),
-            TextInput::make('external_id')->label('外部 ID')->maxLength(255),
+            TextInput::make('external_id')
+                ->label('外部識別碼')
+                ->helperText(ResponseResource::EXTERNAL_ID_HINT)
+                ->maxLength(255),
         ]);
     }
 
@@ -50,7 +54,12 @@ class RecipientsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('name')->label('姓名')->searchable(),
                 TextColumn::make('email')->label('Email')->searchable(),
-                TextColumn::make('external_id')->label('ID')->searchable()->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('external_id')
+                    ->label('外部識別碼')
+                    ->extraHeaderAttributes(['title' => ResponseResource::EXTERNAL_ID_HINT])
+                    ->tooltip(ResponseResource::EXTERNAL_ID_HINT)
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 // 手機／車牌取自名單 payload_json（上游調查名單欄位），供發券回填 DMS 辨識顧客。
                 TextColumn::make('mobile')

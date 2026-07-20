@@ -77,6 +77,12 @@ class ResponseResource extends Resource
     }
 
     /**
+     * external_id 是串接名單、發信與問卷收件人的鍵，不是給人閱讀的編號；
+     * 光看「外部識別碼」看不出用途，列表與表單都掛這段說明。
+     */
+    public const string EXTERNAL_ID_HINT = '跨系統對應同一位收件人的識別碼。問卷邀請信靠它產生個人化連結，對應不到時該筆回覆無法歸戶。';
+
+    /**
      * 將品質判定旗標代碼轉成可讀的中文說明。
      *
      * 旗標來源：Lalalili\SurveyCore\Actions\EvaluateResponseQualityAction
@@ -140,7 +146,12 @@ class ResponseResource extends Resource
                 TextColumn::make('survey.title')->label('問卷')->searchable()->sortable(),
                 TextColumn::make('recipient.name')->label('收件人姓名')->searchable(),
                 TextColumn::make('recipient.email')->label('收件人 Email')->searchable(),
-                TextColumn::make('recipient.external_id')->label('外部 ID')->searchable()->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('recipient.external_id')
+                    ->label('外部識別碼')
+                    ->extraHeaderAttributes(['title' => self::EXTERNAL_ID_HINT])
+                    ->tooltip(self::EXTERNAL_ID_HINT)
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('completion_status')
                     ->label('完成狀態')
                     ->formatStateUsing(fn ($state) => $state instanceof SurveyResponseCompletionStatus ? $state->label() : $state->value)
