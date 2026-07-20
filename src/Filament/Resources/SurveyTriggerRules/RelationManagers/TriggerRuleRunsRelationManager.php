@@ -15,6 +15,10 @@ class TriggerRuleRunsRelationManager extends RelationManager
 
     protected static ?string $title = '排程執行紀錄';
 
+    protected static ?string $modelLabel = '排程執行紀錄';
+
+    protected static ?string $pluralModelLabel = '排程執行紀錄';
+
     public function form(Schema $schema): Schema
     {
         return $schema->components([]);

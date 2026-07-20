@@ -31,6 +31,10 @@ class RecipientsRelationManager extends RelationManager
 
     protected static ?string $title = '收件人';
 
+    protected static ?string $modelLabel = '收件人';
+
+    protected static ?string $pluralModelLabel = '收件人';
+
     public function form(Schema $schema): Schema
     {
         return $schema->components([

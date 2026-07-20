@@ -22,6 +22,10 @@ class TriggerDispatchesRelationManager extends RelationManager
 
     protected static ?string $title = '派送記錄';
 
+    protected static ?string $modelLabel = '派送記錄';
+
+    protected static ?string $pluralModelLabel = '派送記錄';
+
     public function form(Schema $schema): Schema
     {
         return $schema->components([]);

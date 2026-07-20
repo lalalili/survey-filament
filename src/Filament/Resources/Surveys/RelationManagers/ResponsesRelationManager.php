@@ -16,6 +16,10 @@ class ResponsesRelationManager extends RelationManager
 
     protected static ?string $title = '回應';
 
+    protected static ?string $modelLabel = '回應';
+
+    protected static ?string $pluralModelLabel = '回應';
+
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
         return PanelLabel::get('response') ?? static::$title ?? '回應';

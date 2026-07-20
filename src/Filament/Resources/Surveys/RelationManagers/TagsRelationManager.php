@@ -21,6 +21,10 @@ class TagsRelationManager extends RelationManager
 
     protected static ?string $title = '標籤';
 
+    protected static ?string $modelLabel = '標籤';
+
+    protected static ?string $pluralModelLabel = '標籤';
+
     public function form(Schema $schema): Schema
     {
         return $schema->components([

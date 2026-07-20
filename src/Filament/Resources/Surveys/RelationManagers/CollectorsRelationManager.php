@@ -24,6 +24,10 @@ class CollectorsRelationManager extends RelationManager
 
     protected static ?string $title = '回收管道';
 
+    protected static ?string $modelLabel = '回收管道';
+
+    protected static ?string $pluralModelLabel = '回收管道';
+
     public function form(Schema $schema): Schema
     {
         return $schema->components([
