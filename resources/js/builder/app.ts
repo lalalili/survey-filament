@@ -1,6 +1,8 @@
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import SurveyBuilderApp from './SurveyBuilderApp.vue';
+import { useSurveyBuilderStore } from './stores/useSurveyBuilderStore';
+import { registerBuilderNavigationProtection } from './registerBuilderNavigationProtection';
 
 const root = document.getElementById('survey-builder-app');
 
@@ -70,6 +72,14 @@ if (root) {
   app.provide('thankYouRedirectEnabled', root.dataset.thankYouRedirectEnabled === '1');
   app.provide('accentColorSettingEnabled', root.dataset.accentColorSettingEnabled === '1');
 
-  app.use(createPinia());
+  const pinia = createPinia();
+
+  app.use(pinia);
   app.mount(root);
+  registerBuilderNavigationProtection({
+    app,
+    hasUnsavedChanges: () => useSurveyBuilderStore(pinia).hasUnsavedChanges,
+    confirmLeave: () => window.confirm('系統可能不會儲存你所做的變更。確定要離開嗎？'),
+    navigate: (url) => window.Livewire.navigate(url),
+  });
 }

@@ -250,6 +250,7 @@ export interface BuilderPayload {
     status: string;
     version: number;
     published_at?: string | null;
+    has_unpublished_changes?: boolean;
     google_drive?: GoogleDriveBinding;
   };
   schema: SurveyBuilderSchema;

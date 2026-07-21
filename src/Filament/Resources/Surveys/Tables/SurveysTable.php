@@ -29,6 +29,7 @@ class SurveysTable
             ->columns([
                 TextColumn::make('title')
                     ->label('標題')
+                    ->state(fn (Survey $record): string => self::displayTitle($record))
                     ->searchable()
                     ->sortable()
                     ->url(fn (Survey $record) => route('survey.show', $record->public_key))
@@ -179,5 +180,14 @@ class SurveysTable
                 ]),
             ])
             ->bulkActions([]);
+    }
+
+    private static function displayTitle(Survey $survey): string
+    {
+        $draftTitle = data_get($survey->draft_schema, 'title');
+
+        return is_string($draftTitle) && $draftTitle !== ''
+            ? $draftTitle
+            : $survey->title;
     }
 }

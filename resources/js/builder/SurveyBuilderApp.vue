@@ -44,8 +44,8 @@ function beforeUnload(event: BeforeUnloadEvent) {
 
 onMounted(async () => {
   store.configure(props.endpoints, props.csrfToken);
-  await store.loadBuilder();
   window.addEventListener('beforeunload', beforeUnload);
+  await store.loadBuilder();
 });
 onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
 </script>

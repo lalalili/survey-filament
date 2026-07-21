@@ -181,6 +181,7 @@ describe('survey builder autosave', () => {
           status: 'published',
           version: 2,
           published_at: null,
+          has_unpublished_changes: true,
         },
       }),
     } as typeof store.api;
@@ -188,6 +189,7 @@ describe('survey builder autosave', () => {
     await store.loadBuilder();
 
     expect(store.surveyTitle).toBe('草稿問卷標題');
+    expect(store.hasUnpublishedChanges).toBe(true);
   });
 
   it('hydrates a uniquely matching audience list on load without writing during GET', async () => {

@@ -43,6 +43,32 @@ beforeEach(function (): void {
     Gate::define('update', fn (User $user, Survey $survey): bool => true);
 });
 
+it('reports whether a published survey has unpublished builder changes', function (): void {
+    $user = User::create([
+        'name' => 'Editor',
+        'email' => 'editor-unpublished@example.com',
+        'password' => 'password',
+    ]);
+    $publishedSchema = builderActivitySchema(['title' => 'Published title']);
+    $survey = Survey::create([
+        'title' => 'Published title',
+        'status' => SurveyStatus::Published,
+        'draft_schema' => builderActivitySchema(['title' => 'Builder draft title']),
+        'published_schema' => $publishedSchema,
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('survey-filament.builder.show', $survey))
+        ->assertOk()
+        ->assertJsonPath('survey.has_unpublished_changes', true);
+
+    $survey->update(['draft_schema' => $publishedSchema]);
+
+    $this->getJson(route('survey-filament.builder.show', $survey->refresh()))
+        ->assertOk()
+        ->assertJsonPath('survey.has_unpublished_changes', false);
+});
+
 it('merges autosave activity records within the same editing window', function (): void {
     $user = User::create([
         'name' => 'Editor',
