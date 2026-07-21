@@ -14,10 +14,10 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-function savePayload(content: string) {
+function savePayload(content: string, title = '問卷') {
   return {
     schema: {
-      title: '問卷',
+      title,
       pages: [{
         id: 'welcome',
         kind: 'welcome',
@@ -114,6 +114,21 @@ describe('survey builder autosave', () => {
     expect(store.pageRemovalMessage('page-1')).toBeNull();
   });
 
+  it('normalizes text length limits to non-negative integers', () => {
+    const store = useSurveyBuilderStore();
+    store.schema = questionSchema() as typeof store.schema;
+
+    store.updateElementValidationRules('question-1', {
+      min_length: -3,
+      max_length: 12.8,
+    });
+
+    expect(store.allElements[0]?.validation_rules).toMatchObject({
+      min_length: 0,
+      max_length: 12,
+    });
+  });
+
   it('does not overwrite changes made while an autosave request is in flight', async () => {
     const firstSave = deferred<ReturnType<typeof savePayload>>();
     const secondSave = deferred<ReturnType<typeof savePayload>>();
@@ -134,22 +149,45 @@ describe('survey builder autosave', () => {
     store.updatePage('welcome', {
       welcome_settings: { content: imageContent },
     });
+    store.updateSurveyTitle('更新後問卷');
 
     firstSave.resolve(savePayload('<p>準備上傳圖片</p>'));
     await firstSave.promise;
     await vi.advanceTimersByTimeAsync(0);
 
     expect(store.welcomePage?.welcome_settings?.content).toBe(imageContent);
+    expect(store.surveyTitle).toBe('更新後問卷');
     expect(store.isDirty).toBe(true);
 
     await vi.advanceTimersByTimeAsync(2000);
-    secondSave.resolve(savePayload(imageContent));
+    secondSave.resolve(savePayload(imageContent, '更新後問卷'));
     await secondSave.promise;
     await vi.advanceTimersByTimeAsync(0);
 
     expect(save).toHaveBeenCalledTimes(2);
     expect(store.welcomePage?.welcome_settings?.content).toBe(imageContent);
+    expect(store.surveyTitle).toBe('更新後問卷');
     expect(store.isDirty).toBe(false);
+  });
+
+  it('loads the editable title from the draft schema', async () => {
+    const store = useSurveyBuilderStore();
+    store.api = {
+      load: vi.fn().mockResolvedValue({
+        ...savePayload('<p>草稿內容</p>', '草稿問卷標題'),
+        survey: {
+          id: 1,
+          title: '目前正式標題',
+          status: 'published',
+          version: 2,
+          published_at: null,
+        },
+      }),
+    } as typeof store.api;
+
+    await store.loadBuilder();
+
+    expect(store.surveyTitle).toBe('草稿問卷標題');
   });
 
   it('hydrates a uniquely matching audience list on load without writing during GET', async () => {

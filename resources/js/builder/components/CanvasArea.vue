@@ -14,6 +14,7 @@ import { isSystemContextField, visibleSurveyElements } from '../utils/systemCont
 const props = defineProps<{
   endpoints: BuilderEndpoints;
   csrfToken: string;
+  guideUrl?: string;
 }>();
 
 const store = useSurveyBuilderStore();
@@ -2047,7 +2048,7 @@ function textInputType(element: SurveyElement) {
     </main>
 
     <!-- ── Right panel ── -->
-    <RightPanel v-if="!store.isPreviewMode" />
+    <RightPanel v-if="!store.isPreviewMode" :guide-url="props.guideUrl" />
 
   </div><!-- /sb-body -->
 </template>

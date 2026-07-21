@@ -17,6 +17,10 @@ import type { CascadeDialogState } from '../dialogs/CascadeDialog.vue';
 import { calculationToken, calculationVariableToken, variableTokenChipHtml } from '../utils/variableTokens';
 import { visibleSurveyElements } from '../utils/systemContextFields';
 
+const props = defineProps<{
+  guideUrl?: string;
+}>();
+
 const store = useSurveyBuilderStore();
 const canManageAdvancedFields = computed(() => store.capabilities.can_manage_advanced_fields);
 const optionCapacityTypes = ['single_choice', 'multiple_choice', 'select'];
@@ -791,11 +795,11 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
               <div class="sb-prop-grid-2">
                 <label class="sb-prop-row col">
                   <span class="sb-prop-label">最少字數</span>
-                  <input :value="store.selectedElement.validation_rules?.min_length ?? ''" type="number" placeholder="不限制" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { min_length: Number(($event.target as HTMLInputElement).value) })" />
+                  <input :value="store.selectedElement.validation_rules?.min_length ?? ''" type="number" min="0" step="1" placeholder="不限制" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { min_length: Number(($event.target as HTMLInputElement).value) })" />
                 </label>
                 <label class="sb-prop-row col">
                   <span class="sb-prop-label">最多字數</span>
-                  <input :value="store.selectedElement.validation_rules?.max_length ?? ''" type="number" placeholder="不限制" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { max_length: Number(($event.target as HTMLInputElement).value) })" />
+                  <input :value="store.selectedElement.validation_rules?.max_length ?? ''" type="number" min="0" step="1" placeholder="不限制" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { max_length: Number(($event.target as HTMLInputElement).value) })" />
                 </label>
               </div>
             </template>
@@ -878,20 +882,23 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
           -->
 
           <!-- Advanced system settings -->
-          <div v-if="canManageAdvancedFields && !['section_title', 'description_block', 'divider', 'quote_block'].includes(store.selectedElement.type)" class="sb-prop-section">
+          <div v-if="canManageAdvancedFields && ['short_text', 'long_text', 'phone'].includes(store.selectedElement.type)" class="sb-prop-section">
             <div class="sb-prop-heading">進階設定</div>
-            <template v-if="['short_text', 'long_text', 'phone'].includes(store.selectedElement.type)">
-              <label class="sb-prop-row col">
-                <span class="sb-prop-label">格式規則</span>
-                <input :value="store.selectedElement.validation_rules?.regex ?? ''" placeholder="進階設定，可留空" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { regex: ($event.target as HTMLInputElement).value })" />
-                <span class="sb-prop-help">使用正規表示式限制輸入格式，通常只有進階需求才需要設定。</span>
-              </label>
-              <label class="sb-prop-row col">
-                <span class="sb-prop-label">格式錯誤提示</span>
-                <input :value="store.selectedElement.validation_rules?.pattern_label ?? ''" placeholder="例如 請輸入正確格式" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { pattern_label: ($event.target as HTMLInputElement).value })" />
-                <span class="sb-prop-help">當填答內容不符合格式規則時顯示。</span>
-              </label>
-            </template>
+            <label class="sb-prop-row col">
+              <span class="sb-prop-label">格式規則</span>
+              <input :value="store.selectedElement.validation_rules?.regex ?? ''" placeholder="進階設定，可留空" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { regex: ($event.target as HTMLInputElement).value })" />
+              <span class="sb-prop-help">
+                使用正規表示式限制輸入格式，通常只有進階需求才需要設定。
+                <template v-if="props.guideUrl">
+                  不確定如何填寫時，可參考文件中的<a :href="props.guideUrl" target="_blank" rel="noopener noreferrer">常用格式規則範例</a>。
+                </template>
+              </span>
+            </label>
+            <label class="sb-prop-row col">
+              <span class="sb-prop-label">格式錯誤提示</span>
+              <input :value="store.selectedElement.validation_rules?.pattern_label ?? ''" placeholder="例如 請輸入正確格式" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { pattern_label: ($event.target as HTMLInputElement).value })" />
+              <span class="sb-prop-help">當填答內容不符合格式規則時顯示。</span>
+            </label>
           </div>
 
           <!-- Option capacity / score -->

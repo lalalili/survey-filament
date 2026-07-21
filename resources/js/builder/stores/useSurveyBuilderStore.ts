@@ -151,7 +151,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
       const payload = await this.api.load();
 
       this.surveyId = payload.survey.id;
-      this.surveyTitle = payload.survey.title;
+      this.surveyTitle = payload.schema.title;
       this.status = payload.survey.status;
       this.version = payload.survey.version;
       this.publishedAt = payload.survey.published_at ?? null;
@@ -351,9 +351,9 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
 
           if (!hasNewerChanges) {
             this.schema = payload.schema;
+            this.surveyTitle = payload.schema.title;
           }
 
-          this.surveyTitle = payload.survey.title;
           this.status = payload.survey.status;
           this.version = payload.survey.version;
           this.publishedAt = payload.survey.published_at ?? this.publishedAt;
@@ -921,7 +921,17 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         return;
       }
 
-      element.validation_rules = { ...(element.validation_rules ?? {}), ...validationRules };
+      const normalizedRules = Object.fromEntries(
+        Object.entries(validationRules).map(([key, value]) => {
+          if (['min_length', 'max_length'].includes(key) && typeof value === 'number' && Number.isFinite(value)) {
+            return [key, Math.max(0, Math.trunc(value))];
+          }
+
+          return [key, value];
+        }),
+      );
+
+      element.validation_rules = { ...(element.validation_rules ?? {}), ...normalizedRules };
       this.markDirty();
     },
     addMatrixRow(elementId: string) {

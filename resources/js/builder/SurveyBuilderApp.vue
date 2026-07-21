@@ -149,7 +149,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
       </div>
     </div>
 
-    <CanvasArea :endpoints="props.endpoints" :csrf-token="props.csrfToken" />
+    <CanvasArea :endpoints="props.endpoints" :csrf-token="props.csrfToken" :guide-url="props.guideUrl" />
 
     <SettingsModal
       v-model="store.showSettingsModal"

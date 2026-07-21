@@ -155,6 +155,17 @@ it('documents supported advanced builder settings', function () {
     }
 });
 
+it('provides common format rule examples for text questions', function () {
+    expect(surveyGuideText())
+        ->toContain('單行與多行文字題的格式規則')
+        ->toContain('常用格式規則範例')
+        ->toContain('不要在前後加上斜線')
+        ->toContain('^09[0-9]{8}$')
+        ->toContain('^[A-Z]{2}[0-9]{6}$')
+        ->toContain('格式錯誤提示')
+        ->toContain('請用「預覽」分別測試一個正確答案與一個錯誤答案');
+});
+
 it('documents focused operation screenshot blocks', function () {
     $text = surveyGuideText();
 
