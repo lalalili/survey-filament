@@ -1829,8 +1829,16 @@ function textInputType(element: SurveyElement) {
                     </button>
                   </div>
 
-                  <!-- Options preview -->
-                  <div v-if="getQuestionType(element.type).supportsOptions && element.type !== 'select' && element.type !== 'constant_sum'" class="sb-card-body survey-choices sb-edit-options">
+                  <!-- Select preview -->
+                  <div v-if="element.type === 'select'" class="sb-card-body">
+                    <select class="survey-select" disabled>
+                      <option>請選擇</option>
+                      <option v-for="opt in previewOptions(element)" :key="opt.id">{{ opt.label }}</option>
+                    </select>
+                  </div>
+
+                  <!-- Options editor -->
+                  <div v-if="getQuestionType(element.type).supportsOptions && element.type !== 'constant_sum'" class="sb-card-body survey-choices sb-edit-options">
                     <div v-for="(opt, oi) in element.options" :key="opt.id" class="survey-choice-label sb-opt-row">
                       <span class="sb-opt-letter">{{ String.fromCharCode(97 + oi) }}</span>
                       <span class="survey-choice-input sb-opt-marker" :class="element.type === 'multiple_choice' ? 'square' : ''" />
@@ -1875,14 +1883,6 @@ function textInputType(element: SurveyElement) {
                     <button class="sb-opt-add" type="button" @click.stop="addOption(element)">
                       + 新增選項
                     </button>
-                  </div>
-
-                  <!-- Select preview -->
-                  <div v-else-if="element.type === 'select'" class="sb-card-body">
-                    <select class="survey-select" disabled>
-                      <option>請選擇</option>
-                      <option v-for="opt in previewOptions(element)" :key="opt.id">{{ opt.label }}</option>
-                    </select>
                   </div>
 
                   <!-- Text preview -->
