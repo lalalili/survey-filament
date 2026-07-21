@@ -80,7 +80,7 @@ it('round trips welcome and thank-you rich text styles through autosave and publ
         'password' => 'password',
     ]);
     $survey = Survey::create(['title' => 'Styled Draft', 'status' => SurveyStatus::Draft]);
-    $richHtml = '<h2 style="text-align: center"><strong>標題</strong></h2><h3 style="text-align: right"><em><u>副標題</u></em></h3><p style="text-align: left"><span style="color: #EF4444">彩色文字</span> <a href="https://example.com" target="_blank">連結</a></p><img src="https://example.com/image.jpg" alt="圖片"><div class="survey-video"><iframe src="https://www.youtube.com/embed/abc123"></iframe></div><p><span class="survey-variable-token" data-variable-token="{{ calc.score }}" data-variable-label="總分">總分<code>calc.score</code></span></p>';
+    $richHtml = '<h2 style="text-align: center"><strong>標題</strong></h2><h3 style="text-align: right"><em><u>副標題</u></em></h3><p style="text-align: left"><span style="color: rgb(239, 68, 68)">彩色文字</span> <a href="https://example.com" target="_blank">連結</a></p><img src="https://example.com/image.jpg" alt="圖片"><div class="survey-video"><iframe src="https://www.youtube.com/embed/abc123"></iframe></div><p><span class="survey-variable-token" data-variable-token="{{ calc.score }}" data-variable-label="總分">總分<code>calc.score</code></span></p>';
     $schema = builderActivitySchema();
     $schema['pages'] = [
         [
