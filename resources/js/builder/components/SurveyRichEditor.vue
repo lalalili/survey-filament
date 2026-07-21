@@ -257,9 +257,15 @@ function insertVideo() {
       <div class="sre-divider"></div>
 
       <!-- Alignment -->
-      <button type="button" class="sre-btn" :class="{ active: editor.isActive({ textAlign: 'left' }) }" title="靠左" @click="editor.chain().focus().setTextAlign('left').run()">≡</button>
-      <button type="button" class="sre-btn" :class="{ active: editor.isActive({ textAlign: 'center' }) }" title="置中" @click="editor.chain().focus().setTextAlign('center').run()">≡</button>
-      <button type="button" class="sre-btn" :class="{ active: editor.isActive({ textAlign: 'right' }) }" title="靠右" @click="editor.chain().focus().setTextAlign('right').run()">≡</button>
+      <button type="button" class="sre-btn" :class="{ active: editor.isActive({ textAlign: 'left' }) }" title="靠左" aria-label="靠左" @click="editor.chain().focus().setTextAlign('left').run()">
+        <svg viewBox="0 0 18 18" width="16" height="16" aria-hidden="true" focusable="false"><path d="M2 4h14M2 7.5h9M2 11h14M2 14.5h7" /></svg>
+      </button>
+      <button type="button" class="sre-btn" :class="{ active: editor.isActive({ textAlign: 'center' }) }" title="置中" aria-label="置中" @click="editor.chain().focus().setTextAlign('center').run()">
+        <svg viewBox="0 0 18 18" width="16" height="16" aria-hidden="true" focusable="false"><path d="M2 4h14M4.5 7.5h9M2 11h14M5.5 14.5h7" /></svg>
+      </button>
+      <button type="button" class="sre-btn" :class="{ active: editor.isActive({ textAlign: 'right' }) }" title="靠右" aria-label="靠右" @click="editor.chain().focus().setTextAlign('right').run()">
+        <svg viewBox="0 0 18 18" width="16" height="16" aria-hidden="true" focusable="false"><path d="M2 4h14M7 7.5h9M2 11h14M9 14.5h7" /></svg>
+      </button>
 
       <div class="sre-divider"></div>
 
@@ -419,6 +425,13 @@ function insertVideo() {
 .sre-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .sre-btn:hover:not(:disabled) { background: #e5e7eb; }
 .sre-btn.active { background: #dbeafe; color: #1d4ed8; }
+
+.sre-btn > svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
 
 .sre-divider {
   width: 1px;
