@@ -86,10 +86,17 @@ class SurveyTriggerAllowedHostResource extends Resource
             ->recordActions([
                 ActionGroup::make([
                     EditAction::make(),
-                    DeleteAction::make(),
+                    self::deleteAction(),
                 ]),
             ])
             ->defaultSort('host');
+    }
+
+    public static function deleteAction(): DeleteAction
+    {
+        return DeleteAction::make()
+            ->modalHeading(fn (SurveyTriggerAllowedHost $record): string => '刪除 '.$record->host)
+            ->modalDescription('刪除後將無法復原，且該主機將不再允許 DMS HTTP action，確定要進行嗎?');
     }
 
     public static function getPages(): array

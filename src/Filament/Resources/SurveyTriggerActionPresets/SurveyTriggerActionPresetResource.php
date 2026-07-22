@@ -11,6 +11,7 @@ use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -18,6 +19,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Lalalili\SurveyCore\Models\SurveyTriggerActionPreset;
+use Lalalili\SurveyCore\Models\SurveyTriggerRule;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerActionPresets\Pages\CreateSurveyTriggerActionPreset;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerActionPresets\Pages\EditSurveyTriggerActionPreset;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerActionPresets\Pages\ListSurveyTriggerActionPresets;
@@ -164,18 +166,63 @@ class SurveyTriggerActionPresetResource extends Resource
             ->recordActions([
                 ActionGroup::make([
                     EditAction::make(),
-                    DeleteAction::make(),
+                    self::deleteAction(),
                 ]),
             ])
             ->defaultSort('name');
     }
 
+    public static function deleteAction(): DeleteAction
+    {
+        return DeleteAction::make()
+            ->modalHeading(fn (SurveyTriggerActionPreset $record): string => '刪除 '.$record->name)
+            ->modalDescription('刪除後將無法復原，確定要進行嗎?')
+            ->before(fn (DeleteAction $action, SurveyTriggerActionPreset $record) => self::guardAgainstDeletingReferencedPreset($action, $record));
+    }
+
+    public static function guardAgainstDeletingReferencedPreset(DeleteAction $action, SurveyTriggerActionPreset $preset): void
+    {
+        $referenceCount = self::referencingRuleCount($preset);
+
+        if ($referenceCount === 0) {
+            return;
+        }
+
+        Notification::make()
+            ->danger()
+            ->title('無法刪除 DMS 動作設定')
+            ->body("此動作設定仍被 {$referenceCount} 筆發送設定引用，請先移除引用後再刪除。")
+            ->persistent()
+            ->send();
+
+        $action->halt();
+    }
+
+    public static function referencingRuleCount(SurveyTriggerActionPreset $preset): int
+    {
+        $referenceCount = 0;
+
+        SurveyTriggerRule::query()
+            ->select(['id', 'actions_json'])
+            ->lazyById()
+            ->each(function (SurveyTriggerRule $rule) use ($preset, &$referenceCount): void {
+                foreach ($rule->actions_json ?? [] as $definition) {
+                    if (($definition['type'] ?? null) === 'preset' && (int) ($definition['preset_id'] ?? 0) === $preset->getKey()) {
+                        $referenceCount++;
+                        break;
+                    }
+                }
+            });
+
+        return $referenceCount;
+    }
+
     public static function getPages(): array
     {
         return [
-            'index'  => ListSurveyTriggerActionPresets::route('/'),
+            'index' => ListSurveyTriggerActionPresets::route('/'),
             'create' => CreateSurveyTriggerActionPreset::route('/create'),
-            'edit'   => EditSurveyTriggerActionPreset::route('/{record}/edit'),
+            'edit' => EditSurveyTriggerActionPreset::route('/{record}/edit'),
         ];
     }
 }

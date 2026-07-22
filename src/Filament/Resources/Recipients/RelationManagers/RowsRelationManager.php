@@ -3,6 +3,7 @@
 namespace Lalalili\SurveyFilament\Filament\Resources\Recipients\RelationManagers;
 
 use Filament\Actions\Action;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\KeyValue;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
@@ -49,6 +50,9 @@ class RowsRelationManager extends RelationManager
                     ->wrap(),
                 TextColumn::make('status')->label('狀態')->badge(),
                 TextColumn::make('created_at')->label('建立時間')->dateTime()->sortable(),
+            ])
+            ->recordActions([
+                EditAction::make()->label('編輯'),
             ])
             ->defaultSort('id');
     }

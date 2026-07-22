@@ -16,6 +16,8 @@ use Lalalili\SurveyCore\Actions\ExportSurveyBuilderSchemaAction;
 use Lalalili\SurveyCore\Actions\PublishSurveyAction;
 use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Models\Survey;
+use Lalalili\SurveyCore\Models\SurveyResponse;
+use Lalalili\SurveyCore\Models\SurveyTriggerDispatch;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\ViewSurvey;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
@@ -29,7 +31,7 @@ class SurveysTable
             ->columns([
                 TextColumn::make('title')
                     ->label('標題')
-                    ->state(fn (Survey $record): string => self::displayTitle($record))
+                    ->state(fn (Survey $record): string => SurveyResource::recordLabel($record))
                     ->searchable()
                     ->sortable()
                     ->url(fn (Survey $record) => route('survey.show', $record->public_key))
@@ -170,10 +172,10 @@ class SurveysTable
                         ->color('danger')
                         ->visible(fn (Survey $record) => SurveyResource::canDelete($record))
                         ->requiresConfirmation()
-                        ->modalHeading(PanelLabel::get('clear_responses') ?? '清除全部回應')
-                        ->modalDescription(fn (Survey $record): string => '確定要刪除「'.$record->title.'」的所有'.(PanelLabel::get('responses_word') ?? '回應').'嗎？此操作無法復原。')
+                        ->modalHeading(fn (Survey $record): string => '刪除 '.SurveyResource::recordLabel($record).' 的全部回應')
+                        ->modalDescription('刪除後將無法復原，且會一併刪除答案、標籤關聯、同意紀錄、觸發派送、案件與上傳檔案；事件紀錄將保留但解除回應關聯，確定要進行嗎?')
                         ->modalSubmitActionLabel('確認清除')
-                        ->action(fn (Survey $record) => $record->responses()->forceDelete()),
+                        ->action(fn (Survey $record): int => self::clearResponses($record)),
 
                     SurveyResource::deleteAction(),
                     RestoreAction::make()->label('還原'),
@@ -182,12 +184,25 @@ class SurveysTable
             ->bulkActions([]);
     }
 
-    private static function displayTitle(Survey $survey): string
+    public static function clearResponses(Survey $survey): int
     {
-        $draftTitle = data_get($survey->draft_schema, 'title');
+        $deletedCount = 0;
 
-        return is_string($draftTitle) && $draftTitle !== ''
-            ? $draftTitle
-            : $survey->title;
+        SurveyResponse::query()
+            ->withTrashed()
+            ->where('survey_id', $survey->getKey())
+            ->lazyById()
+            ->each(function (SurveyResponse $response) use (&$deletedCount): void {
+                $response->answers()->delete();
+                $response->tags()->detach();
+                $response->consents()->delete();
+                SurveyTriggerDispatch::query()
+                    ->where('survey_response_id', $response->getKey())
+                    ->delete();
+                $response->forceDelete();
+                $deletedCount++;
+            });
+
+        return $deletedCount;
     }
 }

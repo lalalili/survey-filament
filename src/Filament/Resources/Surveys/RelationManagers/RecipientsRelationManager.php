@@ -21,10 +21,10 @@ use Illuminate\Support\Facades\Schema as SchemaFacade;
 use Illuminate\Support\Facades\View as ViewFacade;
 use Lalalili\MarketingAutomation\Enums\Channel;
 use Lalalili\SurveyCore\Enums\SurveyRecipientStatus;
-use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
 use Lalalili\SurveyCore\Enums\SurveyTokenStatus;
 use Lalalili\SurveyCore\Models\SurveyRecipient;
 use Lalalili\SurveyCore\Models\SurveyToken;
+use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
 
 class RecipientsRelationManager extends RelationManager
 {
@@ -115,9 +115,27 @@ class RecipientsRelationManager extends RelationManager
                             'links' => $this->activeLinksFor($record),
                         ])),
 
-                    DeleteAction::make()->label('刪除'),
+                    self::deleteAction(),
                 ]),
             ]);
+    }
+
+    public function isReadOnly(): bool
+    {
+        return false;
+    }
+
+    public static function deleteAction(): DeleteAction
+    {
+        return DeleteAction::make()
+            ->label('刪除')
+            ->modalHeading(fn (SurveyRecipient $record): string => '刪除 '.self::recordLabel($record))
+            ->modalDescription('刪除後將無法復原，且會一併刪除個人化連結；回應將保留但解除收件人及連結關聯，確定要進行嗎?');
+    }
+
+    private static function recordLabel(SurveyRecipient $recipient): string
+    {
+        return $recipient->name ?: ($recipient->email ?: '#'.$recipient->getKey());
     }
 
     /**

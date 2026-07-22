@@ -294,9 +294,9 @@ class ResponseResource extends Resource
                                 ->send();
                         }),
 
-                    DeleteAction::make()->label('刪除'),
-                    RestoreAction::make()->label('還原'),
-                    ForceDeleteAction::make()->label('永久刪除'),
+                    static::deleteAction(),
+                    static::restoreAction(),
+                    static::forceDeleteAction(),
                 ]),
             ])
             ->bulkActions([
@@ -357,12 +357,75 @@ class ResponseResource extends Resource
                                 );
                             }
                         }),
-                    DeleteBulkAction::make()->label('批次刪除'),
-                    RestoreBulkAction::make()->label('批次還原'),
-                    ForceDeleteBulkAction::make()->label('批次永久刪除'),
+                    static::deleteBulkAction(),
+                    static::restoreBulkAction(),
+                    static::forceDeleteBulkAction(),
                 ]),
             ])
             ->defaultSort('submitted_at', 'desc');
+    }
+
+    public static function deleteAction(): DeleteAction
+    {
+        return DeleteAction::make()
+            ->label('刪除')
+            ->modalHeading(fn (SurveyResponse $record): string => '刪除 '.static::recordLabel($record))
+            ->modalDescription('刪除後可從「已刪除」還原，確定要進行嗎?');
+    }
+
+    public static function restoreAction(): RestoreAction
+    {
+        return RestoreAction::make()
+            ->label('還原')
+            ->modalHeading(fn (SurveyResponse $record): string => '還原 '.static::recordLabel($record))
+            ->modalDescription('還原後可重新使用此回應，確定要進行嗎?');
+    }
+
+    public static function forceDeleteAction(): ForceDeleteAction
+    {
+        return ForceDeleteAction::make()
+            ->label('永久刪除')
+            ->modalHeading(fn (SurveyResponse $record): string => '永久刪除 '.static::recordLabel($record))
+            ->modalDescription(static::forceDeleteDescription());
+    }
+
+    public static function deleteBulkAction(): DeleteBulkAction
+    {
+        return DeleteBulkAction::make()
+            ->label('批次刪除')
+            ->modalHeading(fn (Collection $records): string => static::bulkModalHeading('刪除已選取的', $records->count()))
+            ->modalDescription('刪除後可從「已刪除」還原，確定要進行嗎?');
+    }
+
+    public static function restoreBulkAction(): RestoreBulkAction
+    {
+        return RestoreBulkAction::make()
+            ->label('批次還原')
+            ->modalHeading(fn (Collection $records): string => static::bulkModalHeading('還原已選取的', $records->count()))
+            ->modalDescription('還原後可重新使用這些回應，確定要進行嗎?');
+    }
+
+    public static function forceDeleteBulkAction(): ForceDeleteBulkAction
+    {
+        return ForceDeleteBulkAction::make()
+            ->label('批次永久刪除')
+            ->modalHeading(fn (Collection $records): string => static::bulkModalHeading('永久刪除已選取的', $records->count()))
+            ->modalDescription(static::forceDeleteDescription());
+    }
+
+    public static function recordLabel(SurveyResponse $response): string
+    {
+        return $response->response_number ?: '#'.$response->getKey();
+    }
+
+    public static function bulkModalHeading(string $prefix, int $count): string
+    {
+        return "{$prefix} {$count} 筆回應";
+    }
+
+    protected static function forceDeleteDescription(): string
+    {
+        return '永久刪除後將無法復原，且會一併刪除答案、標籤關聯、同意紀錄、觸發派送、案件與上傳檔案；事件紀錄將保留但解除回應關聯，確定要進行嗎?';
     }
 
     /**

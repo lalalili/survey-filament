@@ -132,6 +132,8 @@ class RecipientResource extends Resource
     {
         return DeleteAction::make()
             ->label('刪除')
+            ->modalHeading(fn (AudienceList $record): string => '刪除 '.$record->name)
+            ->modalDescription('刪除後將無法復原，且會一併刪除名單資料列、分群、活動及管道對應；匯入紀錄將保留但解除名單關聯，確定要進行嗎?')
             ->before(function (DeleteAction $action, AudienceList $record): void {
                 self::prepareActivityDispatchReferencesForDelete($record, $action);
             });

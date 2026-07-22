@@ -223,6 +223,8 @@ class SurveyTriggerRuleResource extends Resource
     {
         return DeleteAction::make()
             ->label('刪除')
+            ->modalHeading(fn (SurveyTriggerRule $record): string => '刪除 '.$record->name)
+            ->modalDescription('刪除後將無法復原，且會一併刪除排程執行與派送紀錄，確定要進行嗎?')
             ->before(fn (DeleteAction $action, SurveyTriggerRule $record) => self::guardAgainstDeletingScheduledTriggerRule($action, $record));
     }
 

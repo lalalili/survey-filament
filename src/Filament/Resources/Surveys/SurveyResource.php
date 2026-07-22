@@ -96,8 +96,19 @@ class SurveyResource extends Resource
     {
         return DeleteAction::make()
             ->label('刪除')
+            ->modalHeading(fn (Survey $record): string => '刪除 '.self::recordLabel($record))
+            ->modalDescription('刪除後可從「已刪除」還原，確定要進行嗎?')
             ->hidden(fn (Survey $record): bool => $record->status === SurveyStatus::Published)
             ->before(fn (DeleteAction $action, Survey $record) => self::guardAgainstDeletingActiveSurvey($action, $record));
+    }
+
+    public static function recordLabel(Survey $survey): string
+    {
+        $draftTitle = data_get($survey->draft_schema, 'title');
+
+        return is_string($draftTitle) && $draftTitle !== ''
+            ? $draftTitle
+            : $survey->title;
     }
 
     public static function guardAgainstDeletingActiveSurvey(DeleteAction $action, Survey $record): void

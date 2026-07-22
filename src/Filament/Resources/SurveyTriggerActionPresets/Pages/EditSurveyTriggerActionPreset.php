@@ -2,7 +2,6 @@
 
 namespace Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerActionPresets\Pages;
 
-use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerActionPresets\SurveyTriggerActionPresetResource;
 
@@ -12,6 +11,6 @@ class EditSurveyTriggerActionPreset extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [DeleteAction::make()];
+        return [SurveyTriggerActionPresetResource::deleteAction()];
     }
 }
