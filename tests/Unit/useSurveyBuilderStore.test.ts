@@ -384,4 +384,45 @@ describe('survey builder autosave', () => {
     expect(store.saveError).toBe('Validation failed.');
     expect(store.validationErrors).toHaveProperty('pages.0.elements.0.personalized_key');
   });
+
+  // PHP 的空關聯陣列會 json_encode 成 `[]`，前端若直接在 Array 上指派 `primary`，
+  // JSON.stringify 會把該屬性整個丟掉 → 自動儲存顯示成功但顏色沒送出。
+  it('keeps theme override colors in the payload when the server sends an empty array', async () => {
+    const store = useSurveyBuilderStore();
+    store.api = {
+      load: vi.fn().mockResolvedValue({
+        survey: { id: 1, title: '問卷', status: 'published', version: 2, published_at: null },
+        schema: { ...questionSchema(), id: 1, status: 'published', version: 2, theme_overrides: [] },
+      }),
+    } as typeof store.api;
+
+    await store.loadBuilder();
+    store.updateThemeOverride('primary', '#a80000');
+    store.updateThemeOverride('accent', '#0088cc');
+
+    expect(Array.isArray(store.schema?.theme_overrides)).toBe(false);
+    expect(JSON.parse(JSON.stringify(store.schema)).theme_overrides).toEqual({
+      primary: '#a80000',
+      accent: '#0088cc',
+    });
+  });
+
+  it('does not lose theme overrides when an autosave response returns an empty array', async () => {
+    const store = useSurveyBuilderStore();
+    const save = vi.fn().mockResolvedValue({
+      ...savePayload('<p>內容</p>'),
+      schema: { ...savePayload('<p>內容</p>').schema, theme_overrides: [] },
+    });
+
+    store.api = { save } as typeof store.api;
+    store.schema = { ...questionSchema(), theme_overrides: {} } as typeof store.schema;
+    store.updateThemeOverride('primary', '#a80000');
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(Array.isArray(store.schema?.theme_overrides)).toBe(false);
+
+    store.updateThemeOverride('accent', '#0088cc');
+
+    expect(JSON.parse(JSON.stringify(store.schema)).theme_overrides).toEqual({ accent: '#0088cc' });
+  });
 });

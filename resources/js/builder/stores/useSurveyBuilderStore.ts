@@ -43,6 +43,22 @@ function cloneElement(element: SurveyElement): SurveyElement {
   return JSON.parse(JSON.stringify(element)) as SurveyElement;
 }
 
+/**
+ * PHP 的空關聯陣列會被 json_encode 成 `[]` 而非 `{}`，於是 `theme_overrides`
+ * 在前端可能是 Array。在 Array 上指派字串屬性（例如 `primary`）會被
+ * `JSON.stringify` 整個丟掉，導致自動儲存看似成功、顏色卻沒送出。
+ * 每次從後端取得 schema 時都轉回純物件。
+ */
+function normalizeServerSchema(schema: SurveyBuilderSchema): SurveyBuilderSchema {
+  const overrides: unknown = schema.theme_overrides;
+
+  schema.theme_overrides = overrides && !Array.isArray(overrides) && typeof overrides === 'object'
+    ? overrides as Record<string, string>
+    : {};
+
+  return schema;
+}
+
 function normalizeLegacyElement(element: SurveyElement): SurveyElement {
   if (element.type === 'email') {
     return {
@@ -160,7 +176,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         email: payload.survey.google_drive?.email ?? null,
         configured: payload.survey.google_drive?.configured ?? false,
       };
-      this.schema = payload.schema;
+      this.schema = normalizeServerSchema(payload.schema);
       this.schema.settings ??= { progress: { mode: 'bar', show_estimated_time: true } };
       this.schema.settings.progress ??= { mode: 'bar', show_estimated_time: true };
       this.schema.settings.show_question_numbers ??= true;
@@ -172,7 +188,6 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         this.schema.settings.ends_at = (this.schema.settings as Record<string, unknown>).close_at as string | null;
         delete (this.schema.settings as Record<string, unknown>).close_at;
       }
-      this.schema.theme_overrides ??= {};
       this.schema.calculations ??= [];
       this.schema.thank_you_branches ??= [];
       this.schema.pages.forEach((page) => {
@@ -350,7 +365,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
           const hasNewerChanges = schemaRevision !== savingRevision;
 
           if (!hasNewerChanges) {
-            this.schema = payload.schema;
+            this.schema = normalizeServerSchema(payload.schema);
             this.surveyTitle = payload.schema.title;
           }
 
@@ -415,7 +430,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
 
       try {
         const payload = await this.api.publish();
-        this.schema = payload.schema;
+        this.schema = normalizeServerSchema(payload.schema);
         this.status = payload.survey.status;
         this.version = payload.survey.version;
         this.publishedAt = payload.survey.published_at ?? this.publishedAt;
@@ -469,7 +484,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
 
       try {
         const payload = await this.api.restorePublished();
-        this.schema = payload.schema;
+        this.schema = normalizeServerSchema(payload.schema);
         this.surveyTitle = payload.survey.title;
         this.status = payload.survey.status;
         this.version = payload.survey.version;
@@ -776,8 +791,10 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
         return;
       }
 
-      this.schema.theme_overrides ??= {};
-      this.schema.theme_overrides[key] = value;
+      this.schema.theme_overrides = {
+        ...(Array.isArray(this.schema.theme_overrides) ? {} : this.schema.theme_overrides ?? {}),
+        [key]: value,
+      };
       this.markDirty();
     },
     addCalculation() {
