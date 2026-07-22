@@ -44,15 +44,6 @@
                 }
             },
         }"
-        x-init="
-            $nextTick(() => {
-                const el = $el.querySelector('rule-tree-builder');
-                if (el) {
-                    el.addEventListener('change', (e) => onTreeChange(e));
-                    el.addEventListener('preview', (e) => onTreePreview(e));
-                }
-            });
-        "
     >
         <div
             wire:ignore
@@ -63,6 +54,8 @@
                 x-bind:value="valueJson"
                 x-bind:preview-enabled="@js($field->hasPreview())"
                 x-bind:preview-result="previewResult"
+                x-on:change="onTreeChange($event)"
+                x-on:preview="onTreePreview($event)"
             ></rule-tree-builder>
         </div>
     </div>
