@@ -25,6 +25,7 @@ use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyCore\Models\SurveyField;
 use Lalalili\SurveyCore\Models\SurveyTriggerActionPreset;
 use Lalalili\SurveyCore\Models\SurveyTriggerRule;
+use Lalalili\SurveyCore\Support\SurveyResultContextFields;
 use Lalalili\SurveyFilament\Filament\Forms\Components\RuleTreeField;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\Pages\CreateSurveyTriggerRule;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\Pages\EditSurveyTriggerRule;
@@ -134,17 +135,28 @@ class SurveyTriggerRuleResource extends Resource
                                 'options' => [],
                             ]];
 
-                            // 依問卷實際欄位順序（頁面順序 → 頁內題目順序）排列；已退場欄位不再提供選擇。
-                            $surveyFields = SurveyField::query()
+                            $fields = SurveyField::query()
                                 ->with('surveyPage')
                                 ->where('survey_id', $surveyId)
                                 ->whereNull('retired_at')
-                                ->get()
+                                ->get();
+
+                            // 欄位集合與順序比照問卷結果頁：固定名單欄位（經銷商／據點／車牌／交車日）在前，
+                            // 其後為一般題目（排除內容區塊與其他隱藏欄位），依頁面順序 → 頁內題目順序。
+                            $contextFields = collect(SurveyResultContextFields::fieldKeys())
+                                ->map(fn (string $fieldKey): ?SurveyField => $fields->firstWhere('field_key', $fieldKey))
+                                ->filter();
+
+                            $questionFields = $fields
+                                ->reject(fn (SurveyField $field): bool => $field->type->isContentBlock() || $field->is_hidden)
                                 ->sortBy(fn (SurveyField $field): array => [
                                     $field->surveyPage->sort_order ?? PHP_INT_MAX,
                                     $field->sort_order,
                                     $field->id,
-                                ])
+                                ]);
+
+                            $surveyFields = $contextFields
+                                ->concat($questionFields)
                                 ->map(fn (SurveyField $field): array => [
                                     'key' => $field->field_key,
                                     'label' => $field->label ?? $field->field_key,

@@ -77,7 +77,7 @@ it('exposes key form fields for SurveyTriggerRuleResource', function (): void {
         ->toContain('survey_id', 'name', 'is_active', 'schedule_enabled');
 });
 
-it('lists filter fields in survey page and question order and skips retired fields', function (): void {
+it('lists filter fields in the same order as the survey results page', function (): void {
     $survey = Survey::create(['title' => '排序問卷', 'status' => SurveyStatus::Draft]);
 
     $pageTwo = SurveyPage::create(['survey_id' => $survey->id, 'page_key' => 'p2', 'title' => '第二頁', 'sort_order' => 2]);
@@ -88,15 +88,23 @@ it('lists filter fields in survey page and question order and skips retired fiel
     SurveyField::create(['survey_id' => $survey->id, 'survey_page_id' => $pageOne->id, 'field_key' => 'p1_q2', 'type' => 'nps', 'label' => '第一頁第二題', 'sort_order' => 1002]);
     SurveyField::create(['survey_id' => $survey->id, 'survey_page_id' => $pageOne->id, 'field_key' => 'p1_q1', 'type' => 'short_text', 'label' => '第一頁第一題', 'sort_order' => 1001]);
     SurveyField::create(['survey_id' => $survey->id, 'survey_page_id' => $pageOne->id, 'field_key' => 'p1_retired', 'type' => 'short_text', 'label' => '已退場題', 'sort_order' => 1003, 'retired_at' => now()]);
+    SurveyField::create(['survey_id' => $survey->id, 'survey_page_id' => $pageOne->id, 'field_key' => 'p1_copy', 'type' => 'description_block', 'label' => '說明文字', 'sort_order' => 1004]);
+    SurveyField::create(['survey_id' => $survey->id, 'survey_page_id' => $pageOne->id, 'field_key' => 'p1_secret', 'type' => 'short_text', 'label' => '其他隱藏欄位', 'sort_order' => 1005, 'is_hidden' => true]);
+
+    // 名單對應的固定欄位（隱藏），結果頁固定排在最前面。
+    SurveyField::create(['survey_id' => $survey->id, 'survey_page_id' => $pageOne->id, 'field_key' => 'system_context_location', 'type' => 'short_text', 'label' => '據點', 'sort_order' => 1007, 'is_hidden' => true]);
+    SurveyField::create(['survey_id' => $survey->id, 'survey_page_id' => $pageOne->id, 'field_key' => 'system_context_dealer', 'type' => 'short_text', 'label' => '經銷商', 'sort_order' => 1006, 'is_hidden' => true]);
 
     $fields = triggerRuleAvailableFields($survey->id);
 
     expect(array_column($fields, 'key'))->toBe([
         EvaluateAnswerRuleTreeAction::META_DAYS_SINCE_INVITATION,
+        'system_context_dealer',
+        'system_context_location',
         'p1_q1',
         'p1_q2',
         'p2_q1',
-    ])->and($fields[2]['type'])->toBe('number');
+    ])->and($fields[4]['type'])->toBe('number');
 });
 
 it('clears the rule tree when the survey selection changes', function (): void {
