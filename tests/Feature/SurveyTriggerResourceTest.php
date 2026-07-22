@@ -3,15 +3,18 @@
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
+use Lalalili\SurveyCore\Actions\EvaluateAnswerRuleTreeAction;
 use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Models\Survey;
+use Lalalili\SurveyCore\Models\SurveyField;
+use Lalalili\SurveyCore\Models\SurveyPage;
 use Lalalili\SurveyCore\Models\SurveyTriggerActionPreset;
 use Lalalili\SurveyCore\Models\SurveyTriggerAllowedHost;
 use Lalalili\SurveyCore\Models\SurveyTriggerRule;
+use Lalalili\SurveyFilament\Filament\Forms\Components\RuleTreeField;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerActionPresets\SurveyTriggerActionPresetResource;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerAllowedHosts\SurveyTriggerAllowedHostResource;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\SurveyTriggerRuleResource;
-use Lalalili\SurveyFilament\Filament\Forms\Components\RuleTreeField;
 use Livewire\Component;
 
 /**
@@ -28,6 +31,27 @@ function triggerFormFieldKeys(string $resource): array
     };
 
     return array_keys($resource::form(Schema::make($host))->getFlatFields());
+}
+
+/**
+ * 取得指定問卷在「篩選條件」規則樹可選的欄位定義。
+ *
+ * @return list<array<string, mixed>>
+ */
+function triggerRuleAvailableFields(int $surveyId): array
+{
+    $host = new class extends Component implements HasSchemas
+    {
+        use InteractsWithSchemas;
+    };
+
+    $schema = SurveyTriggerRuleResource::form(Schema::make($host));
+    $schema->fill(['survey_id' => $surveyId]);
+
+    /** @var RuleTreeField $field */
+    $field = $schema->getFlatFields()['rule_tree_json'];
+
+    return $field->getAvailableFields();
 }
 
 it('registers index/create/edit pages for the three trigger resources', function (): void {
@@ -51,6 +75,48 @@ it('binds the correct model to each trigger resource', function (): void {
 it('exposes key form fields for SurveyTriggerRuleResource', function (): void {
     expect(triggerFormFieldKeys(SurveyTriggerRuleResource::class))
         ->toContain('survey_id', 'name', 'is_active', 'schedule_enabled');
+});
+
+it('lists filter fields in survey page and question order and skips retired fields', function (): void {
+    $survey = Survey::create(['title' => '排序問卷', 'status' => SurveyStatus::Draft]);
+
+    $pageTwo = SurveyPage::create(['survey_id' => $survey->id, 'page_key' => 'p2', 'title' => '第二頁', 'sort_order' => 2]);
+    $pageOne = SurveyPage::create(['survey_id' => $survey->id, 'page_key' => 'p1', 'title' => '第一頁', 'sort_order' => 1]);
+
+    // 建立順序刻意打亂，只有頁面與題目的 sort_order 才是正解。
+    SurveyField::create(['survey_id' => $survey->id, 'survey_page_id' => $pageTwo->id, 'field_key' => 'p2_q1', 'type' => 'short_text', 'label' => '第二頁第一題', 'sort_order' => 2001]);
+    SurveyField::create(['survey_id' => $survey->id, 'survey_page_id' => $pageOne->id, 'field_key' => 'p1_q2', 'type' => 'nps', 'label' => '第一頁第二題', 'sort_order' => 1002]);
+    SurveyField::create(['survey_id' => $survey->id, 'survey_page_id' => $pageOne->id, 'field_key' => 'p1_q1', 'type' => 'short_text', 'label' => '第一頁第一題', 'sort_order' => 1001]);
+    SurveyField::create(['survey_id' => $survey->id, 'survey_page_id' => $pageOne->id, 'field_key' => 'p1_retired', 'type' => 'short_text', 'label' => '已退場題', 'sort_order' => 1003, 'retired_at' => now()]);
+
+    $fields = triggerRuleAvailableFields($survey->id);
+
+    expect(array_column($fields, 'key'))->toBe([
+        EvaluateAnswerRuleTreeAction::META_DAYS_SINCE_INVITATION,
+        'p1_q1',
+        'p1_q2',
+        'p2_q1',
+    ])->and($fields[2]['type'])->toBe('number');
+});
+
+it('clears the rule tree when the survey selection changes', function (): void {
+    $host = new class extends Component implements HasSchemas
+    {
+        use InteractsWithSchemas;
+    };
+
+    $schema = SurveyTriggerRuleResource::form(Schema::make($host));
+    $schema->fill([
+        'survey_id' => 1,
+        'rule_tree_json' => ['op' => 'AND', 'children' => [['field' => 'old_field', 'operator' => 'eq', 'value' => '1']]],
+    ]);
+
+    $surveySelect = $schema->getFlatFields()['survey_id'];
+    $surveySelect->state(2);
+    $surveySelect->callAfterStateUpdated();
+
+    expect($schema->getFlatFields()['rule_tree_json']->getState())
+        ->toBe(['op' => 'AND', 'children' => []]);
 });
 
 it('lays out trigger rule form fields in a single column', function (): void {

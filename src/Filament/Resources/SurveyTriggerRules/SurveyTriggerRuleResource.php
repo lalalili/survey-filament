@@ -15,6 +15,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -73,7 +74,9 @@ class SurveyTriggerRuleResource extends Resource
                             ->options(Survey::query()->pluck('title', 'id'))
                             ->searchable()
                             ->required()
-                            ->live(),
+                            ->live()
+                            // 篩選條件綁定該問卷的題目，換問卷後舊條件的 field_key 已不存在，直接清空避免存到無效規則。
+                            ->afterStateUpdated(fn (Set $set) => $set('rule_tree_json', ['op' => 'AND', 'children' => []])),
 
                         TextInput::make('name')
                             ->label('規則名稱')
@@ -131,9 +134,17 @@ class SurveyTriggerRuleResource extends Resource
                                 'options' => [],
                             ]];
 
-                            $surveyFields = SurveyField::where('survey_id', $surveyId)
-                                ->orderBy('sort_order')
+                            // 依問卷實際欄位順序（頁面順序 → 頁內題目順序）排列；已退場欄位不再提供選擇。
+                            $surveyFields = SurveyField::query()
+                                ->with('surveyPage')
+                                ->where('survey_id', $surveyId)
+                                ->whereNull('retired_at')
                                 ->get()
+                                ->sortBy(fn (SurveyField $field): array => [
+                                    $field->surveyPage->sort_order ?? PHP_INT_MAX,
+                                    $field->sort_order,
+                                    $field->id,
+                                ])
                                 ->map(fn (SurveyField $field): array => [
                                     'key' => $field->field_key,
                                     'label' => $field->label ?? $field->field_key,
