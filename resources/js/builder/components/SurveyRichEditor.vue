@@ -88,6 +88,11 @@ const imageFileInput = ref<HTMLInputElement | null>(null);
 const imageUploading = ref(false);
 const imageError = ref('');
 const variableMenuOpen = ref(false);
+const wrapRef = ref<HTMLElement | null>(null);
+
+/** 編輯進行中收到的外部值，等使用者離開編輯器後才套用。 */
+let pendingExternalValue: string | null = null;
+let pendingApplyTimer: number | undefined;
 
 const editor = useEditor({
   content: props.modelValue,
@@ -108,21 +113,68 @@ const editor = useEditor({
     SurveyVideoNode,
   ],
   onUpdate({ editor }) {
+    // 本地編輯永遠優先於待套用的外部值，避免離開編輯器時被舊值蓋回去。
+    pendingExternalValue = null;
+
     const html = editor.getHTML();
     emit('update:modelValue', html === '<p></p>' ? '' : html);
   },
 });
 
+function currentHtml(): string {
+  const current = editor.value?.getHTML() ?? '';
+
+  return current === '<p></p>' ? '' : current;
+}
+
+/** 游標是否還在編輯器或工具列彈窗內（點工具列按鈕時焦點會移到按鈕上）。 */
+function isUserInteracting(): boolean {
+  const wrap = wrapRef.value;
+  const active = document.activeElement;
+
+  return wrap !== null && active !== null && wrap.contains(active);
+}
+
+function applyExternalValue(value: string): void {
+  if (!editor.value || value === currentHtml()) return;
+  editor.value.commands.setContent(value || '', false);
+}
+
+/**
+ * 自動儲存回傳的是伺服器淨化過的 HTML，內容等價但字串常有差異；
+ * 編輯途中直接 setContent 會重建文件、清掉選取範圍與游標，
+ * 使用者選好文字準備套顏色時就會被打斷。因此編輯中先記下來，離開後再套用。
+ */
 watch(() => props.modelValue, (newVal) => {
-  if (!editor.value) return;
-  const current = editor.value.getHTML();
-  const normalized = current === '<p></p>' ? '' : current;
-  if (newVal !== normalized) {
-    editor.value.commands.setContent(newVal || '', false);
+  if (!editor.value || newVal === currentHtml()) {
+    pendingExternalValue = null;
+
+    return;
   }
+
+  if (isUserInteracting()) {
+    pendingExternalValue = newVal;
+
+    return;
+  }
+
+  applyExternalValue(newVal);
 });
 
-onBeforeUnmount(() => editor.value?.destroy());
+function onFocusOut(): void {
+  window.clearTimeout(pendingApplyTimer);
+  // focusout 早於新元素取得焦點，延後一輪才知道焦點是否仍在編輯器內。
+  pendingApplyTimer = window.setTimeout(() => {
+    if (pendingExternalValue === null || isUserInteracting()) return;
+    applyExternalValue(pendingExternalValue);
+    pendingExternalValue = null;
+  }, 0);
+}
+
+onBeforeUnmount(() => {
+  window.clearTimeout(pendingApplyTimer);
+  editor.value?.destroy();
+});
 
 function setColor(color: string) {
   editor.value?.chain().focus().setColor(color).run();
@@ -241,7 +293,7 @@ function insertVideo() {
 </script>
 
 <template>
-  <div class="sre-wrap">
+  <div ref="wrapRef" class="sre-wrap" @focusout="onFocusOut">
     <div v-if="editor" class="sre-toolbar">
       <!-- Text format -->
       <button type="button" class="sre-btn" :class="{ active: editor.isActive('bold') }" title="粗體" @click="editor.chain().focus().toggleBold().run()"><strong>B</strong></button>

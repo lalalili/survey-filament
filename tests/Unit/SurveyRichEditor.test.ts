@@ -10,6 +10,8 @@ vi.mock('@tiptap/extension-placeholder', async () => {
   return { default: Extension.create({ name: 'placeholder' }) };
 });
 
+const editorHolder = vi.hoisted(() => ({ current: null as Record<string, any> | null }));
+
 vi.mock('@tiptap/vue-3', async () => {
   const { defineComponent, h, shallowRef } = await import('vue');
 
@@ -24,9 +26,10 @@ vi.mock('@tiptap/vue-3', async () => {
         getHTML: () => html,
         getAttributes: () => ({}),
         isActive: () => false,
-        commands: { setContent: (content: string) => { html = content || '<p></p>'; } },
+        commands: { setContent: vi.fn((content: string) => { html = content || '<p></p>'; }) },
         destroy: vi.fn(),
       };
+      editorHolder.current = editor;
       const emitUpdate = () => options.onUpdate?.({ editor });
       const chain = {
         focus: () => chain,
@@ -63,6 +66,60 @@ function latestHtml(wrapper: VueWrapper): string {
 
 afterEach(() => {
   document.body.innerHTML = '';
+  editorHolder.current = null;
+});
+
+describe('SurveyRichEditor 自動儲存回寫', () => {
+  function setContentMock() {
+    return editorHolder.current!.commands.setContent as ReturnType<typeof vi.fn>;
+  }
+
+  it('編輯中收到自動儲存回傳的內容時不重建文件', async () => {
+    const wrapper = mount(SurveyRichEditor, {
+      props: { modelValue: '<p>測試文字</p>' },
+      attachTo: document.body,
+    });
+
+    (wrapper.get('button[title="文字顏色"]').element as HTMLButtonElement).focus();
+    await wrapper.setProps({ modelValue: '<p>&#28204;&#35430;&#25991;&#23383;</p>' });
+
+    expect(setContentMock()).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('焦點離開編輯器後才套用待處理的外部內容', async () => {
+    vi.useFakeTimers();
+
+    const wrapper = mount(SurveyRichEditor, {
+      props: { modelValue: '<p>測試文字</p>' },
+      attachTo: document.body,
+    });
+
+    const colorButton = wrapper.get('button[title="文字顏色"]');
+    (colorButton.element as HTMLButtonElement).focus();
+    await wrapper.setProps({ modelValue: '<p>伺服器淨化版</p>' });
+
+    (colorButton.element as HTMLButtonElement).blur();
+    await colorButton.trigger('focusout');
+    vi.runAllTimers();
+
+    expect(setContentMock()).toHaveBeenCalledWith('<p>伺服器淨化版</p>', false);
+
+    vi.useRealTimers();
+    wrapper.unmount();
+  });
+
+  it('未在編輯時外部內容立即套用', async () => {
+    const wrapper = mount(SurveyRichEditor, {
+      props: { modelValue: '<p>測試文字</p>' },
+      attachTo: document.body,
+    });
+
+    await wrapper.setProps({ modelValue: '<p>外部更新</p>' });
+
+    expect(setContentMock()).toHaveBeenCalledWith('<p>外部更新</p>', false);
+    wrapper.unmount();
+  });
 });
 
 describe('SurveyRichEditor toolbar', () => {
