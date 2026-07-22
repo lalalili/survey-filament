@@ -3,6 +3,7 @@
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
+use Filament\Tables\Table;
 use Lalalili\SurveyCore\Actions\EvaluateAnswerRuleTreeAction;
 use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Models\Survey;
@@ -14,6 +15,7 @@ use Lalalili\SurveyCore\Models\SurveyTriggerRule;
 use Lalalili\SurveyFilament\Filament\Forms\Components\RuleTreeField;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerActionPresets\SurveyTriggerActionPresetResource;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerAllowedHosts\SurveyTriggerAllowedHostResource;
+use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\Pages\ListSurveyTriggerRules;
 use Lalalili\SurveyFilament\Filament\Resources\SurveyTriggerRules\SurveyTriggerRuleResource;
 use Livewire\Component;
 
@@ -70,6 +72,25 @@ it('binds the correct model to each trigger resource', function (): void {
     expect(SurveyTriggerRuleResource::getModel())->toBe(SurveyTriggerRule::class)
         ->and(SurveyTriggerAllowedHostResource::getModel())->toBe(SurveyTriggerAllowedHost::class)
         ->and(SurveyTriggerActionPresetResource::getModel())->toBe(SurveyTriggerActionPreset::class);
+});
+
+it('exposes trashed trigger rules and their restore and permanent delete actions', function (): void {
+    $survey = Survey::create(['title' => '問卷', 'status' => SurveyStatus::Draft]);
+    $rule = SurveyTriggerRule::create([
+        'survey_id' => $survey->id,
+        'name' => '已刪除規則',
+        'is_active' => false,
+        'schedule_enabled' => false,
+        'rule_tree_json' => [],
+        'actions_json' => [],
+    ]);
+    $rule->delete();
+
+    $table = SurveyTriggerRuleResource::table(Table::make(new ListSurveyTriggerRules));
+
+    expect(array_keys($table->getFilters()))->toContain('trashed')
+        ->and(array_keys($table->getFlatActions()))->toContain('restore', 'forceDelete')
+        ->and(SurveyTriggerRuleResource::getRecordRouteBindingEloquentQuery()->find($rule->id))->not->toBeNull();
 });
 
 it('exposes key form fields for SurveyTriggerRuleResource', function (): void {

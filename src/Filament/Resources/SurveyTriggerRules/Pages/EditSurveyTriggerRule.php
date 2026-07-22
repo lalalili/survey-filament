@@ -160,6 +160,8 @@ class EditSurveyTriggerRule extends EditRecord
                 ->modalSubmitActionLabel('執行'),
 
             SurveyTriggerRuleResource::deleteAction(),
+            SurveyTriggerRuleResource::restoreAction(),
+            SurveyTriggerRuleResource::forceDeleteAction(),
         ];
     }
 

@@ -7,6 +7,8 @@ use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -14,8 +16,10 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema as SchemaFacade;
 use Lalalili\AudienceCore\Models\AudienceList;
@@ -123,7 +127,12 @@ class RecipientResource extends Resource
                         ->url(fn (AudienceList $record) => static::getUrl('import', ['audience_list_id' => $record->id])),
 
                     self::deleteAction(),
+                    self::restoreAction(),
+                    self::forceDeleteAction(),
                 ]),
+            ])
+            ->filters([
+                TrashedFilter::make(),
             ])
             ->bulkActions([]);
     }
@@ -133,10 +142,26 @@ class RecipientResource extends Resource
         return DeleteAction::make()
             ->label('刪除')
             ->modalHeading(fn (AudienceList $record): string => '刪除 '.$record->name)
-            ->modalDescription('刪除後將無法復原，且會一併刪除名單資料列、分群、活動及管道對應；匯入紀錄將保留但解除名單關聯，確定要進行嗎?')
+            ->modalDescription('刪除後可從「已刪除」還原，名單資料列與歷史紀錄會保留，確定要進行嗎?')
             ->before(function (DeleteAction $action, AudienceList $record): void {
                 self::prepareActivityDispatchReferencesForDelete($record, $action);
             });
+    }
+
+    public static function restoreAction(): RestoreAction
+    {
+        return RestoreAction::make()
+            ->label('還原')
+            ->modalHeading(fn (AudienceList $record): string => '還原 '.$record->name)
+            ->modalDescription('還原後名單會重新顯示並可供後續作業使用。');
+    }
+
+    public static function forceDeleteAction(): ForceDeleteAction
+    {
+        return ForceDeleteAction::make()
+            ->label('永久刪除')
+            ->modalHeading(fn (AudienceList $record): string => '永久刪除 '.$record->name)
+            ->modalDescription('永久刪除後將無法復原，且會一併刪除名單資料列、分群、活動及管道對應；匯入紀錄將保留但解除名單關聯，確定要進行嗎?');
     }
 
     public static function prepareActivityDispatchReferencesForDelete(AudienceList $record, DeleteAction $action): int
@@ -201,7 +226,13 @@ class RecipientResource extends Resource
             $query = $scope($query, auth()->user());
         }
 
-        return $query;
+        return $query->withoutGlobalScopes([SoftDeletingScope::class]);
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 
     public static function getRelations(): array

@@ -6,6 +6,8 @@ use BackedEnum;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
@@ -19,7 +21,10 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Lalalili\SurveyCore\Actions\EvaluateAnswerRuleTreeAction;
 use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyCore\Models\SurveyField;
@@ -232,11 +237,16 @@ class SurveyTriggerRuleResource extends Resource
                     ->dateTime('Y/m/d')
                     ->sortable(),
             ])
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->recordUrl(null)
             ->recordActions([
                 ActionGroup::make([
                     EditAction::make(),
                     self::deleteAction(),
+                    self::restoreAction(),
+                    self::forceDeleteAction(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
@@ -247,20 +257,42 @@ class SurveyTriggerRuleResource extends Resource
         return DeleteAction::make()
             ->label('刪除')
             ->modalHeading(fn (SurveyTriggerRule $record): string => '刪除 '.$record->name)
-            ->modalDescription('刪除後將無法復原，且會一併刪除排程執行與派送紀錄，確定要進行嗎?')
+            ->modalDescription('刪除後可從「已刪除」還原，排程執行與派送紀錄會保留，確定要進行嗎?')
             ->before(fn (DeleteAction $action, SurveyTriggerRule $record) => self::guardAgainstDeletingScheduledTriggerRule($action, $record));
+    }
+
+    public static function restoreAction(): RestoreAction
+    {
+        return RestoreAction::make()
+            ->label('還原')
+            ->modalHeading(fn (SurveyTriggerRule $record): string => '還原 '.$record->name)
+            ->modalDescription('還原後規則仍維持停用，請確認設定後再重新啟用。');
+    }
+
+    public static function forceDeleteAction(): ForceDeleteAction
+    {
+        return ForceDeleteAction::make()
+            ->label('永久刪除')
+            ->modalHeading(fn (SurveyTriggerRule $record): string => '永久刪除 '.$record->name)
+            ->modalDescription('永久刪除後將無法復原，且會一併刪除排程執行與派送紀錄，確定要進行嗎?');
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 
     public static function guardAgainstDeletingScheduledTriggerRule(DeleteAction $action, SurveyTriggerRule $record): void
     {
-        if (! $record->schedule_enabled) {
+        if (! $record->is_active && ! $record->schedule_enabled) {
             return;
         }
 
         Notification::make()
             ->danger()
             ->title('無法刪除發送設定')
-            ->body('此發送設定已啟用排程，請先停用排程再刪除。')
+            ->body('請先停用此發送設定與排程，再進行刪除。')
             ->persistent()
             ->send();
 

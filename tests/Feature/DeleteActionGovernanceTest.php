@@ -20,6 +20,7 @@ use Lalalili\SurveyCore\Models\SurveyTriggerActionPreset;
 use Lalalili\SurveyCore\Models\SurveyTriggerAllowedHost;
 use Lalalili\SurveyCore\Models\SurveyTriggerDispatch;
 use Lalalili\SurveyCore\Models\SurveyTriggerRule;
+use Lalalili\SurveyFilament\Filament\Resources\Recipients\Pages\ListRecipients;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\RecipientResource;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\RelationManagers\RowsRelationManager;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
@@ -79,12 +80,30 @@ it('configures hard delete warnings for survey management records', function ():
     $recipient = SurveyRecipient::create(['survey_id' => $survey->id, 'email' => 'guest@example.com']);
 
     expect(RecipientResource::deleteAction()->record($list)->getModalHeading())->toBe('刪除 VIP 名單')
+        ->and(RecipientResource::deleteAction()->record($list)->getModalDescription())->toContain('可從「已刪除」還原')
+        ->and(RecipientResource::restoreAction()->record($list)->getModalHeading())->toBe('還原 VIP 名單')
+        ->and(RecipientResource::forceDeleteAction()->record($list)->getModalHeading())->toBe('永久刪除 VIP 名單')
+        ->and(RecipientResource::forceDeleteAction()->record($list)->getModalDescription())->toContain('名單資料列、分群、活動及管道對應')
         ->and(SurveyTriggerAllowedHostResource::deleteAction()->record($host)->getModalHeading())->toBe('刪除 dms.internal')
         ->and(SurveyTriggerAllowedHostResource::deleteAction()->record($host)->getModalDescription())->toContain('不再允許 DMS HTTP action')
         ->and(SurveyTriggerRuleResource::deleteAction()->record($rule)->getModalHeading())->toBe('刪除 回訪規則')
-        ->and(SurveyTriggerRuleResource::deleteAction()->record($rule)->getModalDescription())->toContain('排程執行與派送紀錄')
+        ->and(SurveyTriggerRuleResource::deleteAction()->record($rule)->getModalDescription())->toContain('可從「已刪除」還原')
+        ->and(SurveyTriggerRuleResource::restoreAction()->record($rule)->getModalHeading())->toBe('還原 回訪規則')
+        ->and(SurveyTriggerRuleResource::forceDeleteAction()->record($rule)->getModalHeading())->toBe('永久刪除 回訪規則')
+        ->and(SurveyTriggerRuleResource::forceDeleteAction()->record($rule)->getModalDescription())->toContain('排程執行與派送紀錄')
         ->and(RecipientsRelationManager::deleteAction()->record($recipient)->getModalHeading())->toBe('刪除 guest@example.com')
         ->and(RecipientsRelationManager::deleteAction()->record($recipient)->getModalDescription())->toContain('回應將保留但解除收件人及連結關聯');
+});
+
+it('exposes deleted audience lists for restore or permanent deletion', function (): void {
+    $list = AudienceList::create(['name' => '已刪除名單']);
+    $list->delete();
+
+    $table = RecipientResource::table(Table::make(new ListRecipients));
+
+    expect(array_keys($table->getFilters()))->toContain('trashed')
+        ->and(array_keys($table->getFlatActions()))->toContain('restore', 'forceDelete')
+        ->and(RecipientResource::getRecordRouteBindingEloquentQuery()->find($list->id))->not->toBeNull();
 });
 
 it('halts deleting an action preset referenced by trigger rules', function (): void {

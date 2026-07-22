@@ -11,6 +11,10 @@ class EditRecipient extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [RecipientResource::deleteAction()];
+        return [
+            RecipientResource::deleteAction(),
+            RecipientResource::restoreAction(),
+            RecipientResource::forceDeleteAction(),
+        ];
     }
 }
