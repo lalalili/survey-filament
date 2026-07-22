@@ -1334,7 +1334,7 @@ function textInputType(element: SurveyElement) {
                 >預估填寫時間：約 {{ store.selectedPage.welcome_settings?.estimated_time_minutes }} 分鐘</p>
                 <div class="sb-preview-footer" style="margin-top:24px">
                   <div style="flex:1" />
-                  <button type="button" class="sb-btn accent" @click="previewGoNext()">
+                  <button type="button" class="sb-preview-nav-btn sb-preview-nav-btn--primary" @click="previewGoNext()">
                     {{ store.selectedPage.welcome_settings?.cta_label || '開始填寫' }}
                   </button>
                 </div>
@@ -1650,11 +1650,11 @@ function textInputType(element: SurveyElement) {
                 <button
                   v-if="store.schema.pages.findIndex(p => p.id === store.selectedPageId) > 0"
                   type="button"
-                  class="sb-btn"
+                  class="sb-preview-nav-btn sb-preview-nav-btn--secondary"
                   @click="previewGoPrev()"
                 >← 上一頁</button>
                 <div style="flex:1" />
-                <button type="button" class="sb-btn accent" :disabled="previewSubmitDisabled" @click="previewGoNext()">
+                <button type="button" class="sb-preview-nav-btn sb-preview-nav-btn--primary" :disabled="previewSubmitDisabled" @click="previewGoNext()">
                   {{ previewIsLastPage ? '提交' : '下一頁 →' }}
                 </button>
               </div>

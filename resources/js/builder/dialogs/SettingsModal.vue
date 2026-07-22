@@ -403,7 +403,7 @@ function updatePersonalizationAudience(audienceListId: string) {
                 <div v-if="accentColorSettingEnabled" class="sb-set-field sb-set-color-row">
                   <div class="sb-set-field-label">輔助強調色</div>
                   <input type="color" class="sb-set-color-input" :value="store.schema?.theme_overrides?.accent ?? '#f59e0b'" @input="store.updateThemeOverride('accent', ($event.target as HTMLInputElement).value)" />
-                  <div class="sb-set-color-desc">套用於公開問卷的次要動作（上一頁按鈕、感謝頁的繼續連結），與主要操作色區隔。</div>
+                  <div class="sb-set-color-desc">套用於公開問卷的次要動作（上一頁按鈕、感謝頁的繼續連結）與星級評分，與主要操作色區隔。</div>
                 </div>
               </div>
               <div class="sb-set-section-title">使用條款與聲明</div>

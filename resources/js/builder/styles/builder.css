@@ -203,9 +203,10 @@
 }
 .sb-special-title:focus { outline: none; }
 .sb-special-cta-row { margin-top: 16px; }
+/* 歡迎頁 CTA 為可編輯欄位，但代表公開頁的主要動作鈕，沿用問卷主題色。 */
 .sb-special-cta {
-  background: var(--c-accent); color: white;
-  border: none; border-radius: var(--r2);
+  background: var(--survey-primary, var(--c-accent)); color: white;
+  border: none; border-radius: var(--survey-radius, var(--r2));
   padding: 8px 20px; font-size: 13px; font-weight: 500; font-family: var(--font);
   cursor: text;
 }
@@ -1631,6 +1632,30 @@
 .sb-nps-preview-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--c-ink3); }
 
 .sb-preview-footer { margin-top: 24px; display: flex; align-items: center; gap: 8px; }
+
+/* 預覽導覽鈕沿用問卷主題色（--survey-primary / --survey-accent），
+   不使用編輯器 chrome 的 .sb-btn，避免預覽顯示成 builder 品牌色。 */
+.sb-preview-nav-btn {
+  border-radius: var(--survey-radius);
+  cursor: pointer;
+  font-family: var(--survey-font);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 20px;
+  transition: opacity 120ms, background 120ms, border-color 120ms;
+}
+.sb-preview-nav-btn:hover:not(:disabled) { opacity: 0.9; }
+.sb-preview-nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sb-preview-nav-btn--primary {
+  background: var(--survey-primary);
+  border: 1px solid var(--survey-primary);
+  color: #fff;
+}
+.sb-preview-nav-btn--secondary {
+  background: #fff;
+  border: 1px solid var(--survey-accent);
+  color: var(--survey-accent);
+}
 .sb-preview-terms {
   display: flex; align-items: flex-start; gap: 10px;
   margin-top: 20px; padding: 14px 16px;
