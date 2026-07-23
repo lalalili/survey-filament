@@ -196,7 +196,7 @@ export const questionTypes: QuestionTypeDefinition[] = [
     supportsOptions: false,
     supportsPlaceholder: false,
     supportsRequired: true,
-    createDefault: () => ({ ...createBase('rating', '未命名評分題'), settings: { count: 5, shape: 'star', show_numbers: false } }),
+    createDefault: () => ({ ...createBase('rating', '未命名評分題'), settings: { count: 10, shape: 'thumb', show_numbers: true } }),
   },
   {
     id: 'number',

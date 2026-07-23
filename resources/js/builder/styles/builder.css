@@ -1204,9 +1204,10 @@
 }
 :is(.sb-preview, .sb-edit-surface) .survey-rating-stars {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
+  flex-wrap: nowrap;
+  gap: clamp(0.125rem, 1.2cqw, 0.25rem);
   margin-top: 0.25rem;
+  container-type: inline-size;
 }
 :is(.sb-preview, .sb-edit-surface) .survey-rating-star-label {
   align-items: center;
@@ -1218,15 +1219,18 @@
   display: inline-flex;
   flex-direction: column;
   gap: 0.125rem;
-  justify-content: center;
+  justify-content: flex-end;
   line-height: 1;
   padding: 0;
   transition: color 120ms, transform 120ms, filter 120ms;
-  width: 2rem;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 2.5rem;
 }
 :is(.sb-preview, .sb-edit-surface) .survey-rating-star-icon {
   display: inline-block;
-  font-size: 2rem;
+  /* 每個圖示佔格子固定比例，5 級與 10 級都能一行不換行並依容器寬度縮放 */
+  font-size: clamp(0.95rem, calc(62cqw / var(--rating-count, 5)), 2rem);
   line-height: 1;
   user-select: none;
 }

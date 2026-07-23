@@ -1416,7 +1416,7 @@ function textInputType(element: SurveyElement) {
                       class="survey-textarea"
                       @input="previewUpdateTextValue(element.id, ($event.target as HTMLTextAreaElement).value)"
                     />
-                    <div v-else-if="element.type === 'rating'" class="survey-rating-stars">
+                    <div v-else-if="element.type === 'rating'" class="survey-rating-stars" :style="{ '--rating-count': Number((element.settings as any)?.count ?? 5) }">
                       <button
                         v-for="n in Number((element.settings as any)?.count ?? 5)"
                         :key="n"
@@ -1929,7 +1929,7 @@ function textInputType(element: SurveyElement) {
 
                   <!-- Rating preview -->
                   <div v-else-if="element.type === 'rating'" class="sb-card-body">
-                    <div class="survey-rating-stars sb-fake-rating">
+                    <div class="survey-rating-stars sb-fake-rating" :style="{ '--rating-count': Number((element.settings as any)?.count ?? 5) }">
                       <span
                         v-for="n in Number((element.settings as any)?.count ?? 5)"
                         :key="n"
