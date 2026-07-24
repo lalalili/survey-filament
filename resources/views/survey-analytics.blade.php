@@ -2,17 +2,17 @@
     @php
         $totals = $analytics['totals'] ?? [];
         $questions = $analytics['questions'] ?? [];
-        $daily = $analytics['daily'] ?? [];
+        $trend = $analytics['trend'] ?? ['label' => '每日', 'rows' => []];
     @endphp
 
     {{-- 收集器篩選 --}}
     @if(count($collectorOptions) > 0)
-        <div class="flex items-center gap-3">
-            <label for="analytics-collector-filter" class="text-sm font-medium text-gray-700 dark:text-gray-300">收集器</label>
+        <div class="flex flex-wrap items-center gap-3">
+            <label for="analytics-collector-filter" class="shrink-0 text-sm font-medium text-gray-700 dark:text-gray-300">收集器</label>
             <select
                 id="analytics-collector-filter"
                 wire:model.live="collectorId"
-                class="rounded-lg border-gray-300 bg-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                class="min-w-0 flex-1 rounded-lg border-gray-300 bg-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:max-w-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
             >
                 <option value="">全部</option>
                 @foreach($collectorOptions as $option)
@@ -23,91 +23,114 @@
         </div>
     @endif
 
-    {{-- 左：總覽數字（已提交／完成率）｜右：每日趨勢，各佔 50% --}}
-    <div class="grid items-start gap-6 lg:grid-cols-2">
-        {{-- 總覽數字 --}}
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-            @foreach([
-                ['label' => '已提交', 'value' => $totals['submitted'] ?? 0, 'icon' => '✅'],
-                ['label' => '完成率', 'value' => ($totals['completion_rate'] ?? 0) . '%', 'icon' => '📊'],
-            ] as $stat)
-                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                    <div class="flex items-center gap-2">
-                        <span class="text-lg">{{ $stat['icon'] }}</span>
-                        <span class="text-sm text-gray-500 dark:text-gray-400">{{ $stat['label'] }}</span>
-                    </div>
-                    <div class="mt-2 text-3xl font-bold tabular-nums text-gray-900 dark:text-white">{{ $stat['value'] }}</div>
+    {{-- 總覽數字 --}}
+    <div class="grid gap-4 sm:grid-cols-3">
+        @foreach([
+            ['label' => '開始填答', 'value' => $totals['started'] ?? 0, 'icon' => '📝'],
+            ['label' => '已提交', 'value' => $totals['submitted'] ?? 0, 'icon' => '✅'],
+            ['label' => '完成率', 'value' => ($totals['completion_rate'] ?? 0) . '%', 'icon' => '📊'],
+        ] as $stat)
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">{{ $stat['icon'] }}</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ $stat['label'] }}</span>
                 </div>
-            @endforeach
+                <div class="mt-2 text-3xl font-bold tabular-nums text-gray-900 dark:text-white">{{ $stat['value'] }}</div>
+            </div>
+        @endforeach
+    </div>
+
+    {{-- 填答趨勢（wire:key 讓切換 collector 後 Alpine 以新資料重建） --}}
+    <section
+        wire:key="response-trend-{{ $collectorId === '' ? 'all' : $collectorId }}"
+        x-data="{
+            page: 1,
+            perPage: 10,
+            rows: @js(array_values(array_reverse($trend['rows'] ?? []))),
+            get totalPages() { return Math.max(1, Math.ceil(this.rows.length / this.perPage)); },
+            get paged() {
+                const start = (this.page - 1) * this.perPage;
+                return this.rows.slice(start, start + this.perPage);
+            },
+            get rangeLabel() {
+                if (this.rows.length === 0) { return '0'; }
+                const start = (this.page - 1) * this.perPage + 1;
+                const end = Math.min(this.page * this.perPage, this.rows.length);
+                return start + '–' + end;
+            },
+        }"
+        class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+    >
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">填答趨勢</h2>
+                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">依{{ $trend['label'] ?? '每日' }}彙整開始與提交數。</p>
+            </div>
+            <span class="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">{{ $trend['label'] ?? '每日' }}彙整</span>
         </div>
 
-        {{-- 每日趨勢（wire:key 讓切換 collector 後 Alpine 以新資料重建） --}}
-        <section
-            wire:key="daily-trend-{{ $collectorId === '' ? 'all' : $collectorId }}"
-            x-data="{
-                page: 1,
-                perPage: 10,
-                rows: @js(array_values(array_reverse($daily))),
-                get totalPages() { return Math.max(1, Math.ceil(this.rows.length / this.perPage)); },
-                get paged() {
-                    const start = (this.page - 1) * this.perPage;
-                    return this.rows.slice(start, start + this.perPage);
-                },
-                get rangeLabel() {
-                    if (this.rows.length === 0) { return '0'; }
-                    const start = (this.page - 1) * this.perPage + 1;
-                    const end = Math.min(this.page * this.perPage, this.rows.length);
-                    return start + '–' + end;
-                },
-            }"
-            class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
-        >
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">每日趨勢</h2>
-            <div class="mt-4 overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="border-b border-gray-200 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+        <div class="mt-4 hidden sm:block">
+            <table class="w-full text-left text-sm">
+                <thead class="border-b border-gray-200 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    <tr>
+                        <th class="pb-2 pr-4 font-medium">期間</th>
+                        <th class="pb-2 pr-4 text-right font-medium">開始</th>
+                        <th class="pb-2 text-right font-medium">提交</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    <template x-for="row in paged" :key="row.label">
                         <tr>
-                            <th class="pb-2 pr-4 font-medium">日期</th>
-                            <th class="pb-2 pr-4 text-right font-medium">開始</th>
-                            <th class="pb-2 text-right font-medium">提交</th>
+                            <td class="py-2 pr-4 font-medium text-gray-900 dark:text-white" x-text="row.label"></td>
+                            <td class="py-2 pr-4 text-right tabular-nums" x-text="row.started"></td>
+                            <td class="py-2 text-right font-semibold tabular-nums" x-text="row.submitted"></td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                        <template x-for="day in paged" :key="day.date">
-                            <tr>
-                                <td class="py-2 pr-4 font-medium text-gray-900 dark:text-white" x-text="day.date"></td>
-                                <td class="py-2 pr-4 text-right tabular-nums" x-text="day.started"></td>
-                                <td class="py-2 text-right tabular-nums font-semibold" x-text="day.submitted"></td>
-                            </tr>
-                        </template>
-                        <tr x-show="rows.length === 0">
-                            <td class="py-8 text-center text-sm text-gray-400" colspan="3">尚無趨勢資料。</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                    </template>
+                    <tr x-show="rows.length === 0">
+                        <td class="py-8 text-center text-sm text-gray-400" colspan="3">尚無趨勢資料。</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-            {{-- 分頁控制：每頁 10 筆，僅在超過 1 頁時顯示 --}}
-            <div x-show="totalPages > 1" class="mt-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                <span>顯示 <span class="tabular-nums" x-text="rangeLabel"></span> / 共 <span class="tabular-nums" x-text="rows.length"></span> 天</span>
-                <div class="flex items-center gap-2">
-                    <button
-                        type="button"
-                        @click="page = Math.max(1, page - 1)"
-                        :disabled="page === 1"
-                        class="rounded-md border border-gray-200 px-2.5 py-1 font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-800"
-                    >上一頁</button>
-                    <span class="tabular-nums">第 <span x-text="page"></span> / <span x-text="totalPages"></span> 頁</span>
-                    <button
-                        type="button"
-                        @click="page = Math.min(totalPages, page + 1)"
-                        :disabled="page === totalPages"
-                        class="rounded-md border border-gray-200 px-2.5 py-1 font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-800"
-                    >下一頁</button>
+        <div class="mt-4 space-y-2 sm:hidden">
+            <template x-for="row in paged" :key="row.label">
+                <div class="rounded-lg bg-gray-50 px-3 py-2.5 dark:bg-gray-800">
+                    <p class="font-medium text-gray-900 dark:text-white" x-text="row.label"></p>
+                    <dl class="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <dt class="text-gray-400">開始</dt>
+                            <dd class="mt-0.5 tabular-nums text-gray-700 dark:text-gray-300" x-text="row.started"></dd>
+                        </div>
+                        <div>
+                            <dt class="text-gray-400">提交</dt>
+                            <dd class="mt-0.5 font-semibold tabular-nums text-gray-900 dark:text-white" x-text="row.submitted"></dd>
+                        </div>
+                    </dl>
                 </div>
+            </template>
+            <p x-show="rows.length === 0" class="py-8 text-center text-sm text-gray-400">尚無趨勢資料。</p>
+        </div>
+
+        <div x-show="totalPages > 1" class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+            <span>顯示 <span class="tabular-nums" x-text="rangeLabel"></span> / 共 <span class="tabular-nums" x-text="rows.length"></span> 個期間</span>
+            <div class="flex items-center gap-2">
+                <button
+                    type="button"
+                    @click="page = Math.max(1, page - 1)"
+                    :disabled="page === 1"
+                    class="rounded-md border border-gray-200 px-2.5 py-1 font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-800"
+                >上一頁</button>
+                <span class="tabular-nums">第 <span x-text="page"></span> / <span x-text="totalPages"></span> 頁</span>
+                <button
+                    type="button"
+                    @click="page = Math.min(totalPages, page + 1)"
+                    :disabled="page === totalPages"
+                    class="rounded-md border border-gray-200 px-2.5 py-1 font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:hover:bg-gray-800"
+                >下一頁</button>
             </div>
-        </section>
-    </div>
+        </div>
+    </section>
 
     {{-- 填答流程漏斗（逐頁流失） --}}
     @php
@@ -153,18 +176,24 @@
                     {{-- 題目標頭 --}}
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0 flex-1">
-                            <h3 class="truncate font-medium text-gray-900 dark:text-white">{{ $question['label'] }}</h3>
-                            <p class="mt-0.5 text-xs text-gray-400">{{ $question['field_key'] }} · {{ $question['type'] }}</p>
+                            <h3 class="break-words font-medium text-gray-900 dark:text-white">{{ $question['label'] }}</h3>
+                            <p class="mt-0.5 text-xs text-gray-400">{{ $question['type_label'] ?? $question['type'] }}</p>
                         </div>
                         <span class="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                            {{ $question['answered'] }} 答
+                            {{ $question['answered'] ?? 0 }} 答
                         </span>
                     </div>
 
-                    @php $answered = max($question['answered'], 1); @endphp
+                    @php
+                        $responseCount = (int) ($question['answered'] ?? 0);
+                        $answered = max($responseCount, 1);
+                    @endphp
 
                     {{-- NPS：淨推薦值、三族群、0–10 分布與每日趨勢 --}}
-                    @if($question['type'] === 'nps' && isset($question['nps']))
+                    @if($responseCount === 0)
+                        <p class="mt-4 rounded-lg bg-gray-50 px-3 py-3 text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">尚無回覆，收到填答後會在這裡顯示統計。</p>
+
+                    @elseif($question['type'] === 'nps' && isset($question['nps']))
                         @php
                             $nps = $question['nps'];
                             $npsScore = $nps['score'];
@@ -234,10 +263,12 @@
                             </dl>
                         </div>
 
-                        @if(!empty($nps['daily']))
+                        @if(!empty($nps['trend']['rows']))
+                            @php $npsTrend = $nps['trend']; @endphp
                             <div class="mt-4 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
-                                <div class="border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600 dark:border-gray-800 dark:bg-gray-800/60 dark:text-gray-300">
-                                    每日趨勢
+                                <div class="flex items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600 dark:border-gray-800 dark:bg-gray-800/60 dark:text-gray-300">
+                                    <span>NPS 趨勢</span>
+                                    <span class="shrink-0 text-gray-400 dark:text-gray-500">{{ $npsTrend['label'] }}彙整</span>
                                 </div>
                                 <div class="max-h-44 overflow-y-auto">
                                     <table class="w-full text-xs">
@@ -249,13 +280,13 @@
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                                            @foreach(array_reverse($nps['daily']) as $day)
+                                            @foreach(array_reverse($npsTrend['rows']) as $period)
                                                 <tr>
-                                                    <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ $day['date'] }}</td>
+                                                    <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ $period['label'] }}</td>
                                                     <td class="px-3 py-2 text-right font-semibold tabular-nums text-gray-900 dark:text-white">
-                                                        {{ $day['score'] > 0 ? '+' : '' }}{{ number_format($day['score'], 1) }}
+                                                        {{ $period['score'] > 0 ? '+' : '' }}{{ number_format($period['score'], 1) }}
                                                     </td>
-                                                    <td class="px-3 py-2 text-right tabular-nums text-gray-400">{{ $day['respondents'] }} 人</td>
+                                                    <td class="px-3 py-2 text-right tabular-nums text-gray-400">{{ $period['respondents'] }} 人</td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
@@ -275,7 +306,7 @@
                                 @endphp
                                 <div>
                                     <div class="mb-1 flex items-center justify-between text-xs">
-                                        <dt class="truncate text-gray-700 dark:text-gray-300">{{ $item['label'] }}</dt>
+                                        <dt class="break-words text-gray-700 dark:text-gray-300">{{ $item['label'] }}</dt>
                                         <dd class="ml-3 shrink-0 tabular-nums text-gray-500">{{ $item['count'] }} ({{ $pct }}%)</dd>
                                     </div>
                                     <div class="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
@@ -354,6 +385,8 @@
                                     </tbody>
                                 </table>
                             </div>
+                        @else
+                            <p class="mt-4 rounded-lg bg-gray-50 px-3 py-3 text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">此題已收到 {{ $responseCount }} 答；逐筆內容請至問卷回覆查看。</p>
                         @endif
 
                     {{-- 排序題：平均名次排行 --}}
@@ -364,7 +397,7 @@
                                     <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
                                         {{ $i + 1 }}
                                     </span>
-                                    <span class="flex-1 truncate text-gray-700 dark:text-gray-300">{{ $item['label'] }}</span>
+                                    <span class="flex-1 break-words text-gray-700 dark:text-gray-300">{{ $item['label'] }}</span>
                                     <span class="tabular-nums text-xs text-gray-400">平均 {{ $item['avg_rank'] ?? '-' }} 名</span>
                                 </li>
                             @endforeach
@@ -388,15 +421,30 @@
                             @endforeach
                         </dl>
 
-                    {{-- 文字題：樣本答案列表 --}}
-                    @elseif(!empty($question['sample']))
-                        <ul class="mt-4 space-y-1.5">
-                            @foreach($question['sample'] as $text)
-                                <li class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                                    {{ $text }}
-                                </li>
+                    {{-- 輸入題：最新回覆預覽 --}}
+                    @elseif(!empty($question['text_responses']))
+                        <div class="mt-4">
+                            <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                                <p class="text-xs font-medium text-gray-600 dark:text-gray-300">近期回覆</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500">顯示最新 {{ count($question['text_responses']) }} / 共 {{ $responseCount }} 答</p>
+                            </div>
+                            <ul class="max-h-80 space-y-2 overflow-y-auto pr-1">
+                                @foreach($question['text_responses'] as $response)
+                                    <li class="rounded-lg bg-gray-50 px-3 py-2.5 dark:bg-gray-800">
+                                        <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300">{{ $response['response_number'] !== null ? '回覆 '.$response['response_number'] : '已提交回覆' }}</span>
+                                            @if($response['submitted_at'] !== null)
+                                                <time class="tabular-nums text-gray-400 dark:text-gray-500">{{ $response['submitted_at'] }}</time>
+                                            @endif
+                                        </div>
+                                        <p class="mt-2 max-h-28 overflow-y-auto whitespace-pre-wrap break-words text-sm text-gray-700 dark:text-gray-300">{{ $response['text'] }}</p>
+                                    </li>
                             @endforeach
-                        </ul>
+                            </ul>
+                        </div>
+
+                    @else
+                        <p class="mt-4 rounded-lg bg-gray-50 px-3 py-3 text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">此題已收到 {{ $responseCount }} 答；逐筆內容請至問卷回覆查看。</p>
                     @endif
                 </article>
             @empty

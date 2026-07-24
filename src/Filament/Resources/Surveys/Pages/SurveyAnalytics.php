@@ -42,7 +42,7 @@ class SurveyAnalytics extends Page
             ->values()
             ->all();
 
-        $this->analytics = $computeAnalytics->execute($survey);
+        $this->refreshAnalytics($computeAnalytics, $survey);
     }
 
     public function updatedCollectorId(): void
@@ -51,15 +51,25 @@ class SurveyAnalytics extends Page
 
         abort_unless($survey instanceof Survey, 404);
 
-        $this->analytics = app(ComputeSurveyAnalyticsAction::class)->execute(
-            $survey,
-            $this->collectorId === '' ? null : (int) $this->collectorId,
-        );
+        $this->refreshAnalytics(app(ComputeSurveyAnalyticsAction::class), $survey);
     }
 
     public function getTitle(): string
     {
         return '問卷分析';
+    }
+
+    private function refreshAnalytics(ComputeSurveyAnalyticsAction $computeAnalytics, Survey $survey): void
+    {
+        $analytics = $computeAnalytics->execute(
+            $survey,
+            $this->collectorId === '' ? null : (int) $this->collectorId,
+        );
+
+        // 僅供 Action 相容性與測試使用；頁面改用已彙整的 trend，避免把長期逐日資料序列化到 Livewire。
+        unset($analytics['daily']);
+
+        $this->analytics = $analytics;
     }
 
     protected function getHeaderActions(): array

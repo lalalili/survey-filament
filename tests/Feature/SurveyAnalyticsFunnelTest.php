@@ -93,5 +93,22 @@ it('renders the standard NPS score, segments, distribution, and daily trend', fu
             'promoters' => ['count' => 1, 'percentage' => 25.0],
         ])
         ->and($question['distribution'])->toHaveCount(11)
-        ->and($compiledView)->toContain('NPS 分數', '貶損者', '中立者', '推薦者', '分數分布', '每日趨勢');
+        ->and($compiledView)->toContain('NPS 分數', '貶損者', '中立者', '推薦者', '分數分布', 'NPS 趨勢');
+});
+
+it('uses readable labels and responsive layouts for analytics questions', function (): void {
+    $view = file_get_contents(__DIR__.'/../../resources/views/survey-analytics.blade.php');
+
+    expect($view)->toContain(
+        '$question[\'type_label\'] ?? $question[\'type\']',
+        '近期回覆',
+        '尚無回覆，收到填答後會在這裡顯示統計。',
+        'hidden sm:block',
+        'sm:hidden',
+        '<tr x-show="rows.length === 0">',
+        '尚無趨勢資料。',
+        '@if(!empty($rows) && !empty($cols))',
+    )
+        ->toMatch('/@if\(!empty\(\$rows\) && !empty\(\$cols\)\).*?@else\s*<p[^>]*>此題已收到 \{\{ \$responseCount \}\} 答；逐筆內容請至問卷回覆查看。<\/p>\s*@endif/s')
+        ->not->toContain('$question[\'field_key\'] }} · {{ $question[\'type\']');
 });
