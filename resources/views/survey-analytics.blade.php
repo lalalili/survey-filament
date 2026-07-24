@@ -198,6 +198,14 @@
                             $nps = $question['nps'];
                             $npsScore = $nps['score'];
                             $npsRespondents = $nps['respondents'];
+                            $npsMarginOfError = $nps['margin_of_error'] ?? null;
+                            $npsLowSample = ($nps['is_low_sample'] ?? false) && $npsRespondents > 0;
+                            $npsLowSampleThreshold = $nps['low_sample_threshold'] ?? 30;
+                            // 回答全數集中於單一族群時，變異數為 0，誤差範圍會退化成 ±0；
+                            // 樣本又不足時這並非「零誤差」，不應直接呈現。
+                            $npsMarginUnreliable = $npsMarginOfError !== null && $npsMarginOfError <= 0.0 && $npsLowSample;
+                            $npsLowSampleHint = "有效填答者少於 {$npsLowSampleThreshold} 位，NPS 是推薦者與貶損者的差值，樣本少時波動大，請視為參考值。";
+                            $npsSegmentHint = 'NPS 標準分群（Reichheld / Bain）：0–6 為貶損者、7–8 為中立者、9–10 為推薦者。10 分制刻意上偏，只有 9–10 才視為會主動推薦。';
                             $npsDistributionMax = max(collect($question['distribution'] ?? [])->max('count') ?? 0, 1);
                             $npsSegments = [
                                 ['key' => 'detractors', 'label' => '貶損者', 'range' => '0–6', 'classes' => 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'],
@@ -213,22 +221,46 @@
                                     <p class="mt-1 text-4xl font-bold tabular-nums">
                                         {{ $npsScore > 0 ? '+' : '' }}{{ number_format($npsScore, 1) }}
                                     </p>
-                                    <p class="mt-2 text-xs text-gray-400">{{ $npsRespondents }} 位有效填答者</p>
+                                    @if($npsMarginOfError !== null && ! $npsMarginUnreliable)
+                                        <p class="mt-1 text-xs tabular-nums text-gray-400" title="95% 信賴區間：真實 NPS 有 95% 機率落在 {{ number_format($npsScore - $npsMarginOfError, 1) }} 至 {{ number_format($npsScore + $npsMarginOfError, 1) }} 之間。">
+                                            ±{{ number_format($npsMarginOfError, 1) }}（95% 信賴區間）
+                                        </p>
+                                    @elseif($npsMarginUnreliable)
+                                        <p class="mt-1 text-xs text-gray-500" title="所有有效回答都落在同一個族群，且樣本不足，此時無法從資料估計出有意義的誤差範圍。">
+                                            誤差範圍無法估計
+                                        </p>
+                                    @endif
+                                    <p class="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
+                                        <span>{{ $npsRespondents }} 位有效填答者</span>
+                                        @if($npsLowSample)
+                                            <span class="rounded-full bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-300" title="{{ $npsLowSampleHint }}">樣本偏少，僅供參考</span>
+                                        @endif
+                                    </p>
                                 @else
                                     <p class="mt-2 text-3xl font-bold text-gray-500">—</p>
                                     <p class="mt-2 text-sm text-gray-400">尚無 NPS 資料</p>
                                 @endif
                             </div>
 
-                            <dl class="grid grid-cols-3 gap-2">
-                                @foreach($npsSegments as $segment)
-                                    <div class="rounded-xl px-2 py-3 text-center {{ $segment['classes'] }}">
-                                        <dt class="text-xs font-medium">{{ $segment['label'] }}</dt>
-                                        <dd class="mt-1 text-lg font-bold tabular-nums">{{ number_format($nps[$segment['key']]['percentage'], 1) }}%</dd>
-                                        <dd class="text-[11px] tabular-nums opacity-75">{{ $nps[$segment['key']]['count'] }} 人 · {{ $segment['range'] }}</dd>
-                                    </div>
-                                @endforeach
-                            </dl>
+                            <div class="flex flex-col gap-1.5">
+                                <p class="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    <span>族群分布</span>
+                                    <span
+                                        class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-gray-300 text-[10px] font-bold leading-none text-gray-400 dark:border-gray-600 dark:text-gray-500"
+                                        title="{{ $npsSegmentHint }}"
+                                        aria-label="{{ $npsSegmentHint }}"
+                                    >?</span>
+                                </p>
+                                <dl class="grid flex-1 grid-cols-3 gap-2">
+                                    @foreach($npsSegments as $segment)
+                                        <div class="rounded-xl px-2 py-3 text-center {{ $segment['classes'] }}">
+                                            <dt class="text-xs font-medium">{{ $segment['label'] }}</dt>
+                                            <dd class="mt-1 text-lg font-bold tabular-nums">{{ number_format($nps[$segment['key']]['percentage'], 1) }}%</dd>
+                                            <dd class="text-[11px] tabular-nums opacity-75">{{ $nps[$segment['key']]['count'] }} 人 · {{ $segment['range'] }}</dd>
+                                        </div>
+                                    @endforeach
+                                </dl>
+                            </div>
                         </div>
 
                         @if($npsRespondents > 0)
@@ -281,12 +313,19 @@
                                         </thead>
                                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                                             @foreach(array_reverse($npsTrend['rows']) as $period)
+                                                @php $periodLowSample = $period['is_low_sample'] ?? false; @endphp
                                                 <tr>
                                                     <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ $period['label'] }}</td>
-                                                    <td class="px-3 py-2 text-right font-semibold tabular-nums text-gray-900 dark:text-white">
+                                                    <td class="px-3 py-2 text-right font-semibold tabular-nums {{ $periodLowSample ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white' }}"
+                                                        @if($period['margin_of_error'] ?? null)title="±{{ number_format($period['margin_of_error'], 1) }}（95% 信賴區間）"@endif>
                                                         {{ $period['score'] > 0 ? '+' : '' }}{{ number_format($period['score'], 1) }}
                                                     </td>
-                                                    <td class="px-3 py-2 text-right tabular-nums text-gray-400">{{ $period['respondents'] }} 人</td>
+                                                    <td class="px-3 py-2 text-right tabular-nums text-gray-400">
+                                                        {{ $period['respondents'] }} 人
+                                                        @if($periodLowSample)
+                                                            <span class="ml-0.5 cursor-help font-medium text-amber-500" title="{{ $npsLowSampleHint }}" aria-label="樣本偏少">*</span>
+                                                        @endif
+                                                    </td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
