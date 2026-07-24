@@ -1600,9 +1600,11 @@ function textInputType(element: SurveyElement) {
                     </div>
                     <div v-else-if="element.type === 'nps'" class="survey-nps-wrap">
                       <div class="survey-nps-row">
-                        <span
+                        <button
                           v-for="n in 11" :key="n"
+                          type="button"
                           class="survey-nps-pip"
+                          :aria-pressed="previewNps[element.id] === n - 1"
                           :class="{
                             selected: previewNps[element.id] === n - 1,
                             red:    (element.settings as any)?.color_bands && n - 1 <= 6,
@@ -1610,7 +1612,7 @@ function textInputType(element: SurveyElement) {
                             green:  (element.settings as any)?.color_bands && n - 1 >= 9,
                           }"
                           @click="previewSelectNps(element.id, n - 1)"
-                        >{{ n - 1 }}</span>
+                        >{{ n - 1 }}</button>
                       </div>
                       <div class="survey-nps-labels">
                         <span>{{ (element.settings as any)?.low_label || '非常不推薦' }}</span>

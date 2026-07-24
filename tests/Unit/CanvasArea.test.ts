@@ -79,3 +79,60 @@ describe('CanvasArea select options editor', () => {
     expect(store.isDirty).toBe(true);
   });
 });
+
+describe('CanvasArea NPS preview', () => {
+  it('renders all 11 scores in one response group and supports selecting zero and ten', async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const store = useSurveyBuilderStore();
+    store.schema = {
+      title: 'NPS 問卷',
+      pages: [{
+        id: 'page-1',
+        kind: 'question',
+        title: '推薦意願',
+        elements: [{
+          id: 'nps-1',
+          type: 'nps',
+          field_key: 'nps_1',
+          label: '您有多大可能推薦我們？',
+          description: '',
+          required: true,
+          options: [],
+          settings: {
+            color_bands: true,
+            low_label: '完全不可能',
+            high_label: '非常可能',
+          },
+        }],
+      }],
+    } as typeof store.schema;
+    store.selectedPageId = 'page-1';
+    store.isPreviewMode = true;
+
+    const wrapper = mount(CanvasArea, {
+      props: { endpoints, csrfToken: 'token' },
+      global: {
+        plugins: [pinia],
+        stubs: { RightPanel: true },
+      },
+    });
+
+    const scores = wrapper.findAll('.survey-nps-row .survey-nps-pip');
+    expect(scores).toHaveLength(11);
+    expect(scores.every(score => score.element.tagName === 'BUTTON')).toBe(true);
+    expect(scores.every(score => score.attributes('type') === 'button')).toBe(true);
+    expect(scores[0].text()).toBe('0');
+    expect(scores[10].text()).toBe('10');
+
+    await scores[0].trigger('click');
+    expect(scores[0].classes()).toContain('selected');
+    expect(scores[0].attributes('aria-pressed')).toBe('true');
+
+    await scores[10].trigger('click');
+    expect(scores[0].classes()).not.toContain('selected');
+    expect(scores[0].attributes('aria-pressed')).toBe('false');
+    expect(scores[10].classes()).toContain('selected');
+    expect(scores[10].attributes('aria-pressed')).toBe('true');
+  });
+});

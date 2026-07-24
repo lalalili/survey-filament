@@ -163,8 +163,109 @@
 
                     @php $answered = max($question['answered'], 1); @endphp
 
+                    {{-- NPS：淨推薦值、三族群、0–10 分布與每日趨勢 --}}
+                    @if($question['type'] === 'nps' && isset($question['nps']))
+                        @php
+                            $nps = $question['nps'];
+                            $npsScore = $nps['score'];
+                            $npsRespondents = $nps['respondents'];
+                            $npsDistributionMax = max(collect($question['distribution'] ?? [])->max('count') ?? 0, 1);
+                            $npsSegments = [
+                                ['key' => 'detractors', 'label' => '貶損者', 'range' => '0–6', 'classes' => 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'],
+                                ['key' => 'passives', 'label' => '中立者', 'range' => '7–8', 'classes' => 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'],
+                                ['key' => 'promoters', 'label' => '推薦者', 'range' => '9–10', 'classes' => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'],
+                            ];
+                        @endphp
+
+                        <div class="mt-4 grid gap-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                            <div class="flex min-h-32 flex-col justify-center rounded-xl bg-gray-950 px-4 py-5 text-white dark:bg-gray-800">
+                                <p class="text-xs font-medium uppercase tracking-wide text-gray-400">NPS 分數</p>
+                                @if($npsScore !== null)
+                                    <p class="mt-1 text-4xl font-bold tabular-nums">
+                                        {{ $npsScore > 0 ? '+' : '' }}{{ number_format($npsScore, 1) }}
+                                    </p>
+                                    <p class="mt-2 text-xs text-gray-400">{{ $npsRespondents }} 位有效填答者</p>
+                                @else
+                                    <p class="mt-2 text-3xl font-bold text-gray-500">—</p>
+                                    <p class="mt-2 text-sm text-gray-400">尚無 NPS 資料</p>
+                                @endif
+                            </div>
+
+                            <dl class="grid grid-cols-3 gap-2">
+                                @foreach($npsSegments as $segment)
+                                    <div class="rounded-xl px-2 py-3 text-center {{ $segment['classes'] }}">
+                                        <dt class="text-xs font-medium">{{ $segment['label'] }}</dt>
+                                        <dd class="mt-1 text-lg font-bold tabular-nums">{{ number_format($nps[$segment['key']]['percentage'], 1) }}%</dd>
+                                        <dd class="text-[11px] tabular-nums opacity-75">{{ $nps[$segment['key']]['count'] }} 人 · {{ $segment['range'] }}</dd>
+                                    </div>
+                                @endforeach
+                            </dl>
+                        </div>
+
+                        @if($npsRespondents > 0)
+                            <div class="mt-3 flex h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800" aria-label="NPS 族群比例">
+                                <div class="bg-red-500" style="width: {{ $nps['detractors']['percentage'] }}%" title="貶損者 {{ number_format($nps['detractors']['percentage'], 1) }}%"></div>
+                                <div class="bg-amber-400" style="width: {{ $nps['passives']['percentage'] }}%" title="中立者 {{ number_format($nps['passives']['percentage'], 1) }}%"></div>
+                                <div class="bg-emerald-500" style="width: {{ $nps['promoters']['percentage'] }}%" title="推薦者 {{ number_format($nps['promoters']['percentage'], 1) }}%"></div>
+                            </div>
+                        @endif
+
+                        <div class="mt-4">
+                            <div class="mb-2 flex items-center justify-between">
+                                <p class="text-xs font-medium text-gray-600 dark:text-gray-300">分數分布</p>
+                                <p class="text-xs text-gray-400">平均 {{ $question['average'] ?? '—' }}</p>
+                            </div>
+                            <dl class="grid grid-cols-[repeat(11,minmax(0,1fr))] gap-1">
+                                @foreach($question['distribution'] ?? [] as $item)
+                                    @php
+                                        $barHeight = $item['count'] / $npsDistributionMax * 100;
+                                        $barColor = $item['value'] <= 6
+                                            ? 'bg-red-400'
+                                            : ($item['value'] <= 8 ? 'bg-amber-400' : 'bg-emerald-500');
+                                    @endphp
+                                    <div class="min-w-0 text-center">
+                                        <div class="flex h-12 items-end overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-800">
+                                            <div class="w-full {{ $barColor }}" style="height: {{ $barHeight }}%"></div>
+                                        </div>
+                                        <dt class="mt-1 text-[10px] font-medium tabular-nums text-gray-500">{{ $item['value'] }}</dt>
+                                        <dd class="text-[10px] tabular-nums text-gray-400">{{ $item['count'] }}</dd>
+                                    </div>
+                                @endforeach
+                            </dl>
+                        </div>
+
+                        @if(!empty($nps['daily']))
+                            <div class="mt-4 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
+                                <div class="border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600 dark:border-gray-800 dark:bg-gray-800/60 dark:text-gray-300">
+                                    每日趨勢
+                                </div>
+                                <div class="max-h-44 overflow-y-auto">
+                                    <table class="w-full text-xs">
+                                        <thead class="sr-only">
+                                            <tr>
+                                                <th>日期</th>
+                                                <th>NPS 分數</th>
+                                                <th>有效填答者</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                            @foreach(array_reverse($nps['daily']) as $day)
+                                                <tr>
+                                                    <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ $day['date'] }}</td>
+                                                    <td class="px-3 py-2 text-right font-semibold tabular-nums text-gray-900 dark:text-white">
+                                                        {{ $day['score'] > 0 ? '+' : '' }}{{ number_format($day['score'], 1) }}
+                                                    </td>
+                                                    <td class="px-3 py-2 text-right tabular-nums text-gray-400">{{ $day['respondents'] }} 人</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @endif
+
                     {{-- 選擇題：選項分布條形 --}}
-                    @if(!empty($question['distribution']) && isset($question['distribution'][0]['label']))
+                    @elseif(!empty($question['distribution']) && isset($question['distribution'][0]['label']))
                         @php $maxCount = max(collect($question['distribution'])->max('count'), 1); @endphp
                         <dl class="mt-4 space-y-2.5">
                             @foreach($question['distribution'] as $item)
