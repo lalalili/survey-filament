@@ -48,7 +48,7 @@ abstract class TestCase extends PackageTestCase
 
         // audience_lists / audience_list_rows 的 canonical migration 在 audience-core；
         // survey-core 曾有一份重複的（未註冊）副本，移除後這裡必須明確載入。
-        $this->loadMigrationsFrom(__DIR__.'/../../audience-core/database/migrations');
-        $this->loadMigrationsFrom(__DIR__.'/../../survey-core/database/migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../vendor/lalalili/audience-core/database/migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../vendor/lalalili/survey-core/database/migrations');
     }
 }
