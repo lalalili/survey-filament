@@ -21,57 +21,30 @@
         "pestphp/pest-plugin-livewire": "^3.0|^4.0",
         "larastan/larastan": "^3.0",
         "laravel/pint": "^1.0",
-        "lalalili/marketing-automation": "^0.1.1",
+        "lalalili/marketing-automation": "^0.2",
         "phpstan/phpstan": "~2.2.0",
         "lalalili/package-testing-support": "*"
     },
     "repositories": [
         {
-            "type": "path",
-            "url": "../audience-core",
-            "options": {
-                "symlink": true,
-                "versions": {
-                    "lalalili/audience-core": "0.1.1"
-                }
-            }
+            "type": "vcs",
+            "url": "https://github.com/lalalili/audience-core.git"
         },
         {
-            "type": "path",
-            "url": "../email-campaign",
-            "options": {
-                "symlink": true,
-                "versions": {
-                    "lalalili/email-campaign": "0.1.1"
-                }
-            }
+            "type": "vcs",
+            "url": "https://github.com/lalalili/email-campaign.git"
         },
         {
-            "type": "path",
-            "url": "../marketing-automation",
-            "options": {
-                "symlink": true,
-                "versions": {
-                    "lalalili/marketing-automation": "0.1.1"
-                }
-            }
+            "type": "vcs",
+            "url": "https://github.com/lalalili/marketing-automation.git"
         },
         {
-            "type": "path",
-            "url": "../survey-core",
-            "options": {
-                "symlink": true,
-                "versions": {
-                    "lalalili/survey-core": "0.1.1"
-                }
-            }
+            "type": "vcs",
+            "url": "https://github.com/lalalili/survey-core.git"
         },
         {
-            "type": "path",
-            "url": "../package-testing-support",
-            "options": {
-                "symlink": false
-            }
+            "type": "vcs",
+            "url": "https://github.com/lalalili/package-testing-support.git"
         }
     ],
     "autoload": {
@@ -92,6 +65,9 @@
             "providers": [
                 "Lalalili\\SurveyFilament\\SurveyFilamentServiceProvider"
             ]
+        },
+        "branch-alias": {
+            "dev-main": "0.2.x-dev"
         }
     },
     "config": {
@@ -100,8 +76,6 @@
             "pestphp/pest-plugin": true
         }
     },
-    "minimum-stability": "dev",
-    "prefer-stable": true,
     "scripts": {
         "test": "pest",
         "analyse": "phpstan analyse --configuration=phpstan.neon.dist --no-progress",
