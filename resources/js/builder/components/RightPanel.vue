@@ -802,6 +802,11 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
                   <input :value="store.selectedElement.validation_rules?.max_length ?? ''" type="number" min="0" step="1" placeholder="不限制" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { max_length: Number(($event.target as HTMLInputElement).value) })" />
                 </label>
               </div>
+              <label v-if="['short_text', 'long_text'].includes(store.selectedElement.type)" class="sb-prop-row col">
+                <span class="sb-prop-label">最少中文字數</span>
+                <input :value="store.selectedElement.validation_rules?.min_chinese_length ?? ''" type="number" min="0" step="1" placeholder="不限制" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { min_chinese_length: Number(($event.target as HTMLInputElement).value) })" />
+                <span class="sb-prop-help">只計漢字，不含英數、空白與標點。</span>
+              </label>
             </template>
             <template v-else-if="store.selectedElement.type === 'number'">
               <div class="sb-prop-grid-2">

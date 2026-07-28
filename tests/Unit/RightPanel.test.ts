@@ -80,3 +80,35 @@ describe('RightPanel format rule help', () => {
     expect(wrapper.text()).not.toContain('進階設定');
   });
 });
+
+describe('RightPanel Chinese length limit', () => {
+  it.each(['short_text', 'long_text'])('renders the limit for %s questions', (type) => {
+    const wrapper = mountQuestion(type);
+
+    expect(wrapper.text()).toContain('最少中文字數');
+    expect(wrapper.text()).toContain('只計漢字，不含英數、空白與標點。');
+  });
+
+  it.each(['phone', 'number', 'multiple_choice'])('hides the limit for %s questions', (type) => {
+    const wrapper = mountQuestion(type);
+
+    expect(wrapper.text()).not.toContain('最少中文字數');
+  });
+
+  it('writes the input value to min_chinese_length', async () => {
+    const wrapper = mountQuestion('short_text');
+    const label = wrapper.findAll('label').find((candidate) => candidate.text().includes('最少中文字數'));
+    const input = label?.get('input');
+
+    expect(input?.attributes()).toMatchObject({
+      type: 'number',
+      min: '0',
+      step: '1',
+      placeholder: '不限制',
+    });
+
+    await input?.setValue('6');
+
+    expect(useSurveyBuilderStore().allElements[0]?.validation_rules?.min_chinese_length).toBe(6);
+  });
+});

@@ -940,7 +940,7 @@ export const useSurveyBuilderStore = defineStore('survey-builder', {
 
       const normalizedRules = Object.fromEntries(
         Object.entries(validationRules).map(([key, value]) => {
-          if (['min_length', 'max_length'].includes(key) && typeof value === 'number' && Number.isFinite(value)) {
+          if (['min_length', 'min_chinese_length', 'max_length'].includes(key) && typeof value === 'number' && Number.isFinite(value)) {
             return [key, Math.max(0, Math.trunc(value))];
           }
 

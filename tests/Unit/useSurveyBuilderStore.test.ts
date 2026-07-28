@@ -120,13 +120,21 @@ describe('survey builder autosave', () => {
 
     store.updateElementValidationRules('question-1', {
       min_length: -3,
+      min_chinese_length: -7.9,
       max_length: 12.8,
     });
 
     expect(store.allElements[0]?.validation_rules).toMatchObject({
       min_length: 0,
+      min_chinese_length: 0,
       max_length: 12,
     });
+
+    store.updateElementValidationRules('question-1', {
+      min_chinese_length: 7.9,
+    });
+
+    expect(store.allElements[0]?.validation_rules?.min_chinese_length).toBe(7);
   });
 
   it('does not overwrite changes made while an autosave request is in flight', async () => {

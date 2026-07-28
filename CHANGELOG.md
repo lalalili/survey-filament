@@ -2,6 +2,12 @@
 
 All notable changes to `lalalili/survey-filament` will be documented in this file.
 
+## [1.1.0] - 2026-07-28
+
+### Added
+
+- 問卷 Builder 的單行與多行文字題可設定最少中文字數。
+
 ## [1.0.1] - 2026-07-27
 
 ### Fixed
