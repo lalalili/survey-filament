@@ -2,6 +2,12 @@
 
 All notable changes to `lalalili/survey-filament` will be documented in this file.
 
+## [1.1.1] - 2026-07-28
+
+### Changed
+
+- 將宿主整合範例改為中性描述，避免共用套件文件帶入特定專案識別。
+
 ## [1.1.0] - 2026-07-28
 
 ### Added

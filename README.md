@@ -65,7 +65,7 @@ php artisan vendor:publish --tag=survey-filament-config
 2. `config('survey-filament.response_export_action')`（次之）
 3. 兩者皆未設定 → fallback 到上述同步匯出
 
-覆寫的簽名是 `callable(Survey $survey, Illuminate\Support\Collection $records): void`，例如本專案（lxm-survey）的接法
+覆寫的簽名是 `callable(Survey $survey, Illuminate\Support\Collection $records): void`，例如宿主專案的接法
 （`app/Providers/AppServiceProvider.php`）：
 
 ```php
