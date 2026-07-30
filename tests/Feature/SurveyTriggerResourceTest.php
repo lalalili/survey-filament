@@ -4,6 +4,7 @@ use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Validator;
 use Lalalili\SurveyCore\Actions\EvaluateAnswerRuleTreeAction;
 use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Models\Survey;
@@ -203,7 +204,48 @@ it('exposes key form fields for SurveyTriggerAllowedHostResource', function (): 
 
 it('exposes key form fields for SurveyTriggerActionPresetResource', function (): void {
     expect(triggerFormFieldKeys(SurveyTriggerActionPresetResource::class))
-        ->toContain('name', 'key', 'is_active');
+        ->toContain('name', 'key', 'is_active', 'action_json.type');
+});
+
+it('switches the HTTP preset fields by action type', function (): void {
+    $host = new class extends Component implements HasSchemas
+    {
+        use InteractsWithSchemas;
+    };
+    $schema = SurveyTriggerActionPresetResource::form(Schema::make($host));
+
+    $schema->fill(['action_json' => ['type' => 'http_post']]);
+    $httpSection = $schema->getComponent('http_action_settings', withHidden: true);
+
+    expect($httpSection->isVisible())->toBeTrue();
+
+    $schema->fill(['action_json' => ['type' => 'dms_soap']]);
+
+    expect($httpSection->isVisible())->toBeFalse();
+});
+
+it('rejects invalid HTTP payload JSON instead of silently saving an empty array', function (): void {
+    $host = new class extends Component implements HasSchemas
+    {
+        use InteractsWithSchemas;
+    };
+    $schema = SurveyTriggerActionPresetResource::form(Schema::make($host));
+    $schema->fill([
+        'action_json' => [
+            'type' => 'http_post',
+            'payload_template' => '{"invalid":',
+        ],
+    ]);
+    $section = $schema->getComponent('http_action_settings', withHidden: true);
+    $payload = $section->getChildSchema()->getFlatFields(withHidden: true)['action_json.payload_template'];
+    $validator = Validator::make(
+        ['payload' => '{"invalid":'],
+        ['payload' => $payload->getValidationRules()],
+        $payload->getValidationMessages(),
+    );
+
+    expect($validator->fails())->toBeTrue()
+        ->and($validator->errors()->first('payload'))->toBe('Payload 模板必須是有效的 JSON。');
 });
 
 it('persists json and boolean casts for SurveyTriggerRule', function (): void {
