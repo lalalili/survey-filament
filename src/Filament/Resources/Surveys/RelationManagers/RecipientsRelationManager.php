@@ -19,7 +19,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema as SchemaFacade;
 use Illuminate\Support\Facades\View as ViewFacade;
-use Lalalili\MarketingAutomation\Enums\Channel;
 use Lalalili\SurveyCore\Enums\SurveyRecipientStatus;
 use Lalalili\SurveyCore\Enums\SurveyTokenStatus;
 use Lalalili\SurveyCore\Models\SurveyRecipient;
@@ -178,7 +177,7 @@ class RecipientsRelationManager extends RelationManager
             return null;
         }
 
-        $channelEnum = Channel::class;
+        $channelEnum = 'Lalalili\\MarketingAutomation\\Enums\\Channel';
 
         if (class_exists($channelEnum)) {
             return $channelEnum::tryFrom($channel)?->label() ?? $channel;
