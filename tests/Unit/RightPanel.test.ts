@@ -111,4 +111,26 @@ describe('RightPanel Chinese length limit', () => {
 
     expect(useSurveyBuilderStore().allElements[0]?.validation_rules?.min_chinese_length).toBe(6);
   });
+
+  it.each([
+    ['short_text', '最少字數', 'min_length'],
+    ['short_text', '最多字數', 'max_length'],
+    ['short_text', '最少中文字數', 'min_chinese_length'],
+    ['long_text', '最少字數', 'min_length'],
+    ['long_text', '最多字數', 'max_length'],
+    ['long_text', '最少中文字數', 'min_chinese_length'],
+  ])('restores %s %s to unlimited when cleared', async (type, labelText, rule) => {
+    const wrapper = mountQuestion(type);
+    const label = wrapper.findAll('label').find((candidate) => candidate.text().includes(labelText));
+    const input = label?.get('input');
+
+    await input?.setValue('6');
+    expect(useSurveyBuilderStore().allElements[0]?.validation_rules?.[rule]).toBe(6);
+
+    await input?.setValue('');
+
+    expect(useSurveyBuilderStore().allElements[0]?.validation_rules?.[rule]).toBeNull();
+    expect(input?.element.value).toBe('');
+    expect(input?.attributes('placeholder')).toBe('不限制');
+  });
 });

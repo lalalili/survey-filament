@@ -28,6 +28,12 @@ const optionRandomizationTypes = ['single_choice', 'multiple_choice', 'select', 
 const optionScoringTypes = ['single_choice', 'multiple_choice', 'select'];
 const contentBlockTypes = ['section_title', 'description_block', 'quote_block', 'divider'];
 
+function nullableNumberInputValue(event: Event): number | null {
+  const value = (event.target as HTMLInputElement).value;
+
+  return value === '' ? null : Number(value);
+}
+
 // ── Dialog state ─────────────────────────────────────────────────────
 const matrixColsDialog = ref<MatrixColsDialogState | null>(null);
 const numberDialog = ref<NumberDialogState | null>(null);
@@ -795,16 +801,16 @@ function removeShowIfCondition(el: SurveyElement, i: number) {
               <div class="sb-prop-grid-2">
                 <label class="sb-prop-row col">
                   <span class="sb-prop-label">最少字數</span>
-                  <input :value="store.selectedElement.validation_rules?.min_length ?? ''" type="number" min="0" step="1" placeholder="不限制" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { min_length: Number(($event.target as HTMLInputElement).value) })" />
+                  <input :value="store.selectedElement.validation_rules?.min_length ?? ''" type="number" min="0" step="1" placeholder="不限制" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { min_length: nullableNumberInputValue($event) })" />
                 </label>
                 <label class="sb-prop-row col">
                   <span class="sb-prop-label">最多字數</span>
-                  <input :value="store.selectedElement.validation_rules?.max_length ?? ''" type="number" min="0" step="1" placeholder="不限制" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { max_length: Number(($event.target as HTMLInputElement).value) })" />
+                  <input :value="store.selectedElement.validation_rules?.max_length ?? ''" type="number" min="0" step="1" placeholder="不限制" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { max_length: nullableNumberInputValue($event) })" />
                 </label>
               </div>
               <label v-if="['short_text', 'long_text'].includes(store.selectedElement.type)" class="sb-prop-row col">
                 <span class="sb-prop-label">最少中文字數</span>
-                <input :value="store.selectedElement.validation_rules?.min_chinese_length ?? ''" type="number" min="0" step="1" placeholder="不限制" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { min_chinese_length: Number(($event.target as HTMLInputElement).value) })" />
+                <input :value="store.selectedElement.validation_rules?.min_chinese_length ?? ''" type="number" min="0" step="1" placeholder="不限制" class="sb-prop-input" @input="store.updateElementValidationRules(store.selectedElement!.id, { min_chinese_length: nullableNumberInputValue($event) })" />
                 <span class="sb-prop-help">只計漢字，不含英數、空白與標點。</span>
               </label>
             </template>
