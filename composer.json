@@ -27,24 +27,8 @@
     },
     "repositories": [
         {
-            "type": "vcs",
-            "url": "https://github.com/lalalili/audience-core.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/lalalili/email-campaign.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/lalalili/marketing-automation.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/lalalili/survey-core.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/lalalili/package-testing-support.git"
+            "type": "composer",
+            "url": "https://lalalili.github.io/satis"
         }
     ],
     "autoload": {
