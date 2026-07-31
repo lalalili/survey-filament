@@ -19,7 +19,7 @@ const showActivityPanel = ref(false);
 
 // Save status
 const saveStatus = computed(() => {
-  if (store.isPublishing) return 'Publishing...';
+  if (store.isPublishing) return 'Publishing…';
   if (store.isSaving) return '儲存中…';
   if (store.hasPendingShowIfDrafts) return '規則設定中';
   if (store.publishError) {
@@ -58,6 +58,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
         <input
           :value="store.surveyTitle"
           class="sb-title-input"
+          aria-label="問卷名稱"
           @input="store.updateSurveyTitle(($event.target as HTMLInputElement).value)"
         />
       </div>
@@ -65,17 +66,19 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
       <div class="sb-topbar-spacer" />
 
       <div class="sb-topbar-right">
-        <span class="sb-action-tooltip" :data-tooltip="statusTooltip" tabindex="0">
+        <span class="sb-action-tooltip" :data-tooltip="statusTooltip">
           <span
             class="sb-save-status"
             :class="{ saving: store.isSaving || store.isPublishing, error: !!store.saveError || !!store.publishError }"
+            role="status"
+            aria-live="polite"
           >
             <span class="sb-save-dot" />
             {{ saveStatus }}
           </span>
         </span>
 
-        <span class="sb-action-tooltip" data-tooltip="編輯紀錄" tabindex="0">
+        <span class="sb-action-tooltip" data-tooltip="編輯紀錄">
           <button
             type="button"
             class="sb-icon-btn"
@@ -85,7 +88,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
           >↺</button>
         </span>
 
-        <span v-if="props.guideUrl" class="sb-action-tooltip" data-tooltip="問卷使用說明" tabindex="0">
+        <span v-if="props.guideUrl" class="sb-action-tooltip" data-tooltip="問卷使用說明">
           <a
             class="sb-icon-btn"
             :href="props.guideUrl"
@@ -95,7 +98,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
           >?</a>
         </span>
 
-        <span v-if="store.isPreviewMode" class="sb-action-tooltip" data-tooltip="切換行動版" tabindex="0">
+        <span v-if="store.isPreviewMode" class="sb-action-tooltip" data-tooltip="切換行動版">
           <button
             type="button"
             class="sb-icon-btn"
@@ -108,7 +111,6 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
         <span
           class="sb-action-tooltip"
           :data-tooltip="store.isPreviewMode ? '返回問卷編輯' : '預覽模式下不會真的送出填答'"
-          tabindex="0"
         >
           <button
             type="button"
@@ -122,7 +124,6 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
         <span
           class="sb-action-tooltip align-end"
           data-tooltip="發佈後，您編輯的內容才會更新"
-          tabindex="0"
         >
           <button
             type="button"

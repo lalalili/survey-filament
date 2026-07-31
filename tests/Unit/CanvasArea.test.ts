@@ -136,3 +136,150 @@ describe('CanvasArea NPS preview', () => {
     expect(scores[10].attributes('aria-pressed')).toBe('true');
   });
 });
+
+describe('CanvasArea responsive workspace', () => {
+  function mountWorkspace(elements: Record<string, unknown>[] = []) {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const store = useSurveyBuilderStore();
+    store.schema = {
+      title: '行動版問卷',
+      pages: [{
+        id: 'page-1',
+        kind: 'question',
+        title: '第一頁',
+        elements,
+      }],
+    } as typeof store.schema;
+    store.selectedPageId = 'page-1';
+
+    const wrapper = mount(CanvasArea, {
+      props: { endpoints, csrfToken: 'token' },
+      global: { plugins: [pinia] },
+    });
+
+    return { wrapper, store };
+  }
+
+  it('switches between the mobile canvas and right-panel workspaces with tab semantics', async () => {
+    const { wrapper, store } = mountWorkspace();
+    const tabs = wrapper.findAll('.sb-workspace-tab');
+
+    expect(tabs.map(tab => tab.text())).toEqual(['畫布', '題型庫', '屬性', '邏輯']);
+    expect(tabs[0].attributes('aria-pressed')).toBe('true');
+    expect(wrapper.get('.sb-canvas').classes()).toContain('is-mobile-active');
+
+    await tabs[1].trigger('click');
+
+    expect(tabs[1].attributes('aria-pressed')).toBe('true');
+    expect(store.rightPanelTab).toBe('library');
+    expect(wrapper.get('.sb-workspace-panel').classes()).toContain('is-mobile-active');
+
+    await tabs[1].trigger('keydown', { key: 'ArrowRight' });
+
+    expect(tabs[2].attributes('aria-pressed')).toBe('true');
+    expect(tabs[2].attributes('tabindex')).toBe('0');
+    expect(tabs[1].attributes('tabindex')).toBe('-1');
+    expect(store.rightPanelTab).toBe('properties');
+
+    await tabs[0].trigger('click');
+    store.rightPanelTab = 'logic';
+    await wrapper.vm.$nextTick();
+    expect(tabs[3].attributes('aria-pressed')).toBe('true');
+  });
+
+  it('does not expose an orphaned workspace tabpanel while previewing', async () => {
+    const { wrapper, store } = mountWorkspace();
+
+    store.isPreviewMode = true;
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('.sb-workspace-nav').exists()).toBe(false);
+    expect(wrapper.get('.sb-canvas').attributes('role')).toBeUndefined();
+    expect(wrapper.get('.sb-canvas').attributes('aria-label')).toBeUndefined();
+  });
+
+  it('opens the library from the empty state and opens properties after adding a question', async () => {
+    const { wrapper, store } = mountWorkspace();
+
+    expect(wrapper.text()).toContain('從題型庫加入此頁面');
+    expect(wrapper.text()).not.toContain('從右側');
+
+    await wrapper.get('.sb-empty-page .sb-btn').trigger('click');
+    expect(store.rightPanelTab).toBe('library');
+
+    await wrapper.get('.sb-qlib-item').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(store.selectedElementId).not.toBeNull();
+    expect(store.rightPanelTab).toBe('properties');
+    expect(wrapper.findAll('.sb-workspace-tab')[2].attributes('aria-pressed')).toBe('true');
+  });
+
+  it('uses native page tabs and routes condition controls to the logic workspace', async () => {
+    const { wrapper, store } = mountWorkspace([{
+      id: 'question-1',
+      type: 'single_choice',
+      field_key: 'question_1',
+      label: '選擇方案',
+      description: '',
+      required: false,
+      options: [{ id: 'option-1', label: '方案 A', value: 'a' }],
+      settings: {},
+      show_if: { logic: 'and', conditions: [{ field_key: 'other', op: 'equals', value: 'a' }] },
+    }]);
+
+    const pageTab = wrapper.get('.sb-page-tab-select');
+    expect(pageTab.element.tagName).toBe('BUTTON');
+    expect(pageTab.attributes('role')).toBe('tab');
+    expect(pageTab.attributes('aria-selected')).toBe('true');
+    expect(pageTab.attributes('aria-controls')).toBe('sb-page-panel');
+    expect(wrapper.get('#sb-page-panel').attributes('aria-labelledby')).toBe(pageTab.attributes('id'));
+    expect(wrapper.get('.sb-page-tab-close').attributes('aria-label')).toContain('刪除頁面');
+
+    await wrapper.get('.sb-badge-btn').trigger('click');
+
+    expect(store.selectedElementId).toBe('question-1');
+    expect(store.rightPanelTab).toBe('logic');
+    expect(wrapper.findAll('.sb-workspace-tab')[3].attributes('aria-pressed')).toBe('true');
+
+    store.rightPanelTab = 'properties';
+    store.rightPanelTab = 'logic';
+    await wrapper.vm.$nextTick();
+    expect(wrapper.findAll('.sb-workspace-tab')[3].attributes('aria-pressed')).toBe('true');
+  });
+
+  it('moves between page tabs with arrow keys', async () => {
+    const { wrapper, store } = mountWorkspace();
+    store.schema!.pages.push({
+      id: 'page-2',
+      kind: 'question',
+      title: '第二頁',
+      elements: [],
+    });
+    await wrapper.vm.$nextTick();
+
+    const pageTabs = wrapper.findAll('.sb-page-tab-select');
+    expect(pageTabs).toHaveLength(2);
+
+    await pageTabs[0].trigger('keydown', { key: 'ArrowRight' });
+
+    expect(store.selectedPageId).toBe('page-2');
+    expect(pageTabs[1].attributes('aria-selected')).toBe('true');
+    expect(pageTabs[1].attributes('tabindex')).toBe('0');
+  });
+
+  it('exposes the settings entry and loading announcement', async () => {
+    const { wrapper, store } = mountWorkspace();
+
+    await wrapper.get('.sb-workspace-settings').trigger('click');
+    expect(store.showSettingsModal).toBe(true);
+
+    store.isLoading = true;
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('.sb-loading').attributes()).toMatchObject({
+      role: 'status',
+      'aria-live': 'polite',
+    });
+  });
+});

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, useTemplateRef, watch } from 'vue';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
+import { useDialogFocus } from '../composables/useDialogFocus';
 
 const model = defineModel<boolean>({ required: true });
 const store = useSurveyBuilderStore();
@@ -19,6 +20,9 @@ function closePanel(): void {
   model.value = false;
   confirmingRestore.value = false;
 }
+
+const dialog = useTemplateRef<HTMLElement>('dialog');
+useDialogFocus({ isOpen: model, dialog, close: closePanel });
 
 async function restorePublished(): Promise<void> {
   await store.restorePublished();
@@ -45,16 +49,16 @@ function formatDateTime(value: string | null): string {
 
 <template>
   <Teleport to="body">
-    <div v-if="model" class="sb-activity-layer sb-theme sb-auto-dark" role="dialog" aria-modal="true" aria-label="編輯紀錄">
+    <div v-if="model" ref="dialog" class="sb-activity-layer sb-theme sb-auto-dark" role="dialog" aria-modal="true" aria-labelledby="builder-activity-title">
       <button type="button" class="sb-activity-backdrop" aria-label="關閉編輯紀錄" @click="closePanel" />
 
       <aside class="sb-activity-panel">
         <header class="sb-activity-head">
           <div>
             <p class="sb-activity-kicker">History</p>
-            <h2>編輯紀錄</h2>
+            <h2 id="builder-activity-title">編輯紀錄</h2>
           </div>
-          <button type="button" class="sb-activity-close" aria-label="關閉編輯紀錄" @click="closePanel">×</button>
+          <button type="button" class="sb-activity-close" aria-label="關閉編輯紀錄" data-dialog-initial-focus @click="closePanel">×</button>
         </header>
 
         <section class="sb-activity-restore">

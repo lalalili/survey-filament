@@ -41,4 +41,22 @@ describe('SurveyBuilderApp errors', () => {
     expect(html).toContain('儲存失敗');
     expect(html).toContain('問卷至少需要一個題目頁。');
   });
+
+  it('keeps tooltip wrappers out of the tab order and announces save status changes', async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const app = createSSRApp(SurveyBuilderApp, {
+      endpoints,
+      csrfToken: 'token',
+      guideUrl: '/guide',
+    });
+    app.use(pinia);
+
+    const html = await renderToString(app);
+
+    expect(html).toContain('aria-label="問卷名稱"');
+    expect(html).toContain('class="sb-save-status" role="status" aria-live="polite"');
+    expect(html).not.toMatch(/sb-action-tooltip[^>]*tabindex/);
+  });
 });

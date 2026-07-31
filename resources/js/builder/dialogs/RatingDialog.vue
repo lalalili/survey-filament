@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed, useTemplateRef } from 'vue';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
+import { useDialogFocus } from '../composables/useDialogFocus';
 
 const RATING_SHAPES = [
   { value: 'star',  label: '星星', icon: '★' },
@@ -19,6 +21,8 @@ export interface RatingDialogState {
 
 const model = defineModel<RatingDialogState | null>();
 const store = useSurveyBuilderStore();
+const dialog = useTemplateRef<HTMLElement>('dialog');
+useDialogFocus({ isOpen: computed(() => model.value !== null), dialog, close: () => { model.value = null; } });
 
 function shapeIcon(shape: string): string {
   return RATING_SHAPES.find((s) => s.value === shape)?.icon ?? '★';
@@ -38,10 +42,10 @@ function apply() {
 <template>
   <Teleport to="body">
     <div v-if="model" class="sb-settings-overlay sb-theme sb-auto-dark" @click.self="model = null">
-      <div class="sb-rating-dialog">
+      <div ref="dialog" class="sb-rating-dialog" role="dialog" aria-modal="true" aria-labelledby="rating-dialog-title">
         <div class="sb-settings-header">
-          <h2>評分題設定</h2>
-          <button class="sb-settings-close" type="button" @click="model = null">✕</button>
+          <h2 id="rating-dialog-title">評分題設定</h2>
+          <button class="sb-settings-close" type="button" aria-label="關閉評分題設定" @click="model = null">✕</button>
         </div>
         <div class="sb-rating-dialog-body">
           <div class="sb-rating-dialog-grid">

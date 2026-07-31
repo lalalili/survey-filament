@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed, useTemplateRef } from 'vue';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
+import { useDialogFocus } from '../composables/useDialogFocus';
 
 export interface NumberDialogState {
   elementId: string;
@@ -12,6 +14,8 @@ export interface NumberDialogState {
 
 const model = defineModel<NumberDialogState | null>();
 const store = useSurveyBuilderStore();
+const dialog = useTemplateRef<HTMLElement>('dialog');
+useDialogFocus({ isOpen: computed(() => model.value !== null), dialog, close: () => { model.value = null; } });
 
 function apply() {
   if (!model.value) return;
@@ -29,10 +33,10 @@ function apply() {
 <template>
   <Teleport to="body">
     <div v-if="model" class="sb-settings-overlay sb-theme sb-auto-dark" @click.self="model = null">
-      <div class="sb-number-dialog">
+      <div ref="dialog" class="sb-number-dialog" role="dialog" aria-modal="true" aria-labelledby="number-dialog-title">
         <div class="sb-settings-header">
-          <h2>數字範圍設定</h2>
-          <button class="sb-settings-close" type="button" @click="model = null">✕</button>
+          <h2 id="number-dialog-title">數字範圍設定</h2>
+          <button class="sb-settings-close" type="button" aria-label="關閉數字範圍設定" @click="model = null">✕</button>
         </div>
         <div class="sb-number-dialog-body">
           <p class="sb-number-dialog-desc">

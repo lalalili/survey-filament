@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed, useTemplateRef } from 'vue';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
+import { useDialogFocus } from '../composables/useDialogFocus';
 
 export interface MatrixColItem { id: string; label: string; }
 
@@ -17,6 +19,8 @@ const MATRIX_PRESETS: Record<string, string[]> = {
 
 const model = defineModel<MatrixColsDialogState | null>();
 const store = useSurveyBuilderStore();
+const dialog = useTemplateRef<HTMLElement>('dialog');
+useDialogFocus({ isOpen: computed(() => model.value !== null), dialog, close: () => { model.value = null; } });
 
 function applyPreset(preset: string) {
   if (!model.value) return;
@@ -50,10 +54,10 @@ function apply() {
 <template>
   <Teleport to="body">
     <div v-if="model" class="sb-settings-overlay sb-theme sb-auto-dark" @click.self="model = null">
-      <div class="sb-matrix-dialog">
+      <div ref="dialog" class="sb-matrix-dialog" role="dialog" aria-modal="true" aria-labelledby="matrix-cols-dialog-title">
         <div class="sb-settings-header">
-          <h2>矩陣答案設定</h2>
-          <button class="sb-settings-close" type="button" @click="model = null">✕</button>
+          <h2 id="matrix-cols-dialog-title">矩陣答案設定</h2>
+          <button class="sb-settings-close" type="button" aria-label="關閉矩陣答案設定" @click="model = null">✕</button>
         </div>
         <div class="sb-matrix-dialog-body">
           <p class="sb-matrix-dialog-desc">設定矩陣題每一欄的可選答案。答案上限為 11 個。</p>

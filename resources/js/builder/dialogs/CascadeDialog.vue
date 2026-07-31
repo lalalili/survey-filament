@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed, useTemplateRef } from 'vue';
 import type { CascadeLevel, CascadeNode } from '../types/schema';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
+import { useDialogFocus } from '../composables/useDialogFocus';
 
 export interface CascadeDialogState {
   elementId: string;
@@ -10,6 +12,8 @@ export interface CascadeDialogState {
 
 const model = defineModel<CascadeDialogState | null>();
 const store = useSurveyBuilderStore();
+const dialog = useTemplateRef<HTMLElement>('dialog');
+useDialogFocus({ isOpen: computed(() => model.value !== null), dialog, close: () => { model.value = null; } });
 
 function addLevel() {
   if (!model.value || model.value.levels.length >= 5) return;
@@ -131,10 +135,10 @@ function apply() {
 <template>
   <Teleport to="body">
     <div v-if="model" class="sb-settings-overlay sb-theme sb-auto-dark" @click.self="model = null">
-      <div class="sb-cascade-dialog">
+      <div ref="dialog" class="sb-cascade-dialog" role="dialog" aria-modal="true" aria-labelledby="cascade-dialog-title">
         <div class="sb-settings-header">
-          <h2>編輯巢狀選擇題資料</h2>
-          <button class="sb-settings-close" type="button" @click="model = null">✕</button>
+          <h2 id="cascade-dialog-title">編輯巢狀選擇題資料</h2>
+          <button class="sb-settings-close" type="button" aria-label="關閉巢狀選擇題資料設定" @click="model = null">✕</button>
         </div>
         <div class="sb-cascade-dialog-body">
           <!-- Levels row -->

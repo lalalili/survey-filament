@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed, useTemplateRef } from 'vue';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
+import { useDialogFocus } from '../composables/useDialogFocus';
 
 export interface NpsDialogState {
   elementId: string;
@@ -10,6 +12,8 @@ export interface NpsDialogState {
 
 const model = defineModel<NpsDialogState | null>();
 const store = useSurveyBuilderStore();
+const dialog = useTemplateRef<HTMLElement>('dialog');
+useDialogFocus({ isOpen: computed(() => model.value !== null), dialog, close: () => { model.value = null; } });
 
 function apply() {
   if (!model.value) return;
@@ -25,10 +29,10 @@ function apply() {
 <template>
   <Teleport to="body">
     <div v-if="model" class="sb-settings-overlay sb-theme sb-auto-dark" @click.self="model = null">
-      <div class="sb-nps-dialog">
+      <div ref="dialog" class="sb-nps-dialog" role="dialog" aria-modal="true" aria-labelledby="nps-dialog-title">
         <div class="sb-settings-header">
-          <h2>NPS 淨推薦值設定</h2>
-          <button class="sb-settings-close" type="button" @click="model = null">✕</button>
+          <h2 id="nps-dialog-title">NPS 淨推薦值設定</h2>
+          <button class="sb-settings-close" type="button" aria-label="關閉 NPS 淨推薦值設定" @click="model = null">✕</button>
         </div>
         <div class="sb-nps-dialog-body">
           <div class="sb-nps-dialog-grid">

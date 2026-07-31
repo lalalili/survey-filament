@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref, shallowRef, useTemplateRef, watch } from 'vue';
 import { getQuestionType } from '../registry/questionTypes';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
 import type { BuilderEndpoints, SurveyElement, SurveyPage } from '../types/schema';
@@ -21,6 +21,71 @@ const props = defineProps<{
 
 const store = useSurveyBuilderStore();
 const questionCollapse = useQuestionCollapse();
+type BuilderWorkspace = 'canvas' | 'library' | 'properties' | 'logic';
+const workspaceOrder: BuilderWorkspace[] = ['canvas', 'library', 'properties', 'logic'];
+const mobileWorkspace = shallowRef<BuilderWorkspace>('canvas');
+const pageTabsEl = useTemplateRef<HTMLElement>('pageTabs');
+const selectedPageTabId = computed(() => store.selectedPageId ? `sb-page-tab-${store.selectedPageId}` : undefined);
+
+function selectWorkspace(workspace: BuilderWorkspace) {
+  mobileWorkspace.value = workspace;
+  if (workspace !== 'canvas') store.rightPanelTab = workspace;
+}
+
+function adjacentIndex(event: KeyboardEvent, currentIndex: number, itemCount: number): number | null {
+  if (event.key === 'Home') return 0;
+  if (event.key === 'End') return itemCount - 1;
+  if (event.key === 'ArrowLeft') return (currentIndex - 1 + itemCount) % itemCount;
+  if (event.key === 'ArrowRight') return (currentIndex + 1) % itemCount;
+
+  return null;
+}
+
+async function onWorkspaceKeydown(event: KeyboardEvent, workspace: BuilderWorkspace) {
+  const targetIndex = adjacentIndex(event, workspaceOrder.indexOf(workspace), workspaceOrder.length);
+  if (targetIndex === null) return;
+
+  event.preventDefault();
+  const targetWorkspace = workspaceOrder[targetIndex];
+  selectWorkspace(targetWorkspace);
+  await nextTick();
+  document.getElementById(`sb-workspace-tab-${targetWorkspace}`)?.focus();
+}
+
+async function onPageTabKeydown(event: KeyboardEvent, pageId: string) {
+  const pageIds = [
+    ...(store.welcomePage ? [store.welcomePage.id] : []),
+    ...store.questionPages.map((page) => page.id),
+    ...(store.thankYouPage ? [store.thankYouPage.id] : []),
+  ];
+  const targetIndex = adjacentIndex(event, pageIds.indexOf(pageId), pageIds.length);
+  if (targetIndex === null) return;
+
+  event.preventDefault();
+  const targetPageId = pageIds[targetIndex];
+  selectPage(targetPageId);
+  await nextTick();
+  Array.from(pageTabsEl.value?.querySelectorAll<HTMLElement>('[data-page-id]') ?? [])
+    .find((tab) => tab.dataset.pageId === targetPageId)
+    ?.focus();
+}
+
+watch(() => store.selectedElementId, (selectedElementId, previousElementId) => {
+  if (selectedElementId && selectedElementId !== previousElementId) {
+    selectWorkspace('properties');
+  }
+}, { flush: 'sync' });
+
+watch(() => store.rightPanelTab, (rightPanelTab) => {
+  mobileWorkspace.value = rightPanelTab;
+}, { flush: 'sync' });
+
+watch(() => store.selectedPageId, async (pageId) => {
+  await nextTick();
+  const activeTab = Array.from(pageTabsEl.value?.querySelectorAll<HTMLElement>('[data-page-id]') ?? [])
+    .find((tab) => tab.dataset.pageId === pageId);
+  activeTab?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+});
 
 // 預覽執行期由這裡建立並 provide 給 <PreviewCanvas>；編輯面自己也要用其中幾個
 // 輔助函式（選項顯示順序、主題變數、計算變數 token），兩面因此共用同一份狀態。
@@ -139,6 +204,14 @@ function contentBlockLabel(element: SurveyElement): string {
 function selectElement(qId: string) {
   store.selectElement(qId);
   if (store.rightPanelTab === 'library') store.rightPanelTab = 'properties';
+  mobileWorkspace.value = 'properties';
+}
+
+function openLogic(qId: string, jumpLogic = false) {
+  store.selectElement(qId);
+  store.rightPanelTab = 'logic';
+  store.jumpLogicOpen = jumpLogic;
+  mobileWorkspace.value = 'logic';
 }
 
 // ── Page management ─────────────────────────────────────────────────────────
@@ -326,12 +399,32 @@ function isPageDropTarget(pageId: string, position: 'before' | 'after') {
   </div>
 
   <!-- ── Loading ── -->
-  <div v-if="store.isLoading" class="sb-loading">
+  <div v-if="store.isLoading" class="sb-loading" role="status" aria-live="polite">
     載入問卷設計中…
   </div>
 
   <!-- ── Main ── -->
   <div v-else-if="store.schema" class="sb-body">
+
+    <nav v-if="!store.isPreviewMode" class="sb-workspace-nav" aria-label="問卷建立器工作區">
+      <div class="sb-workspace-tabs" aria-label="編輯工作區">
+        <button
+          v-for="workspace in ([['canvas', '畫布'], ['library', '題型庫'], ['properties', '屬性'], ['logic', '邏輯']] as const)"
+          :id="`sb-workspace-tab-${workspace[0]}`"
+          :key="workspace[0]"
+          type="button"
+          class="sb-workspace-tab"
+          :aria-pressed="mobileWorkspace === workspace[0]"
+          :tabindex="mobileWorkspace === workspace[0] ? 0 : -1"
+          :class="{ active: mobileWorkspace === workspace[0] }"
+          @click="selectWorkspace(workspace[0])"
+          @keydown="onWorkspaceKeydown($event, workspace[0])"
+        >{{ workspace[1] }}</button>
+      </div>
+      <button type="button" class="sb-workspace-settings" aria-label="問卷設定" @click="store.showSettingsModal = true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </nav>
 
     <!-- Left rail -->
     <aside v-if="!store.isPreviewMode" class="sb-rail">
@@ -346,17 +439,30 @@ function isPageDropTarget(pageId: string, position: 'before' | 'after') {
     </aside>
 
     <!-- ── Canvas ── -->
-    <main class="sb-canvas">
+    <main
+      id="sb-workspace-canvas"
+      class="sb-canvas"
+      :class="{ 'is-mobile-active': mobileWorkspace === 'canvas' }"
+      :role="!store.isPreviewMode ? 'region' : undefined"
+      :aria-label="!store.isPreviewMode ? '問卷畫布' : undefined"
+    >
       <div class="sb-canvas-inner">
 
         <!-- Page tabs (sticky) -->
         <div v-if="!store.isPreviewMode" class="sb-page-tabs-wrap">
-          <div class="sb-page-tabs">
+          <div ref="pageTabs" class="sb-page-tabs" role="tablist" aria-label="問卷頁面">
             <button
               v-if="store.welcomePage"
               class="sb-page-tab welcome"
+              :id="`sb-page-tab-${store.welcomePage.id}`"
+              role="tab"
+              :aria-selected="store.selectedPageId === store.welcomePage.id"
+              aria-controls="sb-page-panel"
+              :tabindex="store.selectedPageId === store.welcomePage.id ? 0 : -1"
+              :data-page-id="store.welcomePage.id"
               :class="{ active: store.selectedPageId === store.welcomePage.id }"
               @click="selectPage(store.welcomePage.id)"
+              @keydown="onPageTabKeydown($event, store.welcomePage.id)"
             >
               <span class="sb-page-tab-num">歡迎</span>
             </button>
@@ -373,35 +479,51 @@ function isPageDropTarget(pageId: string, position: 'before' | 'after') {
                 'is-page-dragging': dragPageId === page.id,
                 'has-error': errorPageIds.has(page.id),
               }"
-              role="button"
-              tabindex="0"
               draggable="true"
-              @click="selectPage(page.id)"
-              @keydown.enter.prevent="selectPage(page.id)"
-              @keydown.space.prevent="selectPage(page.id)"
               @dragstart="onPageDragStart($event, page.id)"
               @dragend="onPageDragEnd"
               @dragover="onPageTabDragOver($event, page.id)"
               @dragleave="onPageTabDragLeave($event, page.id)"
               @drop="onPageTabDrop($event, page.id)"
             >
-              <span class="sb-page-tab-num" :class="{ 'error-num': errorPageIds.has(page.id) }">P{{ String(i + 1).padStart(2, '0') }}</span>
-              <span>{{ page.title || '未命名頁面' }}</span>
-              <span v-if="errorPageIds.has(page.id)" class="sb-page-tab-error-dot" title="此頁有驗證錯誤">!</span>
-              <span class="sb-page-tab-count">{{ visibleSurveyElements(page.elements).length }}</span>
+              <button
+                type="button"
+                class="sb-page-tab-select"
+                :id="`sb-page-tab-${page.id}`"
+                role="tab"
+                :aria-selected="store.selectedPageId === page.id"
+                aria-controls="sb-page-panel"
+                :tabindex="store.selectedPageId === page.id ? 0 : -1"
+                :data-page-id="page.id"
+                @click="selectPage(page.id)"
+                @keydown="onPageTabKeydown($event, page.id)"
+              >
+                <span class="sb-page-tab-num" :class="{ 'error-num': errorPageIds.has(page.id) }">P{{ String(i + 1).padStart(2, '0') }}</span>
+                <span>{{ page.title || '未命名頁面' }}</span>
+                <span v-if="errorPageIds.has(page.id)" class="sb-page-tab-error-dot" title="此頁有驗證錯誤">!</span>
+                <span class="sb-page-tab-count">{{ visibleSurveyElements(page.elements).length }}</span>
+              </button>
               <button
                 class="sb-page-tab-close"
                 type="button"
                 @click.stop="deletePage(page.id)"
                 title="刪除此頁"
+                :aria-label="`刪除頁面：${page.title || `第 ${i + 1} 頁`}`"
               >×</button>
             </div>
 
             <button
               v-if="store.thankYouPage"
               class="sb-page-tab thanks"
+              :id="`sb-page-tab-${store.thankYouPage.id}`"
+              role="tab"
+              :aria-selected="store.selectedPageId === store.thankYouPage.id"
+              aria-controls="sb-page-panel"
+              :tabindex="store.selectedPageId === store.thankYouPage.id ? 0 : -1"
+              :data-page-id="store.thankYouPage.id"
               :class="{ active: store.selectedPageId === store.thankYouPage.id }"
               @click="selectPage(store.thankYouPage.id)"
+              @keydown="onPageTabKeydown($event, store.thankYouPage.id)"
             >
               <span class="sb-page-tab-num">感謝</span>
             </button>
@@ -415,7 +537,14 @@ function isPageDropTarget(pageId: string, position: 'before' | 'after') {
         <PreviewCanvas v-if="store.isPreviewMode" />
 
         <!-- ── Edit mode ── -->
-        <div v-else class="sb-edit-surface survey-preview-surface" :style="previewThemeVars">
+        <div
+          v-else
+          id="sb-page-panel"
+          class="sb-edit-surface survey-preview-surface"
+          role="tabpanel"
+          :aria-labelledby="selectedPageTabId"
+          :style="previewThemeVars"
+        >
           <!-- Page header (question pages only) -->
           <div v-if="store.selectedPage?.kind !== 'welcome' && store.selectedPage?.kind !== 'thank_you'" class="sb-page-header">
             <span class="sb-page-header-num">
@@ -459,8 +588,8 @@ function isPageDropTarget(pageId: string, position: 'before' | 'after') {
             <template v-if="selectedPageVisibleElements.length === 0">
               <div class="sb-empty-page">
                 <div class="sb-empty-page-icon">＋</div>
-                <p>從右側選擇題型加入此頁面</p>
-                <button class="sb-btn" type="button" @click="store.rightPanelTab = 'library'">瀏覽題型</button>
+                <p>從題型庫加入此頁面</p>
+                <button class="sb-btn" type="button" @click="selectWorkspace('library')">瀏覽題型</button>
               </div>
             </template>
             <template v-else>
@@ -564,8 +693,8 @@ function isPageDropTarget(pageId: string, position: 'before' | 'after') {
                       <span v-if="element.required" class="sb-req-tag">必填</span>
                       <span v-if="errorElementIds.has(element.id)" class="sb-badge error" :title="parsedErrors.find(e => e.elementId === element.id)?.messages.join('；')">⚠ 驗證錯誤</span>
                       <span v-if="element.is_hidden" class="sb-badge blue">個性化</span>
-                      <span v-if="element.show_if_field_key || (element.show_if?.conditions ?? []).length > 0" class="sb-badge amber sb-badge-btn" @click.stop="selectElement(element.id); store.rightPanelTab = 'logic'">條件</span>
-                      <span v-if="hasActiveJumpLogic(element)" class="sb-badge violet sb-badge-btn" @click.stop="selectElement(element.id); store.rightPanelTab = 'logic'; store.jumpLogicOpen = true">跳題</span>
+                      <button v-if="element.show_if_field_key || (element.show_if?.conditions ?? []).length > 0" type="button" class="sb-badge amber sb-badge-btn" @click.stop="openLogic(element.id)">條件</button>
+                      <button v-if="hasActiveJumpLogic(element)" type="button" class="sb-badge violet sb-badge-btn" @click.stop="openLogic(element.id, true)">跳題</button>
                     </div>
                     <button
                       class="sb-card-collapse"
@@ -770,7 +899,7 @@ function isPageDropTarget(pageId: string, position: 'before' | 'after') {
                       @click.stop="store.updateQuestion(element.id, { required: !element.required })"
                     >✱ 必填</button>
                     <button class="sb-quick-btn" type="button" @click.stop="store.duplicateQuestion(element.id)">⊕ 複製</button>
-                    <button v-if="elementSupportsLogic(element)" class="sb-quick-btn" type="button" @click.stop="selectElement(element.id); store.rightPanelTab = 'logic'">⟁ 邏輯</button>
+                    <button v-if="elementSupportsLogic(element)" class="sb-quick-btn" type="button" @click.stop="openLogic(element.id)">⟁ 邏輯</button>
                     <div style="flex:1" />
                     <button class="sb-quick-btn danger" type="button" @click.stop="removeQuestion(element.id)">✕ 刪除</button>
                   </div>
@@ -790,8 +919,8 @@ function isPageDropTarget(pageId: string, position: 'before' | 'after') {
             </template>
 
             <div class="sb-add-q-zone">
-              <button class="sb-add-q-btn" type="button" @click="store.rightPanelTab = 'library'">
-                + 從右側新增題目
+              <button class="sb-add-q-btn" type="button" @click="selectWorkspace('library')">
+                + 從題型庫新增題目
               </button>
             </div>
           </template>
@@ -800,7 +929,16 @@ function isPageDropTarget(pageId: string, position: 'before' | 'after') {
     </main>
 
     <!-- ── Right panel ── -->
-    <RightPanel v-if="!store.isPreviewMode" :guide-url="props.guideUrl" />
+    <div
+      v-if="!store.isPreviewMode"
+      id="sb-workspace-panel"
+      class="sb-workspace-panel"
+      :class="{ 'is-mobile-active': mobileWorkspace !== 'canvas' }"
+      role="region"
+      :aria-label="store.rightPanelTab === 'library' ? '題型庫' : store.rightPanelTab === 'properties' ? '題目屬性' : '題目邏輯'"
+    >
+      <RightPanel :guide-url="props.guideUrl" />
+    </div>
 
   </div><!-- /sb-body -->
 </template>

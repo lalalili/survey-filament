@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
+import { computed, inject, ref, useTemplateRef } from 'vue';
 import type { SurveySettings } from '../types/schema';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
+import { useDialogFocus } from '../composables/useDialogFocus';
 import SurveyRichEditor from '../components/SurveyRichEditor.vue';
 import { calculationVariableToken } from '../utils/variableTokens';
 import {
@@ -33,6 +34,8 @@ const props = defineProps<{
 
 const show = defineModel<boolean>({ default: false });
 const store = useSurveyBuilderStore();
+const dialog = useTemplateRef<HTMLElement>('dialog');
+useDialogFocus({ isOpen: show, dialog, close: () => { show.value = false; } });
 const categoryOptionEntries = computed(() => Object.entries(props.categoryOptions));
 const thankYouVariableTokens = computed(() => (store.schema?.calculations ?? []).map(calculationVariableToken));
 const welcomePageEnabled = computed(() => store.welcomePage != null && store.welcomePage.welcome_settings?.enabled !== false);
@@ -122,10 +125,10 @@ function updatePersonalizationAudience(audienceListId: string) {
 <template>
   <Teleport to="body">
     <div v-if="show" class="sb-settings-overlay sb-theme sb-auto-dark" @click.self="show = false">
-      <div class="sb-settings-modal">
+      <div ref="dialog" class="sb-settings-modal" role="dialog" aria-modal="true" aria-labelledby="survey-settings-dialog-title">
         <div class="sb-settings-header">
-          <h2>問卷設定</h2>
-          <button class="sb-settings-close" type="button" @click="show = false">✕</button>
+          <h2 id="survey-settings-dialog-title">問卷設定</h2>
+          <button class="sb-settings-close" type="button" aria-label="關閉問卷設定" @click="show = false">✕</button>
         </div>
         <div class="sb-settings-body">
           <!-- Left nav -->
