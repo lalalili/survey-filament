@@ -2,6 +2,20 @@
 
 All notable changes to `lalalili/survey-filament` will be documented in this file.
 
+## [1.5.1] - 2026-08-01
+
+### Added
+
+- CI 新增 JS tests job。共用的 `php-package-ci` 只跑 PHP，Builder 前端的 138 個
+  vitest 測試先前完全不在 CI 覆蓋範圍內——曾有四個測試檔長期整檔載入失敗而無人察覺。
+
+### Changed
+
+- `@lalalili/builder-ui-core` 的 specifier 由 `git+ssh` 改為 `git+https`。該 repo
+  是公開的，ssh 只是本機習慣，CI 沒有金鑰會裝不起來。
+- 把頁面層 `jump_rules` 的測試標示為「刻意未實作」而非「已知落差」：建立器沒有
+  任何 UI 能建立這種資料，維持現況是產品決策，不是待辦。
+
 ## [1.5.0] - 2026-08-01
 
 ### Fixed
