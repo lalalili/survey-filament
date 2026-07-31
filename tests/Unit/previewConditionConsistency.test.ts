@@ -214,7 +214,10 @@ describe('跳題：預覽相對 JumpLogicResolver 的已知落差', () => {
     expect(actionAppliedFor('select')).toBe('page-3');
   });
 
-  it('已知落差：預覽完全沒有實作頁面層的 jump_rules', () => {
+  // 刻意不實作：建立器沒有任何 UI 能建立頁面層 jump_rules（RightPanel 與
+  // SettingsModal 都沒有），實務上也沒有這種資料。2026-08-01 決議維持現況，
+  // 要開放得先補編輯 UI，預覽再跟上。詳見 survey-core 的 JumpLogicResolver docblock。
+  it('刻意未實作：頁面層的 jump_rules 不影響預覽流程', () => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const store = useSurveyBuilderStore();
