@@ -2,6 +2,30 @@
 
 All notable changes to `lalalili/survey-filament` will be documented in this file.
 
+## [1.4.0] - 2026-07-31
+
+### Changed
+
+- 把預覽執行期從 `CanvasArea.vue` 抽出，該檔由 2056 行降為 919 行。行為不變，
+  純結構調整：
+  - 新增 `composables/usePreviewRuntime.ts`——預覽的作答狀態、跳題導覽、顯示條件、
+    計算變數與各題型輔助函式。由 `CanvasArea` 建立並 provide，編輯面與預覽面共用
+    同一份狀態。
+  - 新增 `components/preview/PreviewCanvas.vue`——預覽面的呈現，template 逐行原樣搬移。
+  - 兩面共用的純函式（`contentBlockText`、`textInputType`、`ratingShapeIcon`、
+    `formatSurveyNumber`）移入 `utils/builderHelpers`；題號計算移入新的
+    `utils/questionNumbering`。
+- 移除 `CanvasArea.vue` 中未使用的 `elementSupportsJump` import（重構前即已無使用）。
+
+### Added
+
+- `tests/Unit/CanvasAreaPreview.test.ts`：18 個預覽行為的 characterization 測試
+  （顯示條件、跳題與略過頁清空、返回歷程、進度條、合計狀態、排序、評分、
+  計算變數 token、條款同意、檔案格式標示、選項隨機）。全部先寫在重構前並通過，
+  再據以驗證重構未改變行為。
+- `tests/Unit/PreviewCanvasAllTypes.test.ts`：一次渲染全部 26 個題型分支的 smoke
+  測試，攔截預覽面未解析的樣板綁定。
+
 ## [1.3.0] - 2026-07-31
 
 ### Removed
