@@ -9,7 +9,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "@lalalili/builder-ui-core": "git+ssh://git@github.com/lalalili/builder-ui-core.git#v1.0.0",
+    "@lalalili/builder-ui-core": "git+https://github.com/lalalili/builder-ui-core.git#v1.0.0",
     "@tiptap/core": "^3.25.0",
     "@tiptap/extension-color": "^3.25.0",
     "@tiptap/extension-image": "^3.25.0",

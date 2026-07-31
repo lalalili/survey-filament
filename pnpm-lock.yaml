@@ -9,7 +9,7 @@ importers:
   .:
     devDependencies:
       '@lalalili/builder-ui-core':
-        specifier: git+ssh://git@github.com/lalalili/builder-ui-core.git#v1.0.0
+        specifier: git+https://github.com/lalalili/builder-ui-core.git#v1.0.0
         version: https://codeload.github.com/lalalili/builder-ui-core/tar.gz/675cc9964e408f224297101b586af18530fdda24
       '@tiptap/core':
         specifier: ^3.25.0
