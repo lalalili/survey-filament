@@ -2,6 +2,22 @@
 
 All notable changes to `lalalili/survey-filament` will be documented in this file.
 
+## [1.6.0] - 2026-08-01
+
+### Fixed
+
+- **預覽的計算變數改為與伺服器端相同的整數運算。** 權威實作
+  `CalculateSurveyResponseAction` 全程以 `(int)` 累加分數，預覽先前用 `Number()`
+  保留小數：`score_delta` 設成 2.6 時，設計者在預覽看到 2.6，受訪者實際拿到 2。
+  對測驗／診斷型問卷來說這代表整份產出的分數是錯的，而且兩邊都不會報錯。
+  分級門檻（`grade_map_json` 的 min/max）也一併對齊整數轉型。
+
+### Added
+
+- `tests/Fixtures/preview-calculation-consistency.json`：計算變數的跨實作共用
+  fixture。PHP 側跑完整權威路徑（存草稿 → 發布 → 計算），預覽側透過
+  `renderCalculationTokens` 取值，同一份 schema 與作答情境比對兩邊結果。
+
 ## [1.5.1] - 2026-08-01
 
 ### Added

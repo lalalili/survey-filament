@@ -70,10 +70,23 @@ function decodeHtmlEntities(value: string): string {
   return textarea.value;
 }
 
+/**
+ * 對應 PHP 的 `(int)` 轉型：朝零截斷小數，非數值視為 0。
+ *
+ * 計算變數的權威實作是 `CalculateSurveyResponseAction`，它全程以 int 累加；預覽若
+ * 保留小數，設計者看到的分數就會與受訪者實際拿到的不同。一致性由
+ * `tests/Fixtures/preview-calculation-consistency.json` 這份共用 fixture 把關。
+ */
+function truncateScore(value: unknown): number {
+  const numeric = Number(value);
+
+  return Number.isFinite(numeric) ? Math.trunc(numeric) : 0;
+}
+
 function resolveGradeLabel(score: number, gradeMap: Array<Record<string, unknown>> = []): string | number {
   for (const grade of gradeMap) {
-    const min = Object.prototype.hasOwnProperty.call(grade, 'min') ? Number(grade.min) : Number.NEGATIVE_INFINITY;
-    const max = Object.prototype.hasOwnProperty.call(grade, 'max') ? Number(grade.max) : Number.POSITIVE_INFINITY;
+    const min = Object.prototype.hasOwnProperty.call(grade, 'min') ? truncateScore(grade.min) : Number.NEGATIVE_INFINITY;
+    const max = Object.prototype.hasOwnProperty.call(grade, 'max') ? truncateScore(grade.max) : Number.POSITIVE_INFINITY;
 
     if (score >= min && score <= max) {
       return typeof grade.label === 'string' && grade.label !== '' ? grade.label : score;
@@ -362,7 +375,9 @@ export function usePreviewRuntime() {
   function calculationValuesFromPreviewAnswers(useAnswers: boolean): Record<string, string | number> {
     const calculations = store.schema?.calculations ?? [];
     const values = calculations.reduce<Record<string, number>>((carry, calculation) => {
-      carry[calculation.key] = Number(calculation.initial_value ?? 0);
+      // PHP 的 CalculateSurveyResponseAction 以 (int) 轉型，這裡必須同樣截斷，
+      // 否則預覽顯示的分數會與受訪者實際拿到的不同。
+      carry[calculation.key] = truncateScore(calculation.initial_value ?? 0);
       return carry;
     }, {});
 
@@ -390,14 +405,14 @@ export function usePreviewRuntime() {
                 : rawCalculationKey;
 
             if (!Object.prototype.hasOwnProperty.call(values, calculationKey)) continue;
-            values[calculationKey] += Number.isFinite(Number(delta)) ? Number(delta) : 0;
+            values[calculationKey] += truncateScore(delta);
           }
         }
       }
     }
 
     return calculations.reduce<Record<string, string | number>>((carry, calculation: SurveyCalculation) => {
-      const score = values[calculation.key] ?? Number(calculation.initial_value ?? 0);
+      const score = values[calculation.key] ?? truncateScore(calculation.initial_value ?? 0);
       carry[calculation.key] = calculation.output_format === 'grade'
         ? resolveGradeLabel(score, calculation.grade_map_json ?? [])
         : score;

@@ -1,0 +1,125 @@
+{
+  "_comment": [
+    "計算變數（score_delta / {{calc.*}}）的跨實作一致性 fixture。同一份餵給兩邊：",
+    "  PHP  : SaveSurveyDraftSchemaAction + PublishSurveyAction + CalculateSurveyResponseAction  ← 權威實作",
+    "  預覽 : usePreviewRuntime().renderCalculationTokens('{{calc.KEY}}', true)",
+    "",
+    "分歧的後果是「設計者在預覽看到的分數 ≠ 受訪者實際拿到的分數」，對測驗／診斷型",
+    "問卷等於整份產出是錯的，而且兩邊都不會報錯。",
+    "",
+    "expected 是 PHP 的結果（權威），值一律以字串比較——預覽端渲染出來的是字串。",
+    "若某情境的預覽結果與 PHP 不同，就加上 preview_divergence 記下目前實際值與原因；",
+    "TS 測試會 pin 住那個值，修好後測試失敗、提醒移除標記。"
+  ],
+  "schema": {
+    "id": 1,
+    "title": "計算變數一致性",
+    "status": "draft",
+    "version": 1,
+    "calculations": [
+      { "id": "calc_score", "key": "score", "label": "總分", "initial_value": 0 },
+      {
+        "id": "calc_risk",
+        "key": "risk",
+        "label": "風險",
+        "initial_value": 1,
+        "output_format": "grade",
+        "grade_map_json": [
+          { "min": 0, "max": 3, "label": "低" },
+          { "min": 4, "max": 10, "label": "高" }
+        ]
+      }
+    ],
+    "pages": [
+      {
+        "id": "page_1",
+        "kind": "question",
+        "title": "第一頁",
+        "elements": [
+          {
+            "id": "q_choice",
+            "type": "single_choice",
+            "field_key": "choice",
+            "label": "單選",
+            "description": "",
+            "required": false,
+            "placeholder": null,
+            "settings": {},
+            "options": [
+              { "id": "opt_a", "label": "A", "value": "a", "score_delta_json": { "score": 5, "risk": 4 } },
+              { "id": "opt_b", "label": "B", "value": "b", "score_delta_json": { "score": 2 } },
+              { "id": "opt_c", "label": "C", "value": "c" },
+              { "id": "opt_d", "label": "D", "value": "d", "score_delta_json": { "score": 2.6 } }
+            ]
+          },
+          {
+            "id": "q_multi",
+            "type": "multiple_choice",
+            "field_key": "multi",
+            "label": "複選",
+            "description": "",
+            "required": false,
+            "placeholder": null,
+            "settings": {},
+            "options": [
+              { "id": "opt_x", "label": "X", "value": "x", "score_delta_json": { "score": 1 } },
+              { "id": "opt_y", "label": "Y", "value": "y", "score_delta_json": { "score": 3, "risk": -1 } },
+              { "id": "opt_z", "label": "Z", "value": "z", "score_delta_json": { "score": 10, "risk": 20 } }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "answer_types": {
+    "choice": "single_choice",
+    "multi": "multiple_choice"
+  },
+  "cases": [
+    {
+      "name": "未作答時取初始值",
+      "answers": {},
+      "expected": { "score": "0", "risk": "低" }
+    },
+    {
+      "name": "單選累加一個 delta",
+      "answers": { "choice": "b" },
+      "expected": { "score": "2", "risk": "低" }
+    },
+    {
+      "name": "單選同時影響兩個計算變數並跨過分級界線",
+      "answers": { "choice": "a" },
+      "expected": { "score": "5", "risk": "高" }
+    },
+    {
+      "name": "沒有 score_delta 的選項不影響分數",
+      "answers": { "choice": "c" },
+      "expected": { "score": "0", "risk": "低" }
+    },
+    {
+      "name": "複選累加每個被選中的選項",
+      "answers": { "multi": ["x", "y"] },
+      "expected": { "score": "4", "risk": "低" }
+    },
+    {
+      "name": "負值 delta 可把分級拉回下一級",
+      "answers": { "choice": "a", "multi": ["y"] },
+      "expected": { "score": "8", "risk": "高" }
+    },
+    {
+      "name": "超出 grade_map 範圍時保留原始分數而非分級標籤",
+      "answers": { "choice": "a", "multi": ["x", "y", "z"] },
+      "expected": { "score": "19", "risk": "24" }
+    },
+    {
+      "name": "小數 delta 以整數累加",
+      "answers": { "choice": "d" },
+      "expected": { "score": "2", "risk": "低" }
+    },
+    {
+      "name": "小數 delta 累加多次仍逐次截斷",
+      "answers": { "choice": "d", "multi": ["x"] },
+      "expected": { "score": "3", "risk": "低" }
+    }
+  ]
+}
