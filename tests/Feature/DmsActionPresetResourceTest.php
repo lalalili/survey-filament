@@ -121,6 +121,32 @@ it('allows inactive DMS drafts but blocks activation until every item is confirm
     expect($draft->fresh()->is_active)->toBeFalse();
 });
 
+it('shows the pending voucher API separately and blocks activation until its contract is implemented', function (): void {
+    $schema = dmsPresetSchema();
+    $schema->fill([
+        'is_active' => true,
+        'action_json' => [
+            'type' => 'dms_voucher',
+            'profile' => 'qa',
+        ],
+    ]);
+
+    $section = $schema->getComponent('dms_voucher_settings', withHidden: true);
+    $fields = array_keys($section->getChildSchema()->getFlatFields(withHidden: true));
+    $toggle = $schema->getFlatFields()['is_active'];
+    $validator = Validator::make(
+        ['is_active' => true],
+        ['is_active' => $toggle->getValidationRules()],
+    );
+
+    expect($fields)
+        ->toContain('action_json.profile')
+        ->not->toContain('action_json.endpoint', 'action_json.sKey', 'action_json.key')
+        ->and($validator->fails())->toBeTrue()
+        ->and($validator->errors()->first('is_active'))
+        ->toBe('DMS 維修抵用劵 API 規格尚待客戶提供，完成串接與測試前不得啟用。');
+});
+
 it('shows the manual QA action only when config profile and policy all allow it', function (): void {
     $user = User::create([
         'name' => 'DMS Tester',

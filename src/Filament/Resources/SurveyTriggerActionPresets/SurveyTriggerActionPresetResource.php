@@ -108,7 +108,19 @@ class SurveyTriggerActionPresetResource extends Resource
                         ->default(true)
                         ->rules([
                             fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
-                                if (! $value || ($get('action_json.type') ?? 'http_post') !== 'dms_soap') {
+                                if (! $value) {
+                                    return;
+                                }
+
+                                $actionType = $get('action_json.type') ?? 'http_post';
+
+                                if ($actionType === 'dms_voucher') {
+                                    $fail('DMS 維修抵用劵 API 規格尚待客戶提供，完成串接與測試前不得啟用。');
+
+                                    return;
+                                }
+
+                                if ($actionType !== 'dms_soap') {
                                     return;
                                 }
 
@@ -135,6 +147,7 @@ class SurveyTriggerActionPresetResource extends Resource
                         ->options([
                             'http_post' => 'JSON HTTP POST',
                             'dms_soap' => 'DMS SOAP',
+                            'dms_voucher' => 'DMS 維修抵用劵（規格待確認）',
                         ])
                         ->default('http_post')
                         ->required()
@@ -300,6 +313,24 @@ class SurveyTriggerActionPresetResource extends Resource
                     Section::make('參數確認')
                         ->description('每個必要項目需記錄目前值、確認狀態與備註；只有全部為「已確認」才能正式啟用。')
                         ->schema(self::dmsConfirmationFields()),
+                ]),
+
+            Section::make('DMS 維修抵用劵設定')
+                ->key('dms_voucher_settings')
+                ->columns(1)
+                ->description('此功能會串接 DMS，但使用獨立的 API 接口與參數，不沿用顧關立案的 ws_setTicket。')
+                ->visible(fn (Get $get): bool => $get('action_json.type') === 'dms_voucher')
+                ->schema([
+                    TextInput::make('action_json.profile')
+                        ->label('執行環境')
+                        ->readOnly()
+                        ->default(fn (): string => (string) config('survey-core.triggers.dms.profile', 'qa'))
+                        ->dehydrateStateUsing(fn (): string => (string) config('survey-core.triggers.dms.profile', 'qa'))
+                        ->helperText('QA／正式環境仍由系統設定控制；抵用劵 API 的 endpoint 與認證方式待文件確認。'),
+
+                    Placeholder::make('dms_voucher_spec_status')
+                        ->label('API 規格狀態')
+                        ->content('待客戶提供 API 文件；完成接口、認證、請求參數與成功判定確認前，系統會強制保持停用。'),
                 ]),
         ]);
     }
