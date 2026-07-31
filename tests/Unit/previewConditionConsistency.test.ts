@@ -150,9 +150,9 @@ describe('顯示條件求值：預覽 vs PHP 權威實作', () => {
     },
   );
 
-  it('把落差控制在已記錄的範圍內', () => {
-    expect(diverging).toHaveLength(6);
-    expect(agreeing.length).toBeGreaterThan(diverging.length);
+  it('目前沒有已記錄的落差', () => {
+    expect(diverging).toHaveLength(0);
+    expect(agreeing).toHaveLength(fixture.cases.length);
   });
 });
 
@@ -208,11 +208,10 @@ describe('跳題：預覽相對 JumpLogicResolver 的已知落差', () => {
     expect(actionAppliedFor('single_choice')).toBe('page-3');
   });
 
-  it('已知落差：select 題的選項跳題在預覽中不生效', () => {
+  it('honours an option jump on select', () => {
     // builderHelpers.JUMP_SUPPORTED_TYPES 與 PHP 的 JumpLogicResolver 都含 select，
-    // 右側面板也讓使用者替 select 設定跳題；但 previewSelectedPageAction 只掃
-    // single_choice，於是預覽照順序走到下一頁。修好後這裡會變成 'page-3'。
-    expect(actionAppliedFor('select')).toBe('page-2');
+    // 右側面板也讓使用者替 select 設定跳題。
+    expect(actionAppliedFor('select')).toBe('page-3');
   });
 
   it('已知落差：預覽完全沒有實作頁面層的 jump_rules', () => {

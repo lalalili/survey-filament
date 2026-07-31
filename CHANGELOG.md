@@ -2,6 +2,38 @@
 
 All notable changes to `lalalili/survey-filament` will be documented in this file.
 
+## [1.5.0] - 2026-08-01
+
+### Fixed
+
+建立器預覽的顯示條件與跳題判定原本與伺服器端不一致，導致「預覽看到的」與
+「受訪者實際看到的」不同。以下全部改為對齊權威實作
+`Lalalili\SurveyCore\Support\ConditionGroupEvaluator` 與 `JumpLogicResolver`：
+
+- **未作答的目標題目不再讓否定運算子提前成立。** 先前 `not_equals`、
+  `not_contains` 在目標題目尚未作答時就會成立，`greater_than` 也會把未作答當成
+  0 來比較，使被條件控制的題目在預覽中提前出現。
+- **巢狀條件群組不再被整組略過。** 先前預覽把 `conditions` 當成扁平陣列，巢狀
+  群組節點沒有 `field_key`，取值後以空字串比對而恆為真，等於該群組不存在。
+- **支援 `greater_than_or_equal` / `less_than_or_equal`（含 `>=`、`<=`）。**
+  先前這些運算子會掉進 default 而被當成 `equals` 比較。
+- **`contains` 不再把陣列 join 後當字串比對。** 先前 `['a','b']` 會誤中 `'a,b'`。
+- **`is_empty` 改為先 trim。** 純空白字串先前被當成已作答。
+- **`select` 題的選項跳題在預覽中生效。** 先前只掃描 `single_choice`，但
+  `JUMP_SUPPORTED_TYPES`、右側面板與伺服器端都支援 `select`。
+
+### Added
+
+- `tests/Fixtures/preview-condition-consistency.json`：條件求值的跨實作共用
+  fixture，同時餵給 `tests/Feature/PreviewConditionConsistencyTest.php`（PHP，
+  斷言權威行為）與 `tests/Unit/previewConditionConsistency.test.ts`（預覽側）。
+  日後兩邊再度分歧會被這組測試擋下。
+
+### Known limitations
+
+- 預覽仍未實作**頁面層的 `jump_rules`**（伺服器端的 `JumpLogicResolver` 有支援，
+  含條件群組）。已在 `previewConditionConsistency.test.ts` 以測試釘住現況。
+
 ## [1.4.0] - 2026-07-31
 
 ### Changed

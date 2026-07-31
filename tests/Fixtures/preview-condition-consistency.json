@@ -37,11 +37,7 @@
     {
       "name": "not_equals 在未作答題目上不成立",
       "group": { "logic": "and", "conditions": [{ "field_key": "unanswered", "op": "not_equals", "value": "x" }] },
-      "expected": false,
-      "preview_divergence": {
-        "actual": true,
-        "why": "PHP 對未作答一律回 false（避免否定運算子提前觸發）；預覽沒有這道 blank 守衛，null 會被當成空字串去比較，於是 not_equals 提前成立。"
-      }
+      "expected": false
     },
     {
       "name": "contains 命中陣列成員",
@@ -56,11 +52,7 @@
     {
       "name": "contains 不該把陣列拼接後的字串當成子字串",
       "group": { "logic": "and", "conditions": [{ "field_key": "tags", "op": "contains", "value": "a,b" }] },
-      "expected": false,
-      "preview_divergence": {
-        "actual": true,
-        "why": "PHP 對陣列只做成員比對；預覽多了一段 String(current).includes(expected) 後援，陣列被 join 成 'a,b' 因而誤中。"
-      }
+      "expected": false
     },
     {
       "name": "not_contains 在已作答題目上成立",
@@ -75,11 +67,7 @@
     {
       "name": "is_empty 對純空白字串成立",
       "group": { "logic": "and", "conditions": [{ "field_key": "whitespace", "op": "is_empty", "value": null }] },
-      "expected": true,
-      "preview_divergence": {
-        "actual": false,
-        "why": "PHP 用 blank()，會先 trim 再判斷；預覽只比對 === '' ，純空白字串因此被當成已作答。"
-      }
+      "expected": true
     },
     {
       "name": "is_not_empty 對已作答題目成立",
@@ -94,11 +82,7 @@
     {
       "name": "greater_than 對未作答不成立",
       "group": { "logic": "and", "conditions": [{ "field_key": "unanswered", "op": "greater_than", "value": -1 }] },
-      "expected": false,
-      "preview_divergence": {
-        "actual": true,
-        "why": "PHP 的 blank 守衛先擋下；預覽直接 Number(null) 得到 0，0 > -1 因而成立。未作答被當成 0 是實質風險。"
-      }
+      "expected": false
     },
     {
       "name": "greater_than 對非數值答案不成立",
@@ -108,11 +92,7 @@
     {
       "name": "greater_than_or_equal 受支援",
       "group": { "logic": "and", "conditions": [{ "field_key": "score", "op": "greater_than_or_equal", "value": -5 }] },
-      "expected": true,
-      "preview_divergence": {
-        "actual": false,
-        "why": "PHP 支援 greater_than_or_equal / less_than_or_equal / >= / <=；預覽沒有這些分支，會掉進 default 當成 equals 比較。"
-      }
+      "expected": true
     },
     {
       "name": "between 在範圍內成立",
@@ -183,11 +163,7 @@
           }
         ]
       },
-      "expected": false,
-      "preview_divergence": {
-        "actual": true,
-        "why": "PHP 支援任意深度巢狀群組；預覽把 conditions 當成扁平陣列，巢狀節點沒有 field_key，取值得到 null 後以 equals 比對空字串而恆為 true，整個巢狀群組等於被略過。"
-      }
+      "expected": false
     },
     {
       "name": "空的 conditions 視為顯示",

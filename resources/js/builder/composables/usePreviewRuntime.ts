@@ -1,7 +1,7 @@
 import { computed, inject, onBeforeUnmount, provide, ref, watch, type InjectionKey } from 'vue';
 import { useSurveyBuilderStore } from '../stores/useSurveyBuilderStore';
 import type { CascadeNode, Condition, SurveyCalculation, SurveyElement, SurveyOption, SurveyOptionAction, SurveyPage } from '../types/schema';
-import { formatSurveyNumber } from '../utils/builderHelpers';
+import { elementSupportsJump, formatSurveyNumber } from '../utils/builderHelpers';
 import { findPreviewThankYouPageId } from '../utils/previewSubmission';
 import { normalizeVariableTokenChips } from '../utils/variableTokens';
 import { visibleSurveyElements } from '../utils/systemContextFields';
@@ -83,9 +83,51 @@ function resolveGradeLabel(score: number, gradeMap: Array<Record<string, unknown
   return score;
 }
 
+/**
+ * 以下四個判斷刻意對齊 PHP 端的 `ConditionGroupEvaluator`（權威實作）。
+ * 兩邊的一致性由 `tests/Fixtures/preview-condition-consistency.json` 這份共用
+ * fixture 把關，改動任一側請同時跑 PHP 與 TS 兩支一致性測試。
+ */
+
+/** 與 PHP `ConditionGroupEvaluator::MAX_DEPTH` 相同，對付畸形輸入。 */
+const MAX_CONDITION_DEPTH = 10;
+
+/** 對應 PHP 的 `blank()`：null／空字串／純空白／空陣列視為未作答；0 與 '0' 不是。 */
+function isBlankAnswer(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === 'string') return value.trim() === '';
+  if (Array.isArray(value)) return value.length === 0;
+  return false;
+}
+
+/** 對應 PHP 的 `is_numeric()`：空字串與 null 都不是數值。 */
+function isNumericAnswer(value: unknown): boolean {
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value === 'string') return value.trim() !== '' && Number.isFinite(Number(value));
+  return false;
+}
+
 function previewValueMatches(current: unknown, expected: unknown): boolean {
-  if (Array.isArray(current)) return current.includes(expected);
+  if (Array.isArray(current)) return current.map(String).includes(String(expected));
   return String(current ?? '') === String(expected ?? '');
+}
+
+/** 陣列只做成員比對，不把陣列 join 後當字串找子字串——後者會誤中 'a,b'。 */
+function previewValueContains(current: unknown, expected: unknown): boolean {
+  if (Array.isArray(current)) return current.map(String).includes(String(expected));
+  return String(current ?? '').includes(String(expected ?? ''));
+}
+
+function previewValueBetween(current: unknown, expected: unknown): boolean {
+  if (!isNumericAnswer(current) || expected === null || typeof expected !== 'object') return false;
+
+  const range = expected as { min?: unknown; max?: unknown } | unknown[];
+  const min = Array.isArray(range) ? range[0] : range?.min;
+  const max = Array.isArray(range) ? range[1] : range?.max;
+
+  if (!isNumericAnswer(min) || !isNumericAnswer(max)) return false;
+
+  return Number(current) >= Number(min) && Number(current) <= Number(max);
 }
 
 type PreviewFileFormatGroup = {
@@ -260,32 +302,60 @@ export function usePreviewRuntime() {
     const expected = condition.value;
     const op = condition.op ?? 'equals';
 
+    if (op === 'is_empty') return isBlankAnswer(current);
+    if (op === 'is_not_empty') return !isBlankAnswer(current);
+
+    // 目標題目未作答時，除了 is_empty / is_not_empty 之外一律不成立。否則否定運算子
+    // （not_equals、not_contains）會在使用者還沒作答時就成立，讓被條件控制的題目提前
+    // 出現。注意 0 與 '0' 不算未作答，評分 0 分仍是有效答案。
+    if (isBlankAnswer(current)) return false;
+
+    const bothNumeric = isNumericAnswer(current) && isNumericAnswer(expected);
+
     if (op === 'not_equals') return !previewValueMatches(current, expected);
-    if (op === 'contains') return previewValueMatches(current, expected) || String(current ?? '').includes(String(expected ?? ''));
-    if (op === 'not_contains') return !(previewValueMatches(current, expected) || String(current ?? '').includes(String(expected ?? '')));
-    if (op === 'greater_than') return Number(current) > Number(expected);
-    if (op === 'less_than') return Number(current) < Number(expected);
-    if (op === 'between') {
-      const range = expected as { min?: unknown; max?: unknown } | unknown[];
-      const min = Array.isArray(range) ? range[0] : range?.min;
-      const max = Array.isArray(range) ? range[1] : range?.max;
-      return Number(current) >= Number(min) && Number(current) <= Number(max);
-    }
-    if (op === 'is_empty') return current === null || current === '' || (Array.isArray(current) && current.length === 0);
-    if (op === 'is_not_empty') return !(current === null || current === '' || (Array.isArray(current) && current.length === 0));
+    if (op === 'contains') return previewValueContains(current, expected);
+    if (op === 'not_contains') return !previewValueContains(current, expected);
+    if (op === 'greater_than' || op === '>') return bothNumeric && Number(current) > Number(expected);
+    if (op === 'greater_than_or_equal' || op === '>=') return bothNumeric && Number(current) >= Number(expected);
+    if (op === 'less_than' || op === '<') return bothNumeric && Number(current) < Number(expected);
+    if (op === 'less_than_or_equal' || op === '<=') return bothNumeric && Number(current) <= Number(expected);
+    if (op === 'between') return previewValueBetween(current, expected);
+
     return previewValueMatches(current, expected);
   }
 
-  function previewElementVisible(element: SurveyElement): boolean {
-    const conditions = element.show_if?.conditions ?? (
-      element.show_if_field_key
-        ? [{ field_key: element.show_if_field_key, op: 'equals' as const, value: element.show_if_value }]
-        : []
-    );
+  /**
+   * conditions 的每個節點可以是葉條件（`{field_key, op, value}`）或巢狀群組
+   * （`{logic, conditions}`），與 PHP 端同樣支援任意深度的 AND/OR 樹；depth 是
+   * 對付畸形輸入的保險。
+   */
+  function previewGroupPasses(group: Record<string, unknown> | null | undefined, depth = 0): boolean {
+    if (depth > MAX_CONDITION_DEPTH) return true;
+
+    const rawConditions = group?.conditions;
+    const conditions = (Array.isArray(rawConditions) ? rawConditions : [])
+      .filter((condition): condition is Record<string, unknown> => !!condition && typeof condition === 'object');
+
     if (conditions.length === 0) return true;
-    return (element.show_if?.logic ?? 'and') === 'or'
-      ? conditions.some(previewConditionPasses)
-      : conditions.every(previewConditionPasses);
+
+    const evaluate = (node: Record<string, unknown>): boolean => (Array.isArray(node.conditions)
+      ? previewGroupPasses(node, depth + 1)
+      : previewConditionPasses(node as unknown as Condition));
+
+    return String(group?.logic ?? 'and').toLowerCase() === 'or'
+      ? conditions.some(evaluate)
+      : conditions.every(evaluate);
+  }
+
+  function previewElementVisible(element: SurveyElement): boolean {
+    // show_if_field_key 是 show_if 之前的舊式單一條件欄位，仍有既有問卷在用。
+    const group = element.show_if ?? (
+      element.show_if_field_key
+        ? { logic: 'and', conditions: [{ field_key: element.show_if_field_key, op: 'equals', value: element.show_if_value }] }
+        : null
+    );
+
+    return previewGroupPasses(group as Record<string, unknown> | null);
   }
 
   // ── 計算變數 ──────────────────────────────────────────────────────────────
@@ -417,7 +487,8 @@ export function usePreviewRuntime() {
 
   function previewSelectedPageAction(): SurveyOptionAction | null {
     for (const element of store.selectedPage?.elements ?? []) {
-      if (element.type !== 'single_choice') continue;
+      // 與 PHP 的 JumpLogicResolver 一致：single_choice 與 select 都支援選項跳題。
+      if (!elementSupportsJump(element)) continue;
       const selected = previewSelections.value[element.id];
       if (typeof selected !== 'string') continue;
       const action = element.options.find((option) => option.value === selected)?.action;
