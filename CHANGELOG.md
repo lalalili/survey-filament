@@ -2,6 +2,21 @@
 
 All notable changes to `lalalili/survey-filament` will be documented in this file.
 
+## [1.6.1] - 2026-08-01
+
+### Changed
+
+- 驗證錯誤解析從 `CanvasArea.vue` 抽成 `utils/validationErrors`（純函式，吃 pages
+  陣列與題號對照表，不碰 store）。`CanvasArea` 的 `<script setup>` 由 414 行降為
+  301 行。行為不變，目的是讓這 130 行原本只能透過渲染整個元件間接驗證的邏輯
+  可以單獨測試。
+
+### Added
+
+- `tests/Unit/validationErrors.test.ts`：11 個測試涵蓋訊息翻譯的比對順序、
+  `show_if` 條件編號、題頁編號跳過歡迎／感謝頁、標題與題號的退回順序，
+  以及 key 超出 schema 範圍時的既有行為。
+
 ## [1.6.0] - 2026-08-01
 
 ### Fixed
