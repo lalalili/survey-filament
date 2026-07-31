@@ -14,13 +14,8 @@ export class ValidationError extends Error {
   }
 }
 
-function normalizeAutosaveEndpoint(endpoint: string): string {
-  return endpoint.replace(/\/builder\/?$/, '/builder-schema');
-}
-
 async function requestJson<T>(url: string, init: RequestInit = {}): Promise<T> {
-  const requestUrl = init.method?.toUpperCase() === 'PUT' ? normalizeAutosaveEndpoint(url) : url;
-  const response = await fetch(requestUrl, {
+  const response = await fetch(url, {
     ...init,
     credentials: 'same-origin',
     headers: {
@@ -75,7 +70,7 @@ export function createBuilderApi(endpoints: BuilderEndpoints, options: RequestOp
       return requestJson<BuilderPayload>(endpoints.show);
     },
     save(schema: SurveyBuilderSchema) {
-      return requestJson<BuilderPayload & { saved_at: string }>(normalizeAutosaveEndpoint(endpoints.update), {
+      return requestJson<BuilderPayload & { saved_at: string }>(endpoints.update, {
         method: 'PUT',
         headers: {
           'X-CSRF-TOKEN': options.csrfToken,

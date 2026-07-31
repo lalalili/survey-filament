@@ -5,9 +5,30 @@ import { createBuilderApi, ValidationError } from '../../resources/js/builder/ap
 
 const endpoints = {
   show: '/builder',
-  update: '/builder',
+  update: '/builder-schema',
   publish: '/publish',
 } as Parameters<typeof createBuilderApi>[0];
+
+describe('builder API requests', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('autosaves to the given update endpoint without rewriting it', async () => {
+    const fetchMock = vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({ saved_at: '2026-07-31T00:00:00Z' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+
+    const api = createBuilderApi({ ...endpoints, update: '/backoffice/questionnaires/7/builder-schema' } as Parameters<typeof createBuilderApi>[0], { csrfToken: 'token' });
+
+    await api.save({ pages: [] } as never);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/backoffice/questionnaires/7/builder-schema');
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: 'PUT' });
+  });
+});
 
 describe('builder API errors', () => {
   afterEach(() => {

@@ -2,6 +2,32 @@
 
 All notable changes to `lalalili/survey-filament` will be documented in this file.
 
+## [1.3.0] - 2026-07-31
+
+### Removed
+
+- 移除路由 `survey-filament.builder.update-current`（`PUT /{survey}/builder`）。
+  它只是接住前端反推出來的舊網址的安全網，而前端在送出前早已把該網址改寫成
+  `/builder-schema`，實際上從未被呼叫。宿主若曾直接引用此路由名稱，改用
+  `survey-filament.builder.update`。
+
+### Changed
+
+- Builder 前端不再從 `window.location.pathname` 反推 API 網址。所有 endpoint
+  一律讀取由 `EditSurveyBuilder::getViewData()` 以 `route()` 產生的
+  `data-endpoint-*` 屬性；缺少必要屬性時直接拋錯，不再猜測網址。宿主若自訂了
+  路由前綴，先前反推會指向不存在的 URL。
+- `builderApi` 移除重複的 autosave 網址改寫（`normalizeAutosaveEndpoint`），
+  `save()` 直接送往傳入的 `endpoints.update`。
+
+### Fixed
+
+- 修正前端測試套件整檔載入失敗：`@builder-ui-core` 別名原先指向同層
+  `../builder-ui-core/src`，`@tiptap/*` 則仰賴向上解析到宿主的 `node_modules`，
+  兩者都假設套件仍位於宿主 `packages/` 底下。改為在套件自身宣告 devDependency
+  並由套件內解析，`SurveyBuilderApp`、`CanvasArea`、`RightPanel`、
+  `SurveyRichEditor` 四個測試檔恢復執行。
+
 ## [1.1.1] - 2026-07-28
 
 ### Changed

@@ -33,9 +33,6 @@ Route::middleware(['web', 'auth', 'verified'])
         Route::put('/{survey}/builder-schema', [SurveyBuilderController::class, 'update'])
             ->name('update');
 
-        Route::put('/{survey}/builder', [SurveyBuilderController::class, 'update'])
-            ->name('update-current');
-
         Route::post('/{survey}/builder-publish', [SurveyBuilderController::class, 'publish'])
             ->name('publish');
 
