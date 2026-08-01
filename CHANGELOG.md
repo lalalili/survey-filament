@@ -2,6 +2,17 @@
 
 All notable changes to `lalalili/survey-filament` will be documented in this file.
 
+## [1.7.1] - 2026-08-01
+
+### Changed
+
+- 問卷設定的個性化名單欄位，統一為「欄位、值、備註說明」版型，讓收件人欄位與問卷結果固定欄位更容易對照。
+- 小螢幕問卷設定改為全螢幕內容與頂部橫向導覽，欄位對應在窄空間改為單欄排列。
+
+### Accessibility
+
+- 個性化名單的 7 個欄位選單補齊標籤與備註關聯，並維持至少 44px 的行動版操作高度。
+
 ## [1.7.0] - 2026-08-01
 
 ### Added

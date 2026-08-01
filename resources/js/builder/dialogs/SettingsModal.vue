@@ -71,11 +71,11 @@ const audienceColumnOptions = computed(() => columnsForAudience(selectedAudience
 const audienceDateColumnOptions = computed(() => audienceColumnOptions.value
   .filter((column) => column.type === 'date'));
 
-const resultContextFields: Array<{ key: ResultContextKey; label: string }> = [
-  { key: 'dealer', label: '經銷商' },
-  { key: 'location', label: '據點' },
-  { key: 'vehicle_plate', label: '車牌' },
-  { key: 'delivery_date', label: '交車日' },
+const resultContextFields: Array<{ key: ResultContextKey; label: string; description: string }> = [
+  { key: 'dealer', label: '經銷商', description: '帶入問卷結果的經銷商欄位，供結果頁篩選與統計。' },
+  { key: 'location', label: '據點', description: '帶入問卷結果的據點欄位，供結果頁篩選與統計。' },
+  { key: 'vehicle_plate', label: '車牌', description: '帶入問卷結果的車牌欄位，方便辨識受訪車輛。' },
+  { key: 'delivery_date', label: '交車日', description: '僅能選擇日期欄位，以支援結果頁日期區間篩選。' },
 ];
 
 const selectedResultContextColumns = computed(() => store.schema?.settings?.personalization?.result_context_columns ?? {});
@@ -617,61 +617,88 @@ function updatePersonalizationAudience(audienceListId: string) {
                   名單資料設定檔與問卷分類不一致。草稿仍可儲存，但發佈前必須改為相同分類。
                 </div>
                 <template v-if="selectedAudienceList">
-                  <div class="sb-set-field">
-                    <div class="sb-set-field-label">姓名欄位</div>
-                    <select
-                      class="sb-prop-input"
-                      style="max-width:220px"
-                      :value="store.schema?.settings?.personalization?.name_column ?? ''"
-                      @change="updatePersonalizationSettings({ name_column: ($event.target as HTMLSelectElement).value || null })"
-                    >
-                      <option value="">未指定</option>
-                      <option v-for="column in audienceColumnOptions" :key="column.value" :value="column.value">{{ column.label }}</option>
-                    </select>
-                    <div class="sb-set-hint" style="margin-top:4px">同步名單時寫入收件人姓名，方便後台辨識、匯出與後續訊息個人化。</div>
+                  <div class="sb-set-field full sb-set-mapping-section">
+                    <div class="sb-set-field-label">收件人欄位對應</div>
+                    <div class="sb-set-mapping-list">
+                      <div class="sb-set-mapping-head" aria-hidden="true">
+                        <span>欄位</span>
+                        <span>值</span>
+                        <span>備註說明</span>
+                      </div>
+                      <div class="sb-set-mapping-row">
+                        <label class="sb-set-mapping-label" for="personalization-name-column">姓名欄位</label>
+                        <select
+                          id="personalization-name-column"
+                          name="personalization_name_column"
+                          class="sb-prop-input sb-set-mapping-value"
+                          autocomplete="off"
+                          aria-describedby="personalization-name-column-note"
+                          :value="store.schema?.settings?.personalization?.name_column ?? ''"
+                          @change="updatePersonalizationSettings({ name_column: ($event.target as HTMLSelectElement).value || null })"
+                        >
+                          <option value="">未指定</option>
+                          <option v-for="column in audienceColumnOptions" :key="column.value" :value="column.value">{{ column.label }}</option>
+                        </select>
+                        <p id="personalization-name-column-note" class="sb-set-mapping-note">同步名單時寫入收件人姓名，方便後台辨識、匯出與後續訊息個人化。</p>
+                      </div>
+                      <div class="sb-set-mapping-row">
+                        <label class="sb-set-mapping-label" for="personalization-email-column">Email 欄位</label>
+                        <select
+                          id="personalization-email-column"
+                          name="personalization_email_column"
+                          class="sb-prop-input sb-set-mapping-value"
+                          autocomplete="off"
+                          aria-describedby="personalization-email-column-note"
+                          :value="store.schema?.settings?.personalization?.email_column ?? ''"
+                          @change="updatePersonalizationSettings({ email_column: ($event.target as HTMLSelectElement).value || null })"
+                        >
+                          <option value="">未指定</option>
+                          <option v-for="column in audienceColumnOptions" :key="column.value" :value="column.value">{{ column.label }}</option>
+                        </select>
+                        <p id="personalization-email-column-note" class="sb-set-mapping-note">同步為收件人 Email，EDM 活動選擇此問卷時可沿用此欄位作為收件地址來源。</p>
+                      </div>
+                      <div class="sb-set-mapping-row">
+                        <label class="sb-set-mapping-label" for="personalization-external-id-column">外部識別碼欄位</label>
+                        <select
+                          id="personalization-external-id-column"
+                          name="personalization_external_id_column"
+                          class="sb-prop-input sb-set-mapping-value"
+                          autocomplete="off"
+                          aria-describedby="personalization-external-id-column-note"
+                          :value="store.schema?.settings?.personalization?.external_id_column ?? ''"
+                          @change="updatePersonalizationSettings({ external_id_column: ($event.target as HTMLSelectElement).value || null })"
+                        >
+                          <option value="">未指定</option>
+                          <option v-for="column in audienceColumnOptions" :key="column.value" :value="column.value">{{ column.label }}</option>
+                        </select>
+                        <p id="personalization-external-id-column-note" class="sb-set-mapping-note">指定名單中哪一欄作為收件人的外部識別碼，供對帳、去重與跨系統追蹤；未指定時自動使用名單資料列 ID。</p>
+                      </div>
+                    </div>
                   </div>
-                  <div class="sb-set-field">
-                    <div class="sb-set-field-label">Email 欄位</div>
-                    <select
-                      class="sb-prop-input"
-                      style="max-width:220px"
-                      :value="store.schema?.settings?.personalization?.email_column ?? ''"
-                      @change="updatePersonalizationSettings({ email_column: ($event.target as HTMLSelectElement).value || null })"
-                    >
-                      <option value="">未指定</option>
-                      <option v-for="column in audienceColumnOptions" :key="column.value" :value="column.value">{{ column.label }}</option>
-                    </select>
-                    <div class="sb-set-hint" style="margin-top:4px">同步為收件人 Email，EDM 活動選擇此問卷時可沿用此欄位作為收件地址來源。</div>
-                  </div>
-                  <div class="sb-set-field">
-                    <div class="sb-set-field-label">外部識別碼欄位</div>
-                    <select
-                      class="sb-prop-input"
-                      style="max-width:220px"
-                      :value="store.schema?.settings?.personalization?.external_id_column ?? ''"
-                      @change="updatePersonalizationSettings({ external_id_column: ($event.target as HTMLSelectElement).value || null })"
-                    >
-                      <option value="">未指定</option>
-                      <option v-for="column in audienceColumnOptions" :key="column.value" :value="column.value">{{ column.label }}</option>
-                    </select>
-                    <div class="sb-set-hint" style="margin-top:4px">指定名單中哪一欄作為收件人的外部識別碼，供對帳、去重與跨系統追蹤；未指定時自動使用名單資料列 ID。</div>
-                  </div>
-                  <div class="sb-set-field full">
+                  <div class="sb-set-field full sb-set-mapping-section">
                     <div class="sb-set-field-label">問卷結果固定欄位</div>
-                    <div class="sb-set-hint" style="margin-bottom:8px">
+                    <div class="sb-set-mapping-summary">
                       系統會將以下欄位帶入每筆問卷結果。目前已完成 {{ completedResultContextCount }}/4 項對應。
                     </div>
-                    <div class="sb-set-card">
-                      <div v-for="field in resultContextFields" :key="field.key" class="sb-set-field">
-                        <div class="sb-set-field-label">
+                    <div class="sb-set-mapping-list">
+                      <div class="sb-set-mapping-head" aria-hidden="true">
+                        <span>欄位</span>
+                        <span>值</span>
+                        <span>備註說明</span>
+                      </div>
+                      <div v-for="field in resultContextFields" :key="field.key" class="sb-set-mapping-row">
+                        <label class="sb-set-mapping-label" :for="`result-context-${field.key}`">
                           {{ field.label }}
                           <span :class="selectedResultContextColumns[field.key] ? 'sb-set-status-success' : 'sb-set-status-danger'">
                             {{ selectedResultContextColumns[field.key] ? '已對應' : '未完成' }}
                           </span>
-                        </div>
+                        </label>
                         <select
-                          class="sb-prop-input"
-                          style="max-width:260px"
+                          :id="`result-context-${field.key}`"
+                          :name="`result_context_${field.key}`"
+                          class="sb-prop-input sb-set-mapping-value"
+                          autocomplete="off"
+                          :aria-describedby="`result-context-${field.key}-note`"
                           :value="selectedResultContextColumns[field.key] ?? ''"
                           @change="updateResultContextColumn(field.key, ($event.target as HTMLSelectElement).value)"
                         >
@@ -682,9 +709,7 @@ function updatePersonalizationAudience(audienceListId: string) {
                             :value="column.value"
                           >{{ column.label }}</option>
                         </select>
-                        <div v-if="field.key === 'delivery_date'" class="sb-set-hint" style="margin-top:4px">
-                          僅能選擇資料類型為日期的名單欄位，以支援結果頁日期區間篩選。
-                        </div>
+                        <p :id="`result-context-${field.key}-note`" class="sb-set-mapping-note">{{ field.description }}</p>
                       </div>
                     </div>
                   </div>
