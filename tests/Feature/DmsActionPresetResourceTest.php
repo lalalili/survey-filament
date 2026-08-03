@@ -1,5 +1,6 @@
 <?php
 
+use Filament\Actions\Action;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
@@ -46,7 +47,7 @@ function dmsActivationValidator(Schema $schema, array $confirmations, string $pr
     );
 }
 
-function dmsQaActionVisible(SurveyTriggerActionPreset $preset): bool
+function dmsQaAction(SurveyTriggerActionPreset $preset): Action
 {
     $page = new EditSurveyTriggerActionPreset;
     $page->record = $preset;
@@ -57,7 +58,12 @@ function dmsQaActionVisible(SurveyTriggerActionPreset $preset): bool
 
     expect($action)->not->toBeNull();
 
-    return $action->isVisible();
+    return $action;
+}
+
+function dmsQaActionVisible(SurveyTriggerActionPreset $preset): bool
+{
+    return dmsQaAction($preset)->isVisible();
 }
 
 it('shows structured DMS fields without exposing a raw XML or secret key field', function (): void {
@@ -189,6 +195,26 @@ it('shows the manual QA action only when config profile and policy all allow it'
     config()->set('survey-core.triggers.dms.profile', 'qa');
     $preset->update(['action_json' => ['type' => 'dms_soap', 'profile' => 'production']]);
     expect(dmsQaActionVisible($preset->fresh()))->toBeFalse();
+});
+
+it('defaults the QA test to a dealer and department code that exist in DMS', function (): void {
+    $preset = SurveyTriggerActionPreset::create([
+        'key' => 'dms-qa-defaults',
+        'name' => 'DMS QA',
+        'action_json' => ['type' => 'dms_soap', 'profile' => 'qa'],
+        'is_active' => false,
+    ]);
+    $host = new class extends Component implements HasSchemas
+    {
+        use InteractsWithSchemas;
+    };
+    $fields = dmsQaAction($preset)
+        ->getSchema(Schema::make($host))
+        ->getFlatFields(withHidden: true);
+
+    // 'QA' / 'QA00' 在 DMS 查不到，會讓每一次測試都先回 error_code 10312。
+    expect($fields['acb_dealercode']->getDefaultState())->toBe('LC')
+        ->and($fields['acb_deptcode']->getDefaultState())->toBe('09S00');
 });
 
 it('registers attempt history and always redacts DMS secrets from copied debug information', function (): void {

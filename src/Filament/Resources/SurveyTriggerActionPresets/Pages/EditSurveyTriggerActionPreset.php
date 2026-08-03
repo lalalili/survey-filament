@@ -77,12 +77,18 @@ class EditSurveyTriggerActionPreset extends EditRecord
                 TextInput::make('regono')
                     ->label('測試車牌')
                     ->default('QA-0000'),
+                // 經銷商／據點代碼會被 DMS 實際查表，填不存在的值一律回 error_code 10312。
+                // 預設帶文件指定的測試據點，避免每次測試都先撞一次業務錯誤。
                 TextInput::make('acb_dealercode')
                     ->label('經銷商代碼')
-                    ->default('QA'),
+                    ->default('LC')
+                    ->helperText('必須是 DMS 實際存在的經銷商代碼，否則會回 10312 查無資料。')
+                    ->required(),
                 TextInput::make('acb_deptcode')
                     ->label('據點代碼')
-                    ->default('QA00'),
+                    ->default('09S00')
+                    ->helperText('必須是該經銷商底下實際存在的據點代碼。')
+                    ->required(),
                 TextInput::make('open_answer')
                     ->label('測試意見')
                     ->default('DMS QA 串接測試'),
