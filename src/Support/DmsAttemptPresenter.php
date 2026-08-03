@@ -3,10 +3,57 @@
 namespace Lalalili\SurveyFilament\Support;
 
 use Illuminate\Support\Str;
+use Lalalili\SurveyCore\Enums\DmsExecutionMode;
+use Lalalili\SurveyCore\Enums\SurveyTriggerActionAttemptStatus;
 use Lalalili\SurveyCore\Models\SurveyTriggerActionAttempt;
 
 final class DmsAttemptPresenter
 {
+    public static function statusLabel(SurveyTriggerActionAttemptStatus $status): string
+    {
+        return match ($status) {
+            SurveyTriggerActionAttemptStatus::PendingReview => '待判讀',
+            SurveyTriggerActionAttemptStatus::Skipped => '已略過',
+            SurveyTriggerActionAttemptStatus::ConfigurationError => '設定錯誤',
+            SurveyTriggerActionAttemptStatus::Success => '成功',
+            SurveyTriggerActionAttemptStatus::BusinessError => '業務錯誤',
+            SurveyTriggerActionAttemptStatus::SoapFault => 'SOAP 錯誤',
+            SurveyTriggerActionAttemptStatus::HttpError => 'HTTP 錯誤',
+            SurveyTriggerActionAttemptStatus::ConnectionError => '連線失敗',
+        };
+    }
+
+    public static function statusColor(SurveyTriggerActionAttemptStatus $status): string
+    {
+        return match ($status) {
+            SurveyTriggerActionAttemptStatus::Success => 'success',
+            SurveyTriggerActionAttemptStatus::PendingReview => 'warning',
+            SurveyTriggerActionAttemptStatus::Skipped => 'gray',
+            default => 'danger',
+        };
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function statusOptions(): array
+    {
+        return collect(SurveyTriggerActionAttemptStatus::cases())
+            ->mapWithKeys(fn (SurveyTriggerActionAttemptStatus $status): array => [
+                $status->value => self::statusLabel($status),
+            ])
+            ->all();
+    }
+
+    public static function modeLabel(?string $mode): string
+    {
+        return match ($mode) {
+            DmsExecutionMode::ManualQa->value => 'QA 手動測試',
+            DmsExecutionMode::Automatic->value => '自動觸發',
+            default => (string) $mode,
+        };
+    }
+
     public static function debugInformation(SurveyTriggerActionAttempt $attempt): string
     {
         return collect([

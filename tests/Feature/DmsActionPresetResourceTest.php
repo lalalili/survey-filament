@@ -77,6 +77,9 @@ it('shows structured DMS fields without exposing a raw XML or secret key field',
             'action_json.open_question_keys.CSI',
             'action_json.open_question_keys.SSI',
             'action_json.open_question_keys.IQS',
+            'action_json.category_paths.CSI',
+            'action_json.category_paths.SSI',
+            'action_json.category_paths.IQS',
             'action_json.description_templates.CSI',
             'action_json.description_templates.SSI',
             'action_json.description_templates.IQS',
@@ -85,6 +88,17 @@ it('shows structured DMS fields without exposing a raw XML or secret key field',
             'action_json.parameter_confirmations.wsdl_contract',
         )
         ->not->toContain('action_json.raw_xml', 'action_json.sKey', 'action_json.key');
+});
+
+it('defaults the documented follow-up ticket type and satisfaction survey open method', function (): void {
+    $schema = dmsPresetSchema();
+    $schema->fill(['action_json' => ['type' => 'dms_soap']]);
+    $fields = $schema->getComponent('dms_soap_settings', withHidden: true)
+        ->getChildSchema()
+        ->getFlatFields(withHidden: true);
+
+    expect($fields['action_json.ticket_type_id']->getDefaultState())->toBe('CST-FOLLOWUP')
+        ->and($fields['action_json.open_method_id']->getDefaultState())->toBe('I');
 });
 
 it('allows inactive DMS drafts but blocks activation until every item is confirmed on production', function (): void {

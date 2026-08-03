@@ -6,6 +6,7 @@ use Filament\Contracts\Plugin;
 use Filament\Panel;
 use Lalalili\AudienceCore\Models\AudienceList;
 use Lalalili\SurveyFilament\Filament\Pages\SurveyGuide;
+use Lalalili\SurveyFilament\Filament\Resources\DmsAttempts\DmsAttemptResource;
 use Lalalili\SurveyFilament\Filament\Resources\Recipients\RecipientResource;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\ResponseResource;
 use Lalalili\SurveyFilament\Filament\Resources\Surveys\SurveyResource;
@@ -36,6 +37,7 @@ class SurveyFilamentPlugin implements Plugin
             config('survey-filament.response_resource_class') ?? ResponseResource::class,
             SurveyTriggerRuleResource::class,
             SurveyTriggerActionPresetResource::class,
+            DmsAttemptResource::class,
             SurveyTriggerAllowedHostResource::class,
         ];
 

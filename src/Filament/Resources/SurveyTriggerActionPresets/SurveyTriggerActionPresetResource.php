@@ -227,7 +227,8 @@ class SurveyTriggerActionPresetResource extends Resource
                     Grid::make(2)->schema([
                         TextInput::make('action_json.ticket_type_id')
                             ->label('案件類型 ID')
-                            ->default('CST-GENERAL')
+                            ->default('CST-FOLLOWUP')
+                            ->helperText('顧關追蹤為 CST-FOLLOWUP。')
                             ->required(),
                         TextInput::make('action_json.grade_id')
                             ->label('案件等級 ID')
@@ -243,9 +244,12 @@ class SurveyTriggerActionPresetResource extends Resource
                             ->required(),
                         TextInput::make('action_json.open_method_id')
                             ->label('立案方式 ID')
+                            ->default('I')
+                            ->helperText('滿意度調查為 I。')
                             ->required(),
                         TextInput::make('action_json.category_path')
-                            ->label('案件分類路徑')
+                            ->label('案件分類路徑（預設值）')
+                            ->helperText('未針對問卷類別另外設定時採用此值。')
                             ->required(),
                         TextInput::make('action_json.employee_code')
                             ->label('員工代碼固定值／來源')
@@ -277,11 +281,22 @@ class SurveyTriggerActionPresetResource extends Resource
                                 ->required(),
                         ]),
 
+                    Fieldset::make('各問卷類別案件歸屬分類')
+                        ->schema([
+                            TextInput::make('action_json.category_paths.CSI')
+                                ->label('CSI 案件分類路徑')
+                                ->helperText('格式為「第二層 > 第三層」，中間以空格加大於符號分隔；第三層不可選時只帶第二層。留空時採用上方預設值。'),
+                            TextInput::make('action_json.category_paths.SSI')
+                                ->label('SSI 案件分類路徑'),
+                            TextInput::make('action_json.category_paths.IQS')
+                                ->label('IQS 案件分類路徑'),
+                        ]),
+
                     Fieldset::make('各問卷類別案件描述模板')
                         ->schema([
                             Textarea::make('action_json.description_templates.CSI')
                                 ->label('CSI 描述模板')
-                                ->helperText('可使用 {{survey_category}}、{{submitted_at}}、{{delivery_date}}、{{open_answer}}。')
+                                ->helperText('可使用 {{survey_category_label}}（服務／銷售滿意度回饋）、{{survey_category}}、{{submitted_at}}、{{delivery_date}}、{{open_answer}}。')
                                 ->rows(5)
                                 ->required(),
                             Textarea::make('action_json.description_templates.SSI')
