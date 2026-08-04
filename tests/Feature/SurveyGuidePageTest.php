@@ -98,6 +98,14 @@ it('documents the randomize-options feature in the guide', function () {
         ->and($text)->toContain('從範本建立');
 });
 
+it('identifies customer-specific survey templates as generic examples', function () {
+    expect(surveyGuideText())
+        ->toContain('通用顧客回饋')
+        ->toContain('通用售後服務回饋')
+        ->not->toContain('滿意度調查、NPS')
+        ->not->toContain('名單蒐集、售後追蹤');
+});
+
 it('documents the core builder workflow in the guide', function () {
     $text = surveyGuideText();
 
