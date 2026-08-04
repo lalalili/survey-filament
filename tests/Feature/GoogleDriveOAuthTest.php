@@ -10,7 +10,7 @@ use Lalalili\SurveyFilament\Tests\Fixtures\FakeGoogleDriveClientFactory;
 use Lalalili\SurveyFilament\Tests\Fixtures\User;
 
 beforeEach(function () {
-    app()->instance(GoogleDriveClientFactory::class, new FakeGoogleDriveClientFactory);
+    app()->instance(GoogleDriveClientFactory::class, new FakeGoogleDriveClientFactory());
     Gate::define('update', fn (User $user, Survey $survey): bool => true);
     $this->actingAs(User::create(['name' => 'Admin', 'email' => 'admin@example.com', 'password' => bcrypt('secret')]));
 });

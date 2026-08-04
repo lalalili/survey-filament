@@ -1,7 +1,7 @@
 <?php
 
-use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Enums\SurveyResponseQualityStatus;
+use Lalalili\SurveyCore\Enums\SurveyStatus;
 use Lalalili\SurveyCore\Models\Survey;
 use Lalalili\SurveyCore\Models\SurveyResponse;
 use Lalalili\SurveyFilament\Filament\Widgets\PublishedSurveysWidget;
@@ -70,9 +70,9 @@ it('limits widget stats to the tenant scope', function (): void {
     SurveyResponse::create(['survey_id' => $visible->id, 'submitted_at' => now(), 'completion_status' => 'complete']);
     SurveyResponse::create(['survey_id' => $hidden->id, 'submitted_at' => now(), 'completion_status' => 'complete']);
 
-    expect(widgetStatValue(new TotalSurveysWidget))->toBe(1)
-        ->and(widgetStatValue(new PublishedSurveysWidget))->toBe(1)
-        ->and(widgetStatValue(new TotalResponsesWidget))->toBe(1);
+    expect(widgetStatValue(new TotalSurveysWidget()))->toBe(1)
+        ->and(widgetStatValue(new PublishedSurveysWidget()))->toBe(1)
+        ->and(widgetStatValue(new TotalResponsesWidget()))->toBe(1);
 });
 
 it('only counts accepted formal submitted responses in response widgets', function (): void {
@@ -84,13 +84,13 @@ it('only counts accepted formal submitted responses in response widgets', functi
     SurveyResponse::create(['survey_id' => $survey->id, 'submitted_at' => now(), 'completion_status' => 'complete', 'quality_status' => SurveyResponseQualityStatus::Quarantined]);
     SurveyResponse::create(['survey_id' => $survey->id, 'completion_status' => 'partial']);
 
-    expect(widgetStatValue(new TotalResponsesWidget))->toBe(1);
+    expect(widgetStatValue(new TotalResponsesWidget()))->toBe(1);
 });
 
 it('keeps widgets unscoped when no query scope is configured', function (): void {
     Survey::create(['title' => 'A', 'status' => SurveyStatus::Published]);
     Survey::create(['title' => 'B', 'status' => SurveyStatus::Draft]);
 
-    expect(widgetStatValue(new TotalSurveysWidget))->toBe(2)
-        ->and(widgetStatValue(new PublishedSurveysWidget))->toBe(1);
+    expect(widgetStatValue(new TotalSurveysWidget()))->toBe(2)
+        ->and(widgetStatValue(new PublishedSurveysWidget()))->toBe(1);
 });

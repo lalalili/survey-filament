@@ -4,8 +4,8 @@ namespace Lalalili\SurveyFilament\Tests;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Lalalili\PackageTestingSupport\PackageTestCase;
 use Lalalili\AudienceCore\AudienceCoreServiceProvider;
+use Lalalili\PackageTestingSupport\PackageTestCase;
 use Lalalili\SurveyCore\SurveyCoreServiceProvider;
 use Lalalili\SurveyFilament\SurveyFilamentServiceProvider;
 use Spatie\Activitylog\ActivitylogServiceProvider;

@@ -166,7 +166,7 @@ class RecipientResource extends Resource
 
     public static function prepareActivityDispatchReferencesForDelete(AudienceList $record, DeleteAction $action): int
     {
-        $references = (new AudienceListReferenceChecker)->check($record);
+        $references = (new AudienceListReferenceChecker())->check($record);
 
         if ($references->isEmpty()) {
             return 0;
@@ -190,7 +190,7 @@ class RecipientResource extends Resource
 
     public static function activityDispatchReferencesCount(AudienceList $record): int
     {
-        return (new AudienceListReferenceChecker)->check($record)->activityDispatches;
+        return (new AudienceListReferenceChecker())->check($record)->activityDispatches;
     }
 
     public static function detachActivityDispatchReferences(AudienceList $record): int

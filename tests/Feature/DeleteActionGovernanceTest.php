@@ -99,7 +99,7 @@ it('exposes deleted audience lists for restore or permanent deletion', function 
     $list = AudienceList::create(['name' => '已刪除名單']);
     $list->delete();
 
-    $table = RecipientResource::table(Table::make(new ListRecipients));
+    $table = RecipientResource::table(Table::make(new ListRecipients()));
 
     expect(array_keys($table->getFilters()))->toContain('trashed')
         ->and(array_keys($table->getFlatActions()))->toContain('restore', 'forceDelete')
@@ -152,9 +152,9 @@ it('allows deleting an unreferenced action preset', function (): void {
 });
 
 it('exposes recipient management actions without enabling row deletion', function (): void {
-    $recipients = new RecipientsRelationManager;
+    $recipients = new RecipientsRelationManager();
     $recipientTable = $recipients->table(Table::make($recipients));
-    $rows = new RowsRelationManager;
+    $rows = new RowsRelationManager();
     $rowsTable = $rows->table(Table::make($rows));
 
     expect($recipients->isReadOnly())->toBeFalse()

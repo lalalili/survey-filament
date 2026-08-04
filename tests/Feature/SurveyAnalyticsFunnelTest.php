@@ -40,7 +40,7 @@ it('surfaces the drop-off funnel steps on the analytics page', function (): void
     SurveyResponseEvent::create(['survey_id' => $survey->id, 'event' => 'page_viewed', 'page_key' => 'p1', 'occurred_at' => now()]);
     SurveyResponseEvent::create(['survey_id' => $survey->id, 'event' => 'page_viewed', 'page_key' => 'p1', 'occurred_at' => now()]);
 
-    $page = new SurveyAnalytics;
+    $page = new SurveyAnalytics();
     $page->mount($survey->id, app(ComputeSurveyAnalyticsAction::class));
 
     $labels = array_column($page->analytics['funnel']['steps'], 'label');
@@ -78,7 +78,7 @@ it('renders the standard NPS score, segments, distribution, and daily trend', fu
         ]);
     }
 
-    $page = new SurveyAnalytics;
+    $page = new SurveyAnalytics();
     $page->mount($survey->id, app(ComputeSurveyAnalyticsAction::class));
 
     $question = $page->analytics['questions'][0];

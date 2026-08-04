@@ -5,7 +5,7 @@ use Lalalili\SurveyFilament\Filament\Resources\Surveys\Pages\ListSurveys;
 
 function surveyGuideText(): string
 {
-    $page = new SurveyGuide;
+    $page = new SurveyGuide();
 
     $quickSteps = collect($page->guideQuickSteps())
         ->flatMap(fn (array $step): array => [$step['title'], $step['body']]);
@@ -47,7 +47,7 @@ it('generates a safe guide url', function () {
 });
 
 it('exposes well-formed guide sections', function () {
-    $page = new SurveyGuide;
+    $page = new SurveyGuide();
     $steps = $page->guideQuickSteps();
     $sections = $page->guideSections();
 
@@ -183,7 +183,7 @@ it('documents focused operation screenshot blocks', function () {
 });
 
 it('adds a guide action to the survey list header', function () {
-    $page = new ListSurveys;
+    $page = new ListSurveys();
     $method = (new ReflectionClass($page))->getMethod('getHeaderActions');
     $method->setAccessible(true);
 

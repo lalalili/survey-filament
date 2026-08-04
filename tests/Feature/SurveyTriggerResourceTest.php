@@ -28,8 +28,7 @@ use Livewire\Component;
  */
 function triggerFormFieldKeys(string $resource): array
 {
-    $host = new class extends Component implements HasSchemas
-    {
+    $host = new class () extends Component implements HasSchemas {
         use InteractsWithSchemas;
     };
 
@@ -43,8 +42,7 @@ function triggerFormFieldKeys(string $resource): array
  */
 function triggerRuleAvailableFields(int $surveyId): array
 {
-    $host = new class extends Component implements HasSchemas
-    {
+    $host = new class () extends Component implements HasSchemas {
         use InteractsWithSchemas;
     };
 
@@ -87,7 +85,7 @@ it('exposes trashed trigger rules and their restore and permanent delete actions
     ]);
     $rule->delete();
 
-    $table = SurveyTriggerRuleResource::table(Table::make(new ListSurveyTriggerRules));
+    $table = SurveyTriggerRuleResource::table(Table::make(new ListSurveyTriggerRules()));
 
     expect(array_keys($table->getFilters()))->toContain('trashed')
         ->and(array_keys($table->getFlatActions()))->toContain('restore', 'forceDelete')
@@ -130,8 +128,7 @@ it('lists filter fields in the same order as the survey results page', function 
 });
 
 it('clears the rule tree when the survey selection changes', function (): void {
-    $host = new class extends Component implements HasSchemas
-    {
+    $host = new class () extends Component implements HasSchemas {
         use InteractsWithSchemas;
     };
 
@@ -185,8 +182,7 @@ it('exposes an optional renderless rule preview callback', function (): void {
 });
 
 it('uses a translated required message for trigger actions', function (): void {
-    $host = new class extends Component implements HasSchemas
-    {
+    $host = new class () extends Component implements HasSchemas {
         use InteractsWithSchemas;
     };
 
@@ -208,8 +204,7 @@ it('exposes key form fields for SurveyTriggerActionPresetResource', function ():
 });
 
 it('switches the HTTP preset fields by action type', function (): void {
-    $host = new class extends Component implements HasSchemas
-    {
+    $host = new class () extends Component implements HasSchemas {
         use InteractsWithSchemas;
     };
     $schema = SurveyTriggerActionPresetResource::form(Schema::make($host));
@@ -225,8 +220,7 @@ it('switches the HTTP preset fields by action type', function (): void {
 });
 
 it('rejects invalid HTTP payload JSON instead of silently saving an empty array', function (): void {
-    $host = new class extends Component implements HasSchemas
-    {
+    $host = new class () extends Component implements HasSchemas {
         use InteractsWithSchemas;
     };
     $schema = SurveyTriggerActionPresetResource::form(Schema::make($host));

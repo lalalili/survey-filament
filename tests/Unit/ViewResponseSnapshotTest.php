@@ -6,7 +6,7 @@ use Lalalili\SurveyCore\Models\SurveyField;
 use Lalalili\SurveyFilament\Filament\Resources\Responses\Pages\ViewResponse;
 
 it('renders an answer with its snapshot option label', function (): void {
-    $field = new SurveyField;
+    $field = new SurveyField();
     $field->forceFill([
         'field_key' => 'changed_key',
         'label' => 'Changed question',
@@ -16,7 +16,7 @@ it('renders an answer with its snapshot option label', function (): void {
         ],
     ]);
 
-    $answer = new SurveyAnswer;
+    $answer = new SurveyAnswer();
     $answer->forceFill([
         'answer_text' => 'original_value',
         'snapshot_field_key' => 'original_key',

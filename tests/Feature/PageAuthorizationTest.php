@@ -23,7 +23,7 @@ function authTestSurvey(): Survey
 /** 展開列表的 ActionGroup，回傳指定 record action 對該問卷是否可見。 */
 function surveyTableActionIsVisible(string $name, Survey $survey): bool
 {
-    $table = SurveyResource::table(Table::make(new ListSurveys));
+    $table = SurveyResource::table(Table::make(new ListSurveys()));
 
     $action = collect($table->getRecordActions())
         ->flatMap(fn ($action): array => $action instanceof ActionGroup
@@ -38,7 +38,7 @@ function surveyTableActionIsVisible(string $name, Survey $survey): bool
 
 function surveyHeaderActionIsVisible(string $name): bool
 {
-    $page = new ListSurveys;
+    $page = new ListSurveys();
     $method = (new ReflectionClass($page))->getMethod('getHeaderActions');
     $method->setAccessible(true);
 
@@ -65,7 +65,7 @@ it('blocks the builder page when the user cannot update the survey', function ()
     SurveyTestPolicy::$allowUpdate = false;
     $survey = authTestSurvey();
 
-    $page = new EditSurveyBuilder;
+    $page = new EditSurveyBuilder();
 
     expect(fn () => $page->mount($survey->id))
         ->toThrow(HttpException::class);
@@ -74,7 +74,7 @@ it('blocks the builder page when the user cannot update the survey', function ()
 it('allows the builder page when the user can update the survey', function (): void {
     $survey = authTestSurvey();
 
-    $page = new EditSurveyBuilder;
+    $page = new EditSurveyBuilder();
     $page->mount($survey->id);
 
     expect($page->getRecord()->getKey())->toBe($survey->getKey());
@@ -84,7 +84,7 @@ it('blocks the analytics page when the user cannot view the survey', function ()
     SurveyTestPolicy::$allowView = false;
     $survey = authTestSurvey();
 
-    $page = new SurveyAnalytics;
+    $page = new SurveyAnalytics();
 
     expect(fn () => $page->mount($survey->id, app(ComputeSurveyAnalyticsAction::class)))
         ->toThrow(HttpException::class);
@@ -94,7 +94,7 @@ it('blocks the analytics page when the user cannot update the survey', function 
     SurveyTestPolicy::$allowUpdate = false;
     $survey = authTestSurvey();
 
-    $page = new SurveyAnalytics;
+    $page = new SurveyAnalytics();
 
     expect(fn () => $page->mount($survey->id, app(ComputeSurveyAnalyticsAction::class)))
         ->toThrow(HttpException::class);
@@ -129,7 +129,7 @@ it('hides the survey creation header actions when the user cannot create surveys
 it('blocks the create page when the user cannot create surveys', function (): void {
     SurveyTestPolicy::$allowCreate = false;
 
-    $page = new CreateSurvey;
+    $page = new CreateSurvey();
 
     expect(fn () => $page->mount())
         ->toThrow(HttpException::class);

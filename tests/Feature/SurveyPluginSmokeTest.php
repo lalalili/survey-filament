@@ -61,8 +61,7 @@ it('can hide optional survey table columns through config', function () {
 });
 
 it('does not expose a separate personalization required toggle', function () {
-    $livewire = new class extends Component implements HasSchemas
-    {
+    $livewire = new class () extends Component implements HasSchemas {
         use InteractsWithSchemas;
     };
 
@@ -78,8 +77,7 @@ it('configures audience list schema profiles', function () {
         'SSI' => '銷售滿意度',
     ]);
 
-    $livewire = new class extends Component implements HasSchemas
-    {
+    $livewire = new class () extends Component implements HasSchemas {
         use InteractsWithSchemas;
     };
 
@@ -185,9 +183,10 @@ it('registers the collectors relation manager', function () {
 
 function packageNavigationTestUser(bool $isSuperAdmin): Authenticatable
 {
-    return new class($isSuperAdmin) implements Authenticatable
-    {
-        public function __construct(public bool $is_super_admin) {}
+    return new class ($isSuperAdmin) implements Authenticatable {
+        public function __construct(public bool $is_super_admin)
+        {
+        }
 
         public function getAuthIdentifierName(): string
         {
@@ -214,7 +213,9 @@ function packageNavigationTestUser(bool $isSuperAdmin): Authenticatable
             return null;
         }
 
-        public function setRememberToken($value): void {}
+        public function setRememberToken($value): void
+        {
+        }
 
         public function getRememberTokenName(): string
         {

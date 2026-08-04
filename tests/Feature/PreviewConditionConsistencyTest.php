@@ -41,8 +41,15 @@ it('has a fixture that exercises every operator the evaluator supports', functio
     }
 
     expect(array_values(array_unique($covered)))->toContain(
-        'equals', 'not_equals', 'contains', 'not_contains',
-        'is_empty', 'is_not_empty', 'greater_than', 'greater_than_or_equal', 'between',
+        'equals',
+        'not_equals',
+        'contains',
+        'not_contains',
+        'is_empty',
+        'is_not_empty',
+        'greater_than',
+        'greater_than_or_equal',
+        'between',
     );
 });
 

@@ -18,8 +18,7 @@ use Livewire\Component;
 
 function dmsPresetSchema(): Schema
 {
-    $host = new class extends Component implements HasSchemas
-    {
+    $host = new class () extends Component implements HasSchemas {
         use InteractsWithSchemas;
     };
 
@@ -49,7 +48,7 @@ function dmsActivationValidator(Schema $schema, array $confirmations, string $pr
 
 function dmsQaAction(SurveyTriggerActionPreset $preset): Action
 {
-    $page = new EditSurveyTriggerActionPreset;
+    $page = new EditSurveyTriggerActionPreset();
     $page->record = $preset;
     $method = new ReflectionMethod($page, 'getHeaderActions');
     $method->setAccessible(true);
@@ -204,8 +203,7 @@ it('defaults the QA test to a dealer and department code that exist in DMS', fun
         'action_json' => ['type' => 'dms_soap', 'profile' => 'qa'],
         'is_active' => false,
     ]);
-    $host = new class extends Component implements HasSchemas
-    {
+    $host = new class () extends Component implements HasSchemas {
         use InteractsWithSchemas;
     };
     $fields = dmsQaAction($preset)

@@ -23,7 +23,9 @@ use Throwable;
  */
 class GoogleDriveOAuthController extends Controller
 {
-    public function __construct(private readonly GoogleDriveClientFactory $clients) {}
+    public function __construct(private readonly GoogleDriveClientFactory $clients)
+    {
+    }
 
     public function connect(Request $request, Survey $survey): RedirectResponse
     {

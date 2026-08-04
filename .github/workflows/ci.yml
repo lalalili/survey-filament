@@ -10,6 +10,7 @@ jobs:
     with:
       php-versions: "['8.4']"
       run-validate: false
+      run-format: true
 
   # 共用的 php-package-ci 只跑 PHP。Builder 前端（Vue/TS）另有 138 個 vitest 測試，
   # 先前完全不在 CI 覆蓋範圍內——4 個測試檔曾長期整檔載入失敗而無人察覺。

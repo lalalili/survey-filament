@@ -305,7 +305,7 @@ class ResponseResource extends Resource
                         ->label('匯出')
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('primary')
-                        ->visible(fn () => static::canView(new SurveyResponse))
+                        ->visible(fn () => static::canView(new SurveyResponse()))
                         ->action(function (Collection $records) {
                             $surveyIds = $records->pluck('survey_id')->unique();
 
@@ -339,7 +339,7 @@ class ResponseResource extends Resource
                         ->label('批次隔離')
                         ->icon('heroicon-o-no-symbol')
                         ->color('danger')
-                        ->visible(fn () => static::canEdit(new SurveyResponse))
+                        ->visible(fn () => static::canEdit(new SurveyResponse()))
                         ->action(function (Collection $records): void {
                             $reviewResponse = app(ReviewSurveyResponseAction::class);
 

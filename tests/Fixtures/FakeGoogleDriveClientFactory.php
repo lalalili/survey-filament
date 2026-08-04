@@ -21,7 +21,7 @@ class FakeGoogleDriveClientFactory extends GoogleDriveClientFactory
 
     public function baseClient(): Client
     {
-        $client = new Client;
+        $client = new Client();
         $client->setScopes(['https://www.googleapis.com/auth/drive.file']);
 
         return $client;
