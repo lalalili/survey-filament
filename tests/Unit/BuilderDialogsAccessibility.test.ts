@@ -56,7 +56,7 @@ const dialogCases: DialogCase[] = [
     component: SettingsModal,
     modelValue: true,
     expectedTitle: '問卷設定',
-    props: { uploadImageUrl: '/images', csrfToken: 'token', categoryOptions: {} },
+    props: { uploadImageUrl: '/images', csrfToken: 'token' },
   },
 ];
 

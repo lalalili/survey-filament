@@ -53,7 +53,6 @@ function mountPersonalizationSettings() {
       modelValue: true,
       uploadImageUrl: '/images',
       csrfToken: 'token',
-      categoryOptions: { SSI: 'SSI 銷售滿意度' },
     },
     global: { plugins: [pinia] },
   });
@@ -66,6 +65,17 @@ afterEach(() => {
 });
 
 describe('SettingsModal personalization mappings', () => {
+  it('does not expose category editing in basic settings', () => {
+    const { wrapper } = mountPersonalizationSettings();
+
+    const labels = Array.from(document.body.querySelectorAll<HTMLElement>('.sb-set-field-label'))
+      .map((label) => label.textContent?.trim());
+
+    expect(labels).not.toContain('分類');
+
+    wrapper.unmount();
+  });
+
   it('uses one labelled field-value-note layout for recipient and result mappings', async () => {
     const { wrapper } = mountPersonalizationSettings();
     Array.from(document.body.querySelectorAll<HTMLButtonElement>('.sb-settings-nav-item'))

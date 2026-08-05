@@ -29,14 +29,12 @@ function toggleTurnstile() {
 const props = defineProps<{
   uploadImageUrl: string;
   csrfToken: string;
-  categoryOptions: Record<string, string>;
 }>();
 
 const show = defineModel<boolean>({ default: false });
 const store = useSurveyBuilderStore();
 const dialog = useTemplateRef<HTMLElement>('dialog');
 useDialogFocus({ isOpen: show, dialog, close: () => { show.value = false; } });
-const categoryOptionEntries = computed(() => Object.entries(props.categoryOptions));
 const thankYouVariableTokens = computed(() => (store.schema?.calculations ?? []).map(calculationVariableToken));
 const welcomePageEnabled = computed(() => store.welcomePage != null && store.welcomePage.welcome_settings?.enabled !== false);
 
@@ -178,29 +176,6 @@ function updatePersonalizationAudience(audienceListId: string) {
                     @input="store.updateSurveySettings({ description: ($event.target as HTMLTextAreaElement).value || null })"
                   ></textarea>
                   <div class="sb-set-hint" style="margin-top:4px">顯示於填答頁標題下方，適合補充問卷目的或填寫說明</div>
-                </div>
-                <div class="sb-set-field">
-                  <div class="sb-set-field-label">分類</div>
-                  <select
-                    v-if="categoryOptionEntries.length > 0"
-                    class="sb-prop-input"
-                    style="max-width:260px"
-                    :value="store.schema?.settings?.category ?? ''"
-                    @change="store.updateSurveySettings({ category: ($event.target as HTMLSelectElement).value || null })"
-                  >
-                    <option value="">未分類</option>
-                    <option v-for="[value, label] in categoryOptionEntries" :key="value" :value="value">{{ label }}</option>
-                  </select>
-                  <input
-                    v-else
-                    class="sb-prop-input"
-                    type="text"
-                    maxlength="10"
-                    placeholder="例如 CSI、SSI"
-                    :value="store.schema?.settings?.category ?? ''"
-                    @input="store.updateSurveySettings({ category: ($event.target as HTMLInputElement).value || null })"
-                    style="max-width:160px"
-                  />
                 </div>
               </div>
             </template>

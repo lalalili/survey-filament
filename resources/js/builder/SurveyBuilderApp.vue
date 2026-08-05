@@ -11,7 +11,6 @@ const props = defineProps<{
   endpoints: BuilderEndpoints;
   csrfToken: string;
   guideUrl?: string;
-  categoryOptions?: Record<string, string>;
 }>();
 
 const store = useSurveyBuilderStore();
@@ -156,7 +155,6 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
       v-model="store.showSettingsModal"
       :upload-image-url="props.endpoints.uploadImage"
       :csrf-token="props.csrfToken"
-      :category-options="props.categoryOptions ?? {}"
     />
 
     <BuilderActivityPanel v-model="showActivityPanel" />
